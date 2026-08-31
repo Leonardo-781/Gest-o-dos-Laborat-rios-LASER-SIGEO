@@ -17,7 +17,9 @@ import {
   Filter, 
   Sparkles,
   RotateCcw,
-  ShieldCheck
+  ShieldCheck,
+  Copy,
+  Key
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, formatDateTimeBR } from '../utils/dateHelpers';
@@ -490,6 +492,33 @@ export const MaintenanceManagementView: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* BLOCO DA CHAVE DE LICENÇA FORNECIDA PELO USUÁRIO */}
+                {soft.licenseKey && (
+                  <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Key className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-purple-900 block">Código / Chave de Licença Fornecida:</span>
+                        <code className="font-mono text-xs font-black text-purple-950 bg-white px-2 py-0.5 rounded border border-purple-200 inline-block mt-0.5">
+                          {soft.licenseKey}
+                        </code>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(soft.licenseKey!);
+                        alert('Chave de licença copiada para a área de transferência!');
+                      }}
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 self-end sm:self-center"
+                      title="Copiar código de ativação"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copiar Chave</span>
+                    </button>
+                  </div>
+                )}
 
                 {soft.technicianNotes && (
                   <div className="p-2.5 bg-purple-50/60 rounded-xl border border-purple-200 text-xs text-purple-950">

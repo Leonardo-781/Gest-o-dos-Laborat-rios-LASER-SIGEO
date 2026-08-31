@@ -27,6 +27,7 @@ export const SoftwareRequestView: React.FC = () => {
   const [targetScope, setTargetScope] = useState<SoftwareScope>('todas_maquinas');
   const [specificWorkstations, setSpecificWorkstations] = useState('');
   const [licenseType, setLicenseType] = useState<SoftwareLicenseType>('open_source_gratuito');
+  const [licenseKey, setLicenseKey] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [justification, setJustification] = useState('');
   const [courseOrProject, setCourseOrProject] = useState('');
@@ -60,6 +61,12 @@ export const SoftwareRequestView: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (licenseType !== 'open_source_gratuito' && !licenseKey.trim()) {
+      if (!confirm('Você selecionou um software que requer licença, mas não informou o código/chave. Deseja enviar mesmo assim para o técnico verificar a licença institucional?')) {
+        return;
+      }
+    }
+
     const res = createSoftwareRequest({
       labId,
       softwareName,
@@ -67,6 +74,7 @@ export const SoftwareRequestView: React.FC = () => {
       targetScope,
       specificWorkstations: targetScope === 'maquinas_especificas' ? specificWorkstations : undefined,
       licenseType,
+      licenseKey: licenseKey.trim() || undefined,
       downloadUrl: downloadUrl || undefined,
       justification,
       courseOrProject: courseOrProject || undefined,
@@ -264,6 +272,45 @@ export const SoftwareRequestView: React.FC = () => {
                 </select>
               </div>
             </div>
+
+            {/* CAMPO DE CÓDIGO DE LICENÇA (OBRIGATÓRIO / DESTACADO QUANDO DEPENDE DE LICENÇA) */}
+            {licenseType !== 'open_source_gratuito' ? (
+              <div className="p-4 bg-purple-50/80 border border-purple-200 rounded-2xl space-y-2 animate-scale-up">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                    <span>🔑 Código / Chave de Licença (Serial, Activation Key ou Nº do Convênio):</span>
+                    <span className="text-rose-600 font-black">*</span>
+                  </label>
+                  <span className="text-[10px] bg-purple-200 text-purple-900 font-bold px-2 py-0.5 rounded-md">
+                    Requer Licença
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: XXXX-YYYY-ZZZZ-WWWW, Chave Educacional Autodesk, Serial Metashape..."
+                  value={licenseKey}
+                  onChange={(e) => setLicenseKey(e.target.value)}
+                  className="w-full bg-white border border-purple-300 rounded-xl p-2.5 font-mono text-xs font-bold text-purple-900 focus:ring-2 focus:ring-purple-600 shadow-xs"
+                />
+                <p className="text-[11px] text-purple-800 leading-tight">
+                  Informe o serial de ativação, código educacional ou identificador da licença para que os técnicos da Sala 1B308 possam ativar o software nas bancadas de forma legalizada.
+                </p>
+              </div>
+            ) : (
+              <div className="text-xs">
+                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                  Código de Licença ou Token de Ativação (Opcional para Open Source):
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Token de API, chave de extensão (se aplicável)..."
+                  value={licenseKey}
+                  onChange={(e) => setLicenseKey(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono text-xs focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            )}
 
             {targetScope === 'maquinas_especificas' && (
               <div className="animate-fade-in text-xs">

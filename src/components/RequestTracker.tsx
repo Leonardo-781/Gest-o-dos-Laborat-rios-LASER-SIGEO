@@ -15,7 +15,8 @@ import {
   Laptop,
   Check,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Key
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, formatDateTimeBR, getPurposeBadge, getStatusBadge } from '../utils/dateHelpers';
@@ -309,9 +310,12 @@ export const RequestTracker: React.FC = () => {
                   <span className="font-bold text-slate-800">{soft.applicantName}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Escopo:</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Escopo & Licença:</span>
                   <span className="font-bold text-slate-800">
                     {soft.targetScope === 'todas_maquinas' ? 'Todas as 24 Bancadas' : soft.specificWorkstations || 'Específicas'}
+                  </span>
+                  <span className="text-[10px] text-purple-700 font-semibold block capitalize">
+                    {soft.licenseType.replace(/_/g, ' ')}
                   </span>
                 </div>
                 <div>
@@ -321,6 +325,15 @@ export const RequestTracker: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {soft.licenseKey && (
+                <div className="p-2.5 bg-purple-50/70 border border-purple-200 rounded-xl text-xs flex items-center gap-2">
+                  <Key className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                  <span className="text-purple-900">
+                    <strong>Chave de Licença Fornecida:</strong> <code className="font-mono font-bold">{soft.licenseKey}</code>
+                  </span>
+                </div>
+              )}
 
               {soft.technicianNotes && (
                 <div className="p-2.5 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-950">

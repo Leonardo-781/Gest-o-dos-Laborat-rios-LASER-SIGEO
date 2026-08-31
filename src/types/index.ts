@@ -153,6 +153,7 @@ export interface SoftwareRequest {
   targetScope: SoftwareScope;
   specificWorkstations?: string; // Ex: "Bancadas 01 a 12"
   licenseType: SoftwareLicenseType;
+  licenseKey?: string; // Código/chave de ativação, serial ou chave de licença institucional/projeto
   downloadUrl?: string;
   justification: string;
   courseOrProject?: string; // Ex: "TCC Fotogrametria", "AGR-SIG"
