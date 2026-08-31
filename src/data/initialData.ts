@@ -1,4 +1,4 @@
-import { LabInfo, Equipment, FixedClass, Reservation, UserAccount, AuditLog } from '../types';
+import { LabInfo, Equipment, FixedClass, Reservation, UserAccount, AuditLog, MaintenanceRequest, SoftwareRequest } from '../types';
 
 export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
   laser: {
@@ -147,9 +147,12 @@ export const INITIAL_EQUIPMENTS: Equipment[] = [
     name: 'Estação Total Leica TS07 (Precisão 1")',
     code: 'ET-01',
     category: 'topografia',
-    status: 'disponivel',
+    status: 'manutencao',
     description: 'Estação total manual de precisão angular 1 segundo com software FlexField integrado.',
-    specs: 'Leitura com prisma até 3500m / Laser 500m'
+    specs: 'Leitura com prisma até 3500m / Laser 500m',
+    maintenanceReason: 'Descalibração no compensador de eixo duplo e verificação de prisma',
+    maintenanceSince: '2026-08-28T09:00:00Z',
+    assignedTechnician: 'Gabriel Alencar'
   },
   {
     id: 'eq-laser-04',
@@ -629,5 +632,101 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
     },
     details: 'Reserva no Laboratório SIGEO para 27/08 APROVADA pelo técnico responsável.',
     timestamp: '2026-08-23T16:20:00Z'
+  }
+];
+
+export const INITIAL_MAINTENANCE_REQUESTS: MaintenanceRequest[] = [
+  {
+    id: 'man-001',
+    protocol: 'MAN-2026-1041',
+    labId: 'sigeo',
+    equipmentName: 'Workstation 07 (Bancada 07)',
+    urgency: 'alta',
+    problemDescription: 'A máquina desliga sozinha durante a renderização pesada de nuvem de pontos no Metashape. Suspeita de superaquecimento da placa de vídeo (GPU RTX 4070).',
+    applicantName: 'Lucas Ferreira dos Santos',
+    applicantEmail: 'lucas.santos@aluno.universidade.edu.br',
+    applicantRole: 'aluno',
+    applicantId: '2022014589',
+    status: 'em_averiguacao',
+    assignedTechnician: 'Gabriel Alencar',
+    technicianNotes: 'Verificado. Realizada limpeza dos coolers da GPU e troca de pasta térmica. Em fase de testes de benchmark.',
+    createdAt: '2026-08-28T14:30:00Z',
+    updatedAt: '2026-08-29T10:00:00Z'
+  },
+  {
+    id: 'man-002',
+    protocol: 'MAN-2026-1042',
+    labId: 'laser',
+    equipmentName: 'Estação Total Leica TS07 (ET-01)',
+    urgency: 'critica',
+    problemDescription: 'O display apresenta erro no compensador automático ao nivelar a base nivelante no tripé. Não permite iniciar o levantamento de campo.',
+    applicantName: 'Profa. Dra. Helena S. Guimarães',
+    applicantEmail: 'helena.guimaraes@universidade.edu.br',
+    applicantRole: 'professor',
+    applicantId: 'SIAPE 2019482',
+    status: 'em_manutencao',
+    assignedTechnician: 'Gabriel Alencar',
+    technicianNotes: 'Equipamento isolado na Sala 1B308. Enviado chamado para calibração com a assistência técnica autorizada Leica.',
+    createdAt: '2026-08-27T11:15:00Z',
+    updatedAt: '2026-08-28T09:00:00Z'
+  },
+  {
+    id: 'man-003',
+    protocol: 'MAN-2026-1043',
+    labId: 'sigeo',
+    equipmentName: 'Plotter Colorida HP DesignJet T830',
+    urgency: 'media',
+    problemDescription: 'Alinhamento incorreto do rolo de papel A0 e manchas azuis nas impressões de cartas topográficas.',
+    applicantName: 'Carolina Mendes (Nova Aluna)',
+    applicantEmail: 'carolina.mendes@aluno.universidade.edu.br',
+    applicantRole: 'aluno',
+    applicantId: '2026004112',
+    status: 'pendente',
+    createdAt: '2026-08-30T16:20:00Z',
+    updatedAt: '2026-08-30T16:20:00Z'
+  }
+];
+
+export const INITIAL_SOFTWARE_REQUESTS: SoftwareRequest[] = [
+  {
+    id: 'sft-001',
+    protocol: 'SFT-2026-0501',
+    labId: 'sigeo',
+    softwareName: 'CloudCompare',
+    softwareVersion: 'v2.13.2',
+    targetScope: 'todas_maquinas',
+    licenseType: 'open_source_gratuito',
+    downloadUrl: 'https://www.cloudcompare.org/release/',
+    justification: 'Necessário para a disciplina de Modelagem Geoespacial e processamento de nuvens de pontos 3D obtidas com o Laser Scanner do LASER.',
+    courseOrProject: 'AGR-MODGEO / TCC 2026',
+    deadlineDate: '2026-09-05',
+    applicantName: 'Prof. Dr. Marcos Vinicius',
+    applicantEmail: 'marcos.vinicius@universidade.edu.br',
+    applicantRole: 'coordenador',
+    applicantId: 'SIAPE 1849201',
+    status: 'em_instalacao',
+    technicianNotes: 'Pacote homologado e script de instalação em lote (deploy silencioso) preparado para as 24 bancadas.',
+    createdAt: '2026-08-26T15:00:00Z',
+    updatedAt: '2026-08-28T11:00:00Z'
+  },
+  {
+    id: 'sft-002',
+    protocol: 'SFT-2026-0502',
+    labId: 'sigeo',
+    softwareName: 'Plugin Semi-Automatic Classification Plugin (SCP) para QGIS',
+    softwareVersion: 'v8.2.0',
+    targetScope: 'todas_maquinas',
+    licenseType: 'open_source_gratuito',
+    downloadUrl: 'https://plugins.qgis.org/plugins/SemiAutomaticClassificationPlugin/',
+    justification: 'Indispensável para as aulas de PDI (Processamento Digital de Imagens) para classificação supervisionada de imagens Sentinel-2 e Landsat-9.',
+    courseOrProject: 'AGR-PDI',
+    deadlineDate: '2026-09-02',
+    applicantName: 'Profa. Dra. Helena S. Guimarães',
+    applicantEmail: 'helena.guimaraes@universidade.edu.br',
+    applicantRole: 'professor',
+    applicantId: 'SIAPE 2019482',
+    status: 'pendente',
+    createdAt: '2026-08-29T17:40:00Z',
+    updatedAt: '2026-08-29T17:40:00Z'
   }
 ];

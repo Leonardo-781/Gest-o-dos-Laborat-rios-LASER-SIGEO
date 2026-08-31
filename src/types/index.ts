@@ -55,6 +55,9 @@ export interface Equipment {
   status: 'disponivel' | 'em_uso' | 'manutencao' | 'em_campo';
   description: string;
   specs?: string;
+  maintenanceReason?: string;
+  maintenanceSince?: string;
+  assignedTechnician?: string;
 }
 
 export interface FixedClass {
@@ -107,6 +110,65 @@ export interface Reservation {
   updatedAt: string;
 }
 
+// ----------------------------------------------------------------------------
+// CHAMADOS DE MANUTENÇÃO / AVERIGUAÇÃO DE MÁQUINAS
+// ----------------------------------------------------------------------------
+export type MaintenanceUrgency = 'baixa' | 'media' | 'alta' | 'critica';
+export type MaintenanceStatus = 'pendente' | 'em_averiguacao' | 'em_manutencao' | 'resolvido' | 'recusado';
+
+export interface MaintenanceRequest {
+  id: string;
+  protocol: string; // Ex: "MAN-2026-1042"
+  labId: LabId;
+  equipmentId?: string; // ID do equipamento se selecionado da lista
+  equipmentName: string; // Nome ou identificação (ex: "Workstation 07", "Plotter A0", "Leica TS07")
+  urgency: MaintenanceUrgency;
+  problemDescription: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone?: string;
+  applicantRole: UserRole;
+  applicantId: string;
+  status: MaintenanceStatus;
+  assignedTechnician?: string;
+  technicianNotes?: string;
+  resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ----------------------------------------------------------------------------
+// CHAMADOS DE INSTALAÇÃO / ATUALIZAÇÃO DE SOFTWARES
+// ----------------------------------------------------------------------------
+export type SoftwareScope = 'todas_maquinas' | 'maquinas_especificas' | 'servidor';
+export type SoftwareLicenseType = 'open_source_gratuito' | 'institucional' | 'licenca_propria' | 'trial';
+export type SoftwareRequestStatus = 'pendente' | 'em_analise' | 'em_instalacao' | 'instalado' | 'recusado';
+
+export interface SoftwareRequest {
+  id: string;
+  protocol: string; // Ex: "SFT-2026-0521"
+  labId: LabId;
+  softwareName: string;
+  softwareVersion?: string;
+  targetScope: SoftwareScope;
+  specificWorkstations?: string; // Ex: "Bancadas 01 a 12"
+  licenseType: SoftwareLicenseType;
+  downloadUrl?: string;
+  justification: string;
+  courseOrProject?: string; // Ex: "TCC Fotogrametria", "AGR-SIG"
+  deadlineDate?: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone?: string;
+  applicantRole: UserRole;
+  applicantId: string;
+  status: SoftwareRequestStatus;
+  technicianNotes?: string;
+  installedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ScheduleEvent {
   id: string;
   originType: 'fixed_class' | 'reservation';
@@ -135,13 +197,17 @@ export type AuditActionType =
   | 'usuario_aprovado'
   | 'usuario_recusado'
   | 'pdf_importado'
-  | 'equipamento_alterado';
+  | 'equipamento_alterado'
+  | 'manutencao_solicitada'
+  | 'manutencao_atualizada'
+  | 'software_solicitado'
+  | 'software_atualizado';
 
 export interface AuditLog {
   id: string;
   actionType: AuditActionType;
   targetId: string;
-  targetType: 'reserva' | 'aula_fixa' | 'equipamento' | 'usuario' | 'sistema';
+  targetType: 'reserva' | 'aula_fixa' | 'equipamento' | 'usuario' | 'manutencao' | 'software' | 'sistema';
   targetTitle: string;
   performedBy: {
     id: string;
@@ -183,5 +249,17 @@ export interface CloudConfig {
 }
 
 export type ViewMode = 'week' | 'day' | 'table';
-export type ActiveTab = 'grade' | 'solicitar' | 'rastrear' | 'admin' | 'equipamentos' | 'indicadores' | 'auditoria' | 'importar_pdf';
+export type ActiveTab = 
+  | 'grade' 
+  | 'solicitar' 
+  | 'rastrear' 
+  | 'solicitar_manutencao' 
+  | 'solicitar_software' 
+  | 'gestao_manutencao' 
+  | 'admin' 
+  | 'equipamentos' 
+  | 'indicadores' 
+  | 'auditoria' 
+  | 'importar_pdf';
+
 export type AppProfile = UserRole;

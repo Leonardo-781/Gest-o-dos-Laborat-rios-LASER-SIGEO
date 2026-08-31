@@ -13,6 +13,9 @@ import { AuthModal } from './components/AuthModal';
 import { PdfScheduleImporter } from './components/PdfScheduleImporter';
 import { AuditLogView } from './components/AuditLogView';
 import { ClassEditModal } from './components/ClassEditModal';
+import { MaintenanceRequestView } from './components/MaintenanceRequestView';
+import { SoftwareRequestView } from './components/SoftwareRequestView';
+import { MaintenanceManagementView } from './components/MaintenanceManagementView';
 import { ActiveTab } from './types';
 
 const AppContent: React.FC = () => {
@@ -31,9 +34,27 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'solicitar_manutencao' && (
+          <div>
+            <MaintenanceRequestView />
+          </div>
+        )}
+
+        {activeTab === 'solicitar_software' && (
+          <div>
+            <SoftwareRequestView />
+          </div>
+        )}
+
         {activeTab === 'rastrear' && (
           <div>
             <RequestTracker />
+          </div>
+        )}
+
+        {activeTab === 'gestao_manutencao' && (
+          <div>
+            <MaintenanceManagementView />
           </div>
         )}
 

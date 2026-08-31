@@ -11,7 +11,11 @@ import {
   AuditLog,
   ParsedPdfClass,
   CloudConfig,
-  ReservationStatus
+  ReservationStatus,
+  MaintenanceRequest,
+  SoftwareRequest,
+  MaintenanceStatus,
+  SoftwareRequestStatus
 } from '../types';
 import { 
   LABS_INFO, 
@@ -19,7 +23,9 @@ import {
   INITIAL_RESERVATIONS, 
   INITIAL_EQUIPMENTS,
   INITIAL_USERS,
-  INITIAL_AUDIT_LOGS
+  INITIAL_AUDIT_LOGS,
+  INITIAL_MAINTENANCE_REQUESTS,
+  INITIAL_SOFTWARE_REQUESTS
 } from '../data/initialData';
 import { 
   checkTimeOverlap, 
@@ -45,6 +51,8 @@ interface LabContextType {
   equipments: Equipment[];
   auditLogs: AuditLog[];
   usersList: UserAccount[];
+  maintenanceRequests: MaintenanceRequest[];
+  softwareRequests: SoftwareRequest[];
   
   // Autenticação & Usuário Ativo (Inicia SEMPRE deslogado como visitante)
   currentUser: UserAccount | null;
@@ -109,13 +117,30 @@ interface LabContextType {
   deleteFixedClass: (id: string) => void;
   bulkImportPdfClasses: (classes: ParsedPdfClass[], sourceDocument: string) => void;
 
-  // Ações de Equipamentos (Apenas Técnicos/Monitores e Coordenadores)
+  // Ações de Equipamentos e Manutenção Direta
   updateEquipmentStatus: (id: string, status: Equipment['status']) => void;
+  setEquipmentMaintenance: (equipmentId: string, inMaintenance: boolean, reason?: string, technician?: string) => void;
+
+  // Ações de Chamados de Manutenção / Averiguação (Aberto a todos)
+  createMaintenanceRequest: (data: Omit<MaintenanceRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+    success: boolean;
+    protocol?: string;
+  };
+  updateMaintenanceStatus: (id: string, status: MaintenanceStatus, technicianNotes?: string, assignedTech?: string) => void;
+
+  // Ações de Chamados de Instalação de Softwares (Aberto a todos)
+  createSoftwareRequest: (data: Omit<SoftwareRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+    success: boolean;
+    protocol?: string;
+  };
+  updateSoftwareStatus: (id: string, status: SoftwareRequestStatus, technicianNotes?: string) => void;
 
   // Utilitários
   getEventsForDate: (dateStr: string, labFilter?: 'all' | LabId) => ScheduleEvent[];
   getPendingRequestsCount: () => number;
   getPendingUsersCount: () => number;
+  getPendingMaintenanceCount: () => number;
+  getPendingSoftwareCount: () => number;
   resetToDemoData: () => void;
   toastMessage: string | null;
   showToast: (msg: string) => void;
@@ -124,11 +149,13 @@ interface LabContextType {
 const LabContext = createContext<LabContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  CLASSES: 'laser_sigeo_classes_official_v4',
-  RESERVATIONS: 'laser_sigeo_reservations_v4',
-  EQUIPMENTS: 'laser_sigeo_equipments_v4',
-  AUDIT: 'laser_sigeo_audit_v4',
-  USERS_LIST: 'laser_sigeo_users_list_v4'
+  CLASSES: 'laser_sigeo_classes_official_v5',
+  RESERVATIONS: 'laser_sigeo_reservations_v5',
+  EQUIPMENTS: 'laser_sigeo_equipments_v5',
+  AUDIT: 'laser_sigeo_audit_v5',
+  USERS_LIST: 'laser_sigeo_users_list_v5',
+  MAINTENANCE: 'laser_sigeo_maintenance_v5',
+  SOFTWARE: 'laser_sigeo_software_v5'
 };
 
 export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -174,6 +201,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
   });
 
+  const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.MAINTENANCE);
+    return saved ? JSON.parse(saved) : INITIAL_MAINTENANCE_REQUESTS;
+  });
+
+  const [softwareRequests, setSoftwareRequests] = useState<SoftwareRequest[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SOFTWARE);
+    return saved ? JSON.parse(saved) : INITIAL_SOFTWARE_REQUESTS;
+  });
+
   // Modais
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
@@ -212,6 +249,14 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEYS.USERS_LIST, JSON.stringify(usersList));
   }, [usersList]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MAINTENANCE, JSON.stringify(maintenanceRequests));
+  }, [maintenanceRequests]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SOFTWARE, JSON.stringify(softwareRequests));
+  }, [softwareRequests]);
+
   // Auth methods
   const login = (email: string, password?: string, directUser?: UserAccount): boolean => {
     if (directUser) {
@@ -235,7 +280,6 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return true;
     }
 
-    // Se cadastrou na hora, entra como pendente
     const autoUser: UserAccount = {
       id: `usr-${Date.now()}`,
       name: email.split('@')[0],
@@ -341,7 +385,6 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const openBookingWithPreselection = (labId?: LabId, date?: string, startTime?: string) => {
-    // Qualquer pessoa pode solicitar
     setBookingPreselection({ labId, date, startTime });
     setIsBookingOpen(true);
   };
@@ -470,7 +513,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const approveReservation = (id: string, adminNotes?: string) => {
     if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas técnicos/monitores e coordenadores têm permissão para aprovar reservas.');
+      showToast('Apenas técnicos e coordenadores têm permissão para aprovar reservas.');
       return;
     }
 
@@ -517,7 +560,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const rejectReservation = (id: string, reason: string) => {
     if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas técnicos/monitores e coordenadores têm permissão para recusar reservas.');
+      showToast('Apenas técnicos e coordenadores têm permissão para recusar reservas.');
       return;
     }
 
@@ -693,12 +736,186 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateEquipmentStatus = (id: string, status: Equipment['status']) => {
     if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas técnicos/monitores e coordenadores podem alterar status de equipamentos.');
+      showToast('Apenas técnicos e coordenadores podem alterar status de equipamentos.');
       return;
     }
 
     setEquipments(prev => prev.map(eq => eq.id === id ? { ...eq, status } : eq));
     showToast('Status do equipamento atualizado!');
+  };
+
+  const setEquipmentMaintenance = (equipmentId: string, inMaintenance: boolean, reason?: string, technician?: string) => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas técnicos e coordenadores podem gerenciar máquinas em manutenção.');
+      return;
+    }
+
+    const target = equipments.find(e => e.id === equipmentId);
+    if (!target) return;
+
+    setEquipments(prev => prev.map(eq => {
+      if (eq.id === equipmentId) {
+        return {
+          ...eq,
+          status: inMaintenance ? 'manutencao' : 'disponivel',
+          maintenanceReason: inMaintenance ? (reason || 'Em manutenção preventiva/corretiva') : undefined,
+          maintenanceSince: inMaintenance ? new Date().toISOString() : undefined,
+          assignedTechnician: inMaintenance ? (technician || currentUser?.name) : undefined
+        };
+      }
+      return eq;
+    }));
+
+    logAudit(
+      'equipamento_alterado',
+      target.id,
+      'equipamento',
+      `${target.name} (${target.code})`,
+      inMaintenance 
+        ? `Equipamento colocado EM MANUTENÇÃO por ${currentUser?.name}. Motivo: ${reason || 'Não informado'}.`
+        : `Manutenção concluída e equipamento LIBERADO como DISPONÍVEL por ${currentUser?.name}.`
+    );
+
+    showToast(inMaintenance ? `Equipamento ${target.code} colocado em manutenção.` : `Equipamento ${target.code} liberado para uso!`);
+  };
+
+  // --------------------------------------------------------------------------
+  // CHAMADOS DE MANUTENÇÃO / AVERIGUAÇÃO (Aberto a todos)
+  // --------------------------------------------------------------------------
+  const createMaintenanceRequest = (data: Omit<MaintenanceRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+    const newProtocol = `MAN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const nowIso = new Date().toISOString();
+
+    const newReq: MaintenanceRequest = {
+      ...data,
+      id: `man-${Date.now()}`,
+      protocol: newProtocol,
+      status: 'pendente',
+      createdAt: nowIso,
+      updatedAt: nowIso
+    };
+
+    setMaintenanceRequests(prev => [newReq, ...prev]);
+
+    logAudit(
+      'manutencao_solicitada',
+      newReq.id,
+      'manutencao',
+      `${data.equipmentName} (${newProtocol})`,
+      `Chamado de manutenção aberto por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()}. Urgência: ${data.urgency.toUpperCase()}.`,
+      {
+        name: data.applicantName,
+        email: data.applicantEmail,
+        id: data.applicantId,
+        role: data.applicantRole
+      }
+    );
+
+    showToast(`Chamado de manutenção registrado! Protocolo: ${newProtocol}`);
+    return { success: true, protocol: newProtocol };
+  };
+
+  const updateMaintenanceStatus = (id: string, status: MaintenanceStatus, technicianNotes?: string, assignedTech?: string) => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas técnicos e coordenadores podem atender chamados de manutenção.');
+      return;
+    }
+
+    const target = maintenanceRequests.find(m => m.id === id);
+    if (!target) return;
+
+    setMaintenanceRequests(prev => prev.map(m => {
+      if (m.id === id) {
+        return {
+          ...m,
+          status,
+          technicianNotes: technicianNotes || m.technicianNotes,
+          assignedTechnician: assignedTech || m.assignedTechnician || currentUser?.name,
+          resolvedAt: status === 'resolvido' ? new Date().toISOString() : m.resolvedAt,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return m;
+    }));
+
+    logAudit(
+      'manutencao_atualizada',
+      target.id,
+      'manutencao',
+      `${target.equipmentName} (${target.protocol})`,
+      `Status do chamado atualizado para ${status.toUpperCase()} pelo técnico ${currentUser?.name}. Parecer: "${technicianNotes || 'Sem observações'}"`
+    );
+
+    showToast(`Chamado ${target.protocol} atualizado para ${status.toUpperCase()}`);
+  };
+
+  // --------------------------------------------------------------------------
+  // CHAMADOS DE INSTALAÇÃO DE SOFTWARES (Aberto a todos)
+  // --------------------------------------------------------------------------
+  const createSoftwareRequest = (data: Omit<SoftwareRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+    const newProtocol = `SFT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const nowIso = new Date().toISOString();
+
+    const newReq: SoftwareRequest = {
+      ...data,
+      id: `sft-${Date.now()}`,
+      protocol: newProtocol,
+      status: 'pendente',
+      createdAt: nowIso,
+      updatedAt: nowIso
+    };
+
+    setSoftwareRequests(prev => [newReq, ...prev]);
+
+    logAudit(
+      'software_solicitado',
+      newReq.id,
+      'software',
+      `${data.softwareName} (${newProtocol})`,
+      `Solicitação de instalação de software enviada por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()}.`,
+      {
+        name: data.applicantName,
+        email: data.applicantEmail,
+        id: data.applicantId,
+        role: data.applicantRole
+      }
+    );
+
+    showToast(`Solicitação de software registrada! Protocolo: ${newProtocol}`);
+    return { success: true, protocol: newProtocol };
+  };
+
+  const updateSoftwareStatus = (id: string, status: SoftwareRequestStatus, technicianNotes?: string) => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas técnicos e coordenadores podem homologar instalações de software.');
+      return;
+    }
+
+    const target = softwareRequests.find(s => s.id === id);
+    if (!target) return;
+
+    setSoftwareRequests(prev => prev.map(s => {
+      if (s.id === id) {
+        return {
+          ...s,
+          status,
+          technicianNotes: technicianNotes || s.technicianNotes,
+          installedAt: status === 'instalado' ? new Date().toISOString() : s.installedAt,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return s;
+    }));
+
+    logAudit(
+      'software_atualizado',
+      target.id,
+      'software',
+      `${target.softwareName} (${target.protocol})`,
+      `Status da solicitação de software alterado para ${status.toUpperCase()} pelo técnico ${currentUser?.name}.`
+    );
+
+    showToast(`Solicitação ${target.protocol} atualizada para ${status.toUpperCase()}`);
   };
 
   const getEventsForDate = (dateStr: string, labFilter: 'all' | LabId = selectedLab): ScheduleEvent[] => {
@@ -756,12 +973,22 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return usersList.filter(u => u.status === 'pendente').length;
   };
 
+  const getPendingMaintenanceCount = () => {
+    return maintenanceRequests.filter(m => m.status === 'pendente' || m.status === 'em_averiguacao').length;
+  };
+
+  const getPendingSoftwareCount = () => {
+    return softwareRequests.filter(s => s.status === 'pendente' || s.status === 'em_analise').length;
+  };
+
   const resetToDemoData = () => {
     setFixedClasses(INITIAL_FIXED_CLASSES);
     setReservations(INITIAL_RESERVATIONS);
     setEquipments(INITIAL_EQUIPMENTS);
     setAuditLogs(INITIAL_AUDIT_LOGS);
     setUsersList(INITIAL_USERS);
+    setMaintenanceRequests(INITIAL_MAINTENANCE_REQUESTS);
+    setSoftwareRequests(INITIAL_SOFTWARE_REQUESTS);
     setCurrentUser(null);
     localStorage.clear();
     showToast('Dados restaurados para a grade horária oficial. Modo visitante ativo.');
@@ -780,6 +1007,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         equipments,
         auditLogs,
         usersList,
+        maintenanceRequests,
+        softwareRequests,
         currentUser,
         currentProfile,
         isAuthModalOpen,
@@ -814,9 +1043,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteFixedClass,
         bulkImportPdfClasses,
         updateEquipmentStatus,
+        setEquipmentMaintenance,
+        createMaintenanceRequest,
+        updateMaintenanceStatus,
+        createSoftwareRequest,
+        updateSoftwareStatus,
         getEventsForDate,
         getPendingRequestsCount,
         getPendingUsersCount,
+        getPendingMaintenanceCount,
+        getPendingSoftwareCount,
         resetToDemoData,
         toastMessage,
         showToast

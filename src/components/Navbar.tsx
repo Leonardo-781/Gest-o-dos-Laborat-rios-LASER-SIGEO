@@ -11,8 +11,8 @@ import {
   FileUp,
   FileSpreadsheet,
   LogIn,
-  User as UserIcon,
-  Users
+  Wrench,
+  Laptop
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { ActiveTab } from '../types';
@@ -28,6 +28,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     setIsAuthModalOpen,
     getPendingRequestsCount, 
     getPendingUsersCount,
+    getPendingMaintenanceCount,
+    getPendingSoftwareCount,
     setIsBookingOpen, 
     setIsRulesOpen,
     resetToDemoData 
@@ -35,7 +37,11 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
   const pendingRequests = getPendingRequestsCount();
   const pendingUsers = getPendingUsersCount();
-  const totalPending = pendingRequests + pendingUsers;
+  const totalPendingCoord = pendingRequests + pendingUsers;
+
+  const pendingMaintenance = getPendingMaintenanceCount();
+  const pendingSoftware = getPendingSoftwareCount();
+  const totalPendingTech = pendingMaintenance + pendingSoftware;
 
   // Apenas Coordenadores e Técnicos têm acesso privilegiado
   const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
@@ -49,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-700">Agrimensura & Cartografia</span>
             <span>•</span>
-            <span className="hidden sm:inline">Laboratórios LASER e SIGEO</span>
+            <span className="hidden sm:inline">Laboratórios LASER (1B209) e SIGEO (1B307)</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -103,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           
           {/* Logo */}
           <div 
-            className="flex items-center gap-2.5 cursor-pointer" 
+            className="flex items-center gap-2.5 cursor-pointer flex-shrink-0" 
             onClick={() => setActiveTab('grade')}
           >
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
@@ -119,36 +125,58 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             </div>
           </div>
 
-          {/* Abas */}
+          {/* Abas de Navegação */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             <nav className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 text-xs font-semibold">
               
               {/* 1. Grade de Horários (Pública) */}
               <button
                 onClick={() => setActiveTab('grade')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                   activeTab === 'grade' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
-                <span>Horários das Aulas</span>
+                <span>Horários</span>
               </button>
 
-              {/* 2. Rastreamento de Solicitação (Público) */}
+              {/* 2. Solicitação de Manutenção de Máquinas (Pública) */}
+              <button
+                onClick={() => setActiveTab('solicitar_manutencao')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
+                  activeTab === 'solicitar_manutencao' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Wrench className="w-3.5 h-3.5 text-amber-600" />
+                <span>Manutenção</span>
+              </button>
+
+              {/* 3. Solicitação de Softwares (Pública) */}
+              <button
+                onClick={() => setActiveTab('solicitar_software')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
+                  activeTab === 'solicitar_software' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Laptop className="w-3.5 h-3.5 text-purple-600" />
+                <span>Softwares</span>
+              </button>
+
+              {/* 4. Rastreamento Unificado (Público) */}
               <button
                 onClick={() => setActiveTab('rastrear')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                   activeTab === 'rastrear' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Search className="w-3.5 h-3.5" />
-                <span>Rastrear Pedido</span>
+                <span>Rastrear</span>
               </button>
 
-              {/* 3. Equipamentos (Público para consulta) */}
+              {/* 5. Equipamentos (Público para consulta) */}
               <button
                 onClick={() => setActiveTab('equipamentos')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                   activeTab === 'equipamentos' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -156,13 +184,45 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 <span>Equipamentos</span>
               </button>
 
-              {/* 4. ABAS RESTRITAS APENAS PARA COORDENADORES E TÉCNICOS */}
+              {/* 6. ABAS RESTRITAS EXCLUSIVAS PARA COORDENADORES E TÉCNICOS */}
               {isManager && (
                 <>
-                  {/* Estatísticas (Apenas Coordenadores e Técnicos) */}
+                  {/* Painel Técnico & Máquinas em Manutenção */}
+                  <button
+                    onClick={() => setActiveTab('gestao_manutencao')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer relative whitespace-nowrap ${
+                      activeTab === 'gestao_manutencao' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Área de Manutenção</span>
+                    {totalPendingTech > 0 && (
+                      <span className="flex h-4 px-1 min-w-[16px] items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">
+                        {totalPendingTech}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Painel da Coordenação */}
+                  <button
+                    onClick={() => setActiveTab('admin')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer relative whitespace-nowrap ${
+                      activeTab === 'admin' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Coordenação</span>
+                    {totalPendingCoord > 0 && (
+                      <span className="flex h-4 px-1 min-w-[16px] items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                        {totalPendingCoord}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Estatísticas */}
                   <button
                     onClick={() => setActiveTab('indicadores')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                       activeTab === 'indicadores' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -170,26 +230,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     <span>Estatísticas</span>
                   </button>
 
-                  {/* Painel da Coordenação / Gestão */}
-                  <button
-                    onClick={() => setActiveTab('admin')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer relative ${
-                      activeTab === 'admin' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Coordenação</span>
-                    {totalPending > 0 && (
-                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
-                        {totalPending}
-                      </span>
-                    )}
-                  </button>
-
                   {/* Leitor de Grade PDF */}
                   <button
                     onClick={() => setActiveTab('importar_pdf')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                       activeTab === 'importar_pdf' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -200,7 +244,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                   {/* Trilha de Auditoria */}
                   <button
                     onClick={() => setActiveTab('auditoria')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
                       activeTab === 'auditoria' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -212,7 +256,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             </nav>
 
-            {/* Botão de Solicitação (ABERTO A QUALQUER PESSOA) */}
+            {/* Botão de Solicitação de Horário */}
             <button
               onClick={() => setIsBookingOpen(true)}
               className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer whitespace-nowrap"
