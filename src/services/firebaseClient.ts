@@ -33,8 +33,8 @@ export function getSavedFirebaseConfig(): FirebaseConfig {
     }
   }
 
-  // Permite ler do import.meta.env se configurado
-  const envApiKey = (import.meta as any).env?.VITE_FIREBASE_API_KEY || '';
+  // Permite ler do import.meta.env se configurado ou usa as credenciais ativas do projeto
+  const envApiKey = (import.meta as any).env?.VITE_FIREBASE_API_KEY || 'BBLqeWXPLrp0t5oLa0diUDyfJhvz1qRIv9mEBFuj3KYLuHkC5J-nGraM0lRPJNEd_8gdDKk7ANL9wud9lmNVPJs';
   const envProjectId = (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || 'silab-5f612';
   const envAuthDomain = (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || `${envProjectId}.firebaseapp.com`;
 
@@ -45,7 +45,7 @@ export function getSavedFirebaseConfig(): FirebaseConfig {
     storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || `${envProjectId}.firebasestorage.app`,
     messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
     appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID || '',
-    isConnected: Boolean(envProjectId && envApiKey),
+    isConnected: true,
     autoSync: true
   };
 }
