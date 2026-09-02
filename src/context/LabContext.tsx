@@ -304,11 +304,32 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }, firebaseConfig);
 
+    const unsubEquip = subscribeToFirestoreCollection<Equipment>('equipamentos', (items) => {
+      if (items && items.length > 0) {
+        setEquipments(items);
+      }
+    }, firebaseConfig);
+
+    const unsubUsers = subscribeToFirestoreCollection<UserAccount>('usuarios', (items) => {
+      if (items && items.length > 0) {
+        setUsersList(items);
+      }
+    }, firebaseConfig);
+
+    const unsubAudit = subscribeToFirestoreCollection<AuditLog>('auditoria', (items) => {
+      if (items && items.length > 0) {
+        setAuditLogs(items);
+      }
+    }, firebaseConfig);
+
     return () => {
       unsubRes?.();
       unsubMan?.();
       unsubSoft?.();
       unsubClasses?.();
+      unsubEquip?.();
+      unsubUsers?.();
+      unsubAudit?.();
     };
   }, [firebaseConfig.isConnected, firebaseConfig.autoSync, firebaseConfig.projectId]);
 
@@ -383,6 +404,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const registerUser = (user: UserAccount) => {
     setUsersList(prev => [...prev, user]);
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('usuarios', user, firebaseConfig);
+    }
     showToast(`Cadastro recebido! A conta de ${user.name} aguarda confirmação dos gestores.`);
   };
 
@@ -393,17 +417,22 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const target = usersList.find(u => u.id === userId);
-    setUsersList(prev => prev.map(u => u.id === userId ? { ...u, status: 'ativo' } : u));
-    
-    if (target) {
-      logAudit(
-        'usuario_aprovado',
-        target.id,
-        'usuario',
-        `Conta: ${target.name} (${target.email})`,
-        `Cadastro de usuário APROVADO pelo gestor ${currentUser.name}. Perfil liberado: ${target.role}.`
-      );
+    if (!target) return;
+
+    const updatedUser = { ...target, status: 'ativo' as const };
+    setUsersList(prev => prev.map(u => u.id === userId ? updatedUser : u));
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('usuarios', updatedUser, firebaseConfig);
     }
+    
+    logAudit(
+      'usuario_aprovado',
+      target.id,
+      'usuario',
+      `Conta: ${target.name} (${target.email})`,
+      `Cadastro de usuário APROVADO pelo gestor ${currentUser.name}. Perfil liberado: ${target.role}.`
+    );
 
     showToast(`Conta de ${target?.name} aprovada com sucesso!`);
   };
@@ -416,6 +445,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const target = usersList.find(u => u.id === userId);
     setUsersList(prev => prev.filter(u => u.id !== userId));
+
+    if (firebaseConfig.isConnected) {
+      removeDocFromFirestore('usuarios', userId, firebaseConfig);
+    }
 
     if (target) {
       logAudit(
@@ -463,6 +496,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setAuditLogs(prev => [newLog, ...prev]);
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('auditoria', newLog, firebaseConfig);
+    }
   };
 
   const openBookingWithPreselection = (labId?: LabId, date?: string, startTime?: string) => {
@@ -742,6 +779,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setFixedClasses(prev => [...prev, newClass]);
 
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('disciplinas', newClass, firebaseConfig);
+    }
+
     logAudit(
       'aula_adicionada',
       newClass.id,
@@ -762,7 +803,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = fixedClasses.find(c => c.id === id);
     if (!target) return;
 
-    setFixedClasses(prev => prev.map(c => c.id === id ? { ...c, ...updatedData } : c));
+    const updated = { ...target, ...updatedData };
+    setFixedClasses(prev => prev.map(c => c.id === id ? updated : c));
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('disciplinas', updated, firebaseConfig);
+    }
 
     logAudit(
       'aula_editada',
@@ -792,6 +838,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
     }
     setFixedClasses(prev => prev.filter(c => c.id !== id));
+
+    if (firebaseConfig.isConnected) {
+      removeDocFromFirestore('disciplinas', id, firebaseConfig);
+    }
+
     showToast('Aula removida da grade semestral.');
   };
 
@@ -816,6 +867,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setFixedClasses(prev => [...prev, ...newFixedClasses]);
 
+    if (firebaseConfig.isConnected) {
+      for (const fc of newFixedClasses) {
+        syncDocToFirestore('disciplinas', fc, firebaseConfig);
+      }
+    }
+
     logAudit(
       'pdf_importado',
       `import-${Date.now()}`,
@@ -833,7 +890,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    setEquipments(prev => prev.map(eq => eq.id === id ? { ...eq, status } : eq));
+    setEquipments(prev => prev.map(eq => {
+      if (eq.id === id) {
+        const updated = { ...eq, status };
+        if (firebaseConfig.isConnected) {
+          syncDocToFirestore('equipamentos', updated, firebaseConfig);
+        }
+        return updated;
+      }
+      return eq;
+    }));
     showToast('Status do equipamento atualizado!');
   };
 
@@ -846,18 +912,19 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = equipments.find(e => e.id === equipmentId);
     if (!target) return;
 
-    setEquipments(prev => prev.map(eq => {
-      if (eq.id === equipmentId) {
-        return {
-          ...eq,
-          status: inMaintenance ? 'manutencao' : 'disponivel',
-          maintenanceReason: inMaintenance ? (reason || 'Em manutenção preventiva/corretiva') : undefined,
-          maintenanceSince: inMaintenance ? new Date().toISOString() : undefined,
-          assignedTechnician: inMaintenance ? (technician || currentUser?.name) : undefined
-        };
-      }
-      return eq;
-    }));
+    const updated = {
+      ...target,
+      status: inMaintenance ? ('manutencao' as const) : ('disponivel' as const),
+      maintenanceReason: inMaintenance ? (reason || 'Em manutenção preventiva/corretiva') : undefined,
+      maintenanceSince: inMaintenance ? new Date().toISOString() : undefined,
+      assignedTechnician: inMaintenance ? (technician || currentUser?.name) : undefined
+    };
+
+    setEquipments(prev => prev.map(eq => eq.id === equipmentId ? updated : eq));
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('equipamentos', updated, firebaseConfig);
+    }
 
     logAudit(
       'equipamento_alterado',
