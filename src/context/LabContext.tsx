@@ -11,6 +11,7 @@ import {
   AuditLog,
   ParsedPdfClass,
   CloudConfig,
+  FirebaseConfig,
   ReservationStatus,
   MaintenanceRequest,
   SoftwareRequest,
@@ -33,6 +34,14 @@ import {
   formatDateBR 
 } from '../utils/dateHelpers';
 import { getSavedCloudConfig, saveCloudConfig } from '../services/supabaseClient';
+import { 
+  getSavedFirebaseConfig, 
+  saveFirebaseConfig, 
+  syncDocToFirestore, 
+  removeDocFromFirestore, 
+  subscribeToFirestoreCollection, 
+  seedAllDataToFirebase 
+} from '../services/firebaseClient';
 
 interface CheckAvailabilityResult {
   available: boolean;
@@ -65,9 +74,12 @@ interface LabContextType {
   approveUserAccount: (userId: string) => void;
   rejectUserAccount: (userId: string) => void;
 
-  // Nuvem / Supabase
+  // Nuvem / Firebase (Firestore) & Supabase
   cloudConfig: CloudConfig;
   setCloudConfig: (cfg: CloudConfig) => void;
+  firebaseConfig: FirebaseConfig;
+  setFirebaseConfig: (cfg: FirebaseConfig) => void;
+  pushAllToFirebase: () => Promise<{ success: boolean; count: number; message: string }>;
   
   // Modais de Reserva e Regras
   isBookingOpen: boolean;
@@ -179,6 +191,13 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveCloudConfig(cfg);
   };
 
+  const [firebaseConfig, setFirebaseConfigState] = useState<FirebaseConfig>(getSavedFirebaseConfig());
+
+  const setFirebaseConfig = (cfg: FirebaseConfig) => {
+    setFirebaseConfigState(cfg);
+    saveFirebaseConfig(cfg);
+  };
+
   const currentProfile: UserRole = currentUser ? currentUser.role : 'visitante';
 
   const [fixedClasses, setFixedClasses] = useState<FixedClass[]>(() => {
@@ -256,6 +275,68 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SOFTWARE, JSON.stringify(softwareRequests));
   }, [softwareRequests]);
+
+  // Sincronização em Tempo Real via Firebase Firestore (para apresentação ao vivo)
+  useEffect(() => {
+    if (!firebaseConfig.isConnected || !firebaseConfig.autoSync) return;
+
+    const unsubRes = subscribeToFirestoreCollection<Reservation>('reservas', (items) => {
+      if (items && items.length > 0) {
+        setReservations(items);
+      }
+    }, firebaseConfig);
+
+    const unsubMan = subscribeToFirestoreCollection<MaintenanceRequest>('manutencoes', (items) => {
+      if (items && items.length > 0) {
+        setMaintenanceRequests(items);
+      }
+    }, firebaseConfig);
+
+    const unsubSoft = subscribeToFirestoreCollection<SoftwareRequest>('softwares', (items) => {
+      if (items && items.length > 0) {
+        setSoftwareRequests(items);
+      }
+    }, firebaseConfig);
+
+    const unsubClasses = subscribeToFirestoreCollection<FixedClass>('disciplinas', (items) => {
+      if (items && items.length > 0) {
+        setFixedClasses(items);
+      }
+    }, firebaseConfig);
+
+    return () => {
+      unsubRes?.();
+      unsubMan?.();
+      unsubSoft?.();
+      unsubClasses?.();
+    };
+  }, [firebaseConfig.isConnected, firebaseConfig.autoSync, firebaseConfig.projectId]);
+
+  const pushAllToFirebase = async () => {
+    const res = await seedAllDataToFirebase({
+      fixedClasses,
+      reservations,
+      maintenanceRequests,
+      softwareRequests,
+      equipments,
+      usersList,
+      auditLogs
+    }, firebaseConfig);
+
+    if (res.success) {
+      const updated = {
+        ...firebaseConfig,
+        isConnected: true,
+        lastSyncAt: new Date().toISOString()
+      };
+      setFirebaseConfig(updated);
+      showToast('Dados sincronizados com o Firebase!');
+    } else {
+      showToast(`Aviso: ${res.message}`);
+    }
+
+    return res;
+  };
 
   // Auth methods
   const login = (email: string, password?: string, directUser?: UserAccount): boolean => {
@@ -490,6 +571,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setReservations(prev => [newReservation, ...prev]);
 
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('reservas', newReservation, firebaseConfig);
+    }
+
     logAudit(
       'solicitacao_criada',
       newReservation.id,
@@ -524,7 +609,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setReservations(prev => prev.map(res => {
       if (res.id === id) {
-        return {
+        const updatedRes = {
           ...res,
           status: 'aprovada' as ReservationStatus,
           adminNotes: adminNotes || res.adminNotes,
@@ -537,6 +622,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
           updatedAt: new Date().toISOString()
         };
+        if (firebaseConfig.isConnected) {
+          syncDocToFirestore('reservas', updatedRes, firebaseConfig);
+        }
+        return updatedRes;
       }
       return res;
     }));
@@ -571,7 +660,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setReservations(prev => prev.map(res => {
       if (res.id === id) {
-        return {
+        const updatedRes = {
           ...res,
           status: 'recusada' as ReservationStatus,
           rejectionReason: reason,
@@ -584,6 +673,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
           updatedAt: new Date().toISOString()
         };
+        if (firebaseConfig.isConnected) {
+          syncDocToFirestore('reservas', updatedRes, firebaseConfig);
+        }
+        return updatedRes;
       }
       return res;
     }));
@@ -797,6 +890,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setMaintenanceRequests(prev => [newReq, ...prev]);
 
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('manutencoes', newReq, firebaseConfig);
+    }
+
     logAudit(
       'manutencao_solicitada',
       newReq.id,
@@ -826,7 +923,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setMaintenanceRequests(prev => prev.map(m => {
       if (m.id === id) {
-        return {
+        const updated = {
           ...m,
           status,
           technicianNotes: technicianNotes || m.technicianNotes,
@@ -834,6 +931,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           resolvedAt: status === 'resolvido' ? new Date().toISOString() : m.resolvedAt,
           updatedAt: new Date().toISOString()
         };
+        if (firebaseConfig.isConnected) {
+          syncDocToFirestore('manutencoes', updated, firebaseConfig);
+        }
+        return updated;
       }
       return m;
     }));
@@ -867,6 +968,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setSoftwareRequests(prev => [newReq, ...prev]);
 
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('softwares', newReq, firebaseConfig);
+    }
+
     logAudit(
       'software_solicitado',
       newReq.id,
@@ -896,13 +1001,17 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setSoftwareRequests(prev => prev.map(s => {
       if (s.id === id) {
-        return {
+        const updated = {
           ...s,
           status,
           technicianNotes: technicianNotes || s.technicianNotes,
           installedAt: status === 'instalado' ? new Date().toISOString() : s.installedAt,
           updatedAt: new Date().toISOString()
         };
+        if (firebaseConfig.isConnected) {
+          syncDocToFirestore('softwares', updated, firebaseConfig);
+        }
+        return updated;
       }
       return s;
     }));
@@ -1020,6 +1129,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rejectUserAccount,
         cloudConfig,
         setCloudConfig,
+        firebaseConfig,
+        setFirebaseConfig,
+        pushAllToFirebase,
         isBookingOpen,
         setIsBookingOpen,
         isRulesOpen,

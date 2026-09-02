@@ -21,12 +21,17 @@ import {
   Edit3,
   Users,
   UserCheck,
-  UserX
+  UserX,
+  Flame,
+  Database,
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { LabId, FixedClass } from '../types';
+import { LabId, FixedClass, FirebaseConfig } from '../types';
 import { formatDateBR, formatDateTimeBR, getPurposeBadge } from '../utils/dateHelpers';
 import { testSupabaseConnection } from '../services/supabaseClient';
+import { testFirebaseConnection } from '../services/firebaseClient';
 
 export const AdminPanel: React.FC = () => {
   const { 
@@ -46,6 +51,9 @@ export const AdminPanel: React.FC = () => {
     checkAvailability,
     cloudConfig,
     setCloudConfig,
+    firebaseConfig,
+    setFirebaseConfig,
+    pushAllToFirebase,
     showToast
   } = useLab();
 
@@ -54,6 +62,17 @@ export const AdminPanel: React.FC = () => {
   // Modal de rejeição
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState<string>('');
+
+  // Configuração Firebase
+  const [fbApiKey, setFbApiKey] = useState(firebaseConfig.apiKey || '');
+  const [fbProjectId, setFbProjectId] = useState(firebaseConfig.projectId || '');
+  const [fbAuthDomain, setFbAuthDomain] = useState(firebaseConfig.authDomain || '');
+  const [fbStorageBucket, setFbStorageBucket] = useState(firebaseConfig.storageBucket || '');
+  const [fbAppId, setFbAppId] = useState(firebaseConfig.appId || '');
+  const [fbSnippet, setFbSnippet] = useState('');
+  const [isTestingFb, setIsTestingFb] = useState(false);
+  const [isSeedingFb, setIsSeedingFb] = useState(false);
+  const [fbTestResult, setFbTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Configuração Supabase
   const [sbUrl, setSbUrl] = useState(cloudConfig.supabaseUrl);
@@ -92,6 +111,70 @@ export const AdminPanel: React.FC = () => {
       });
       showToast('Configurações de nuvem salvas!');
     }
+  };
+
+  const handleParseSnippet = (text: string) => {
+    setFbSnippet(text);
+    if (!text.trim()) return;
+
+    const apiKeyMatch = text.match(/apiKey:\s*["']([^"']+)["']/);
+    const projectIdMatch = text.match(/projectId:\s*["']([^"']+)["']/);
+    const authDomainMatch = text.match(/authDomain:\s*["']([^"']+)["']/);
+    const storageBucketMatch = text.match(/storageBucket:\s*["']([^"']+)["']/);
+    const appIdMatch = text.match(/appId:\s*["']([^"']+)["']/);
+
+    if (apiKeyMatch) setFbApiKey(apiKeyMatch[1]);
+    if (projectIdMatch) setFbProjectId(projectIdMatch[1]);
+    if (authDomainMatch) setFbAuthDomain(authDomainMatch[1]);
+    if (storageBucketMatch) setFbStorageBucket(storageBucketMatch[1]);
+    if (appIdMatch) setFbAppId(appIdMatch[1]);
+
+    if (apiKeyMatch || projectIdMatch) {
+      showToast('Campos do Firebase extraídos com sucesso!');
+    }
+  };
+
+  const handleTestFirebase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsTestingFb(true);
+    setFbTestResult(null);
+
+    const cfg: FirebaseConfig = {
+      apiKey: fbApiKey.trim(),
+      projectId: fbProjectId.trim(),
+      authDomain: fbAuthDomain.trim() || `${fbProjectId.trim()}.firebaseapp.com`,
+      storageBucket: fbStorageBucket.trim(),
+      appId: fbAppId.trim(),
+      isConnected: false,
+      autoSync: true
+    };
+
+    const res = await testFirebaseConnection(cfg);
+    setIsTestingFb(false);
+    setFbTestResult(res);
+
+    if (res.success) {
+      setFirebaseConfig({
+        ...cfg,
+        isConnected: true
+      });
+      showToast('Firebase conectado e pronto para a apresentação!');
+    }
+  };
+
+  const handlePushAllToFirebase = async () => {
+    setIsSeedingFb(true);
+    await pushAllToFirebase();
+    setIsSeedingFb(false);
+  };
+
+  const handleDisconnectFirebase = () => {
+    setFirebaseConfig({
+      ...firebaseConfig,
+      isConnected: false
+    });
+    setFbTestResult(null);
+    showToast('Firebase desconectado. Modo Local ativo.');
   };
 
   const dayNames = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
@@ -161,12 +244,15 @@ export const AdminPanel: React.FC = () => {
 
           <button
             onClick={() => setActiveAdminTab('nuvem')}
-            className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeAdminTab === 'nuvem' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600'
             }`}
           >
-            <Cloud className="w-3.5 h-3.5 text-blue-600" />
-            <span>Banco Online</span>
+            <Flame className="w-3.5 h-3.5 text-amber-500" />
+            <span>Banco Online (Firebase)</span>
+            {firebaseConfig.isConnected && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Firebase Conectado"></span>
+            )}
           </button>
 
           <button
@@ -494,66 +580,256 @@ export const AdminPanel: React.FC = () => {
         </div>
       )}
 
-      {/* 4. ABA: BANCO ONLINE */}
+      {/* 4. ABA: BANCO ONLINE (FIREBASE & SUPABASE) */}
       {activeAdminTab === 'nuvem' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4 max-w-2xl">
-          <div>
-            <div className="flex items-center gap-2 text-slate-900 font-bold">
-              <Cloud className="w-5 h-5 text-blue-600" />
-              <span>Conexão com Banco de Dados Online (Supabase / PostgreSQL)</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Conecte seu projeto Supabase para que as aprovações e horários fiquem sincronizados em tempo real na nuvem.
-            </p>
-          </div>
-
-          <form onSubmit={handleTestCloud} className="space-y-3 pt-2">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-600 mb-1">Project URL (Supabase):</label>
-              <input
-                type="url"
-                placeholder="https://xyzcompany.supabase.co"
-                value={sbUrl}
-                onChange={(e) => setSbUrl(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-600 mb-1">Project Anon / Public API Key:</label>
-              <input
-                type="password"
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-                value={sbKey}
-                onChange={(e) => setSbKey(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono"
-              />
-            </div>
-
-            {cloudTestResult && (
-              <div className={`p-3 rounded-xl border text-xs font-semibold ${
-                cloudTestResult.success 
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-                  : 'bg-rose-50 border-rose-200 text-rose-800'
-              }`}>
-                {cloudTestResult.message}
+        <div className="space-y-6 max-w-3xl">
+          
+          {/* CARD PRINCIPAL: GOOGLE FIREBASE FIRESTORE */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500 text-white rounded-2xl shadow-xs">
+                  <Flame className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-base font-bold text-slate-900">Banco de Dados em Nuvem (Google Firebase Firestore)</h4>
+                    <span className="text-[10px] font-bold uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                      Recomendado para Apresentação
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Sincronização em tempo real: qualquer pessoa que abrir o sistema pelo celular ou computador atualiza a tela do apresentador instantaneamente.
+                  </p>
+                </div>
               </div>
-            )}
 
-            <div className="pt-2 flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={isTestingCloud}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
-              >
-                {isTestingCloud ? 'Testando Conexão...' : 'Testar e Salvar Conexão'}
-              </button>
+              {/* Status Badge */}
+              {firebaseConfig.isConnected ? (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-xs font-bold text-emerald-800">Conectado ({firebaseConfig.projectId})</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                  <span className="text-xs font-semibold text-slate-600">Modo Local (LocalStorage)</span>
+                </div>
+              )}
             </div>
-          </form>
 
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-500 leading-relaxed">
-            📁 O script de criação das tabelas PostgreSQL está pronto no arquivo <strong>src/data/supabaseSchema.sql</strong>.
+            {/* Ações quando conectado */}
+            {firebaseConfig.isConnected ? (
+              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-emerald-950 block">Conexão Ativa com o Firestore</span>
+                    <p className="text-[11px] text-emerald-800/90 mt-0.5">
+                      Projeto: <strong>{firebaseConfig.projectId}</strong> • Sincronização em tempo real habilitada.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleDisconnectFirebase}
+                    className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition cursor-pointer"
+                  >
+                    Desconectar
+                  </button>
+                </div>
+
+                <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between gap-3 flex-wrap">
+                  <span className="text-[11px] text-emerald-900 font-medium">
+                    Clique abaixo para enviar todas as aulas, chamados e equipamentos locais para a nuvem:
+                  </span>
+
+                  <button
+                    onClick={handlePushAllToFirebase}
+                    disabled={isSeedingFb}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSeedingFb ? 'animate-spin' : ''}`} />
+                    <span>{isSeedingFb ? 'Sincronizando...' : 'Sincronizar Todas as Tabelas com o Firebase'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Formulário de Configuração do Firebase */}
+            <form onSubmit={handleTestFirebase} className="space-y-4">
+              
+              {/* Opção Rápida de Colar Código */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5">
+                <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Opção Rápida: Cole aqui o bloco do Firebase Console:</span>
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder={`const firebaseConfig = {\n  apiKey: "AIzaSy...",\n  projectId: "seu-projeto-123",\n  authDomain: "seu-projeto.firebaseapp.com"\n};`}
+                  value={fbSnippet}
+                  onChange={(e) => handleParseSnippet(e.target.value)}
+                  className="w-full text-[11px] bg-white border border-slate-300 rounded-xl p-2.5 font-mono focus:ring-2 focus:ring-amber-500"
+                />
+                <span className="text-[10px] text-slate-400 block">
+                  Ao colar o bloco de código gerado no console do Firebase, os campos abaixo são preenchidos automaticamente.
+                </span>
+              </div>
+
+              {/* Campos Manuais */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1">Project ID (Firebase):</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: gestao-laser-sigeo"
+                    value={fbProjectId}
+                    onChange={(e) => setFbProjectId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono font-bold text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1">Web API Key (apiKey):</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="AIzaSy..."
+                    value={fbApiKey}
+                    onChange={(e) => setFbApiKey(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1">Auth Domain (Opcional):</label>
+                  <input
+                    type="text"
+                    placeholder="projeto.firebaseapp.com"
+                    value={fbAuthDomain}
+                    onChange={(e) => setFbAuthDomain(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1">App ID (Opcional):</label>
+                  <input
+                    type="text"
+                    placeholder="1:123456:web:..."
+                    value={fbAppId}
+                    onChange={(e) => setFbAppId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono"
+                  />
+                </div>
+              </div>
+
+              {fbTestResult && (
+                <div className={`p-3 rounded-xl border text-xs font-semibold ${
+                  fbTestResult.success 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                }`}>
+                  {fbTestResult.message}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={isTestingFb}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Flame className="w-4 h-4" />
+                  <span>{isTestingFb ? 'Testando Conexão...' : 'Testar e Conectar ao Firebase'}</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Guia Rápido de 2 Minutos para Criar o Banco */}
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs text-slate-600">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <span>📖 Como criar o banco gratuito no Firebase em 2 minutos:</span>
+                </span>
+                <a 
+                  href="https://console.firebase.google.com" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-blue-600 hover:underline flex items-center gap-1 font-bold text-[11px]"
+                >
+                  <ExternalLink className="w-3 h-3" /> Abrir Firebase Console
+                </a>
+              </div>
+
+              <ol className="list-decimal pl-4 space-y-1 text-[11px] text-slate-600 leading-relaxed">
+                <li>Acesse <strong>console.firebase.google.com</strong> e clique em <strong>Adicionar projeto</strong> (ex: <em>laser-sigeo</em>).</li>
+                <li>No menu lateral, clique em <strong>Firestore Database</strong> &gt; <strong>Criar banco de dados</strong> e marque a opção <strong>Modo de teste (Test mode)</strong> para permitir gravação imediata na apresentação.</li>
+                <li>Clique no ícone de engrenagem ⚙️ (Configurações do projeto) &gt; Role até <strong>Seus aplicativos</strong> &gt; Clique no ícone Web <strong>&lt;/&gt;</strong>.</li>
+                <li>Copie o trecho <code>const firebaseConfig = &#123; ... &#125;</code> e cole no campo acima!</li>
+              </ol>
+            </div>
           </div>
+
+          {/* CARD SECUNDÁRIO: SUPABASE / POSTGRESQL (OPCIONAL) */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <div>
+              <div className="flex items-center gap-2 text-slate-900 font-bold">
+                <Cloud className="w-5 h-5 text-blue-600" />
+                <span>Opção Alternativa: Banco de Dados Relacional (Supabase / PostgreSQL)</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Caso prefira banco SQL relacional para armazenamento permanente em servidor da universidade.
+              </p>
+            </div>
+
+            <form onSubmit={handleTestCloud} className="space-y-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Project URL (Supabase):</label>
+                  <input
+                    type="url"
+                    placeholder="https://xyzcompany.supabase.co"
+                    value={sbUrl}
+                    onChange={(e) => setSbUrl(e.target.value)}
+                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Project Anon API Key:</label>
+                  <input
+                    type="password"
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                    value={sbKey}
+                    onChange={(e) => setSbKey(e.target.value)}
+                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono"
+                  />
+                </div>
+              </div>
+
+              {cloudTestResult && (
+                <div className={`p-3 rounded-xl border text-xs font-semibold ${
+                  cloudTestResult.success 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                }`}>
+                  {cloudTestResult.message}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={isTestingCloud}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
+                >
+                  {isTestingCloud ? 'Testando Conexão...' : 'Testar Conexão Supabase'}
+                </button>
+              </div>
+            </form>
+          </div>
+
         </div>
       )}
 

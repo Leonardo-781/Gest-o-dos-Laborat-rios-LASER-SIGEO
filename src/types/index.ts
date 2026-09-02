@@ -249,6 +249,18 @@ export interface CloudConfig {
   autoSync: boolean;
 }
 
+export interface FirebaseConfig {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId?: string;
+  isConnected: boolean;
+  autoSync: boolean;
+  lastSyncAt?: string;
+}
+
 export type ViewMode = 'week' | 'day' | 'table';
 export type ActiveTab = 
   | 'grade' 

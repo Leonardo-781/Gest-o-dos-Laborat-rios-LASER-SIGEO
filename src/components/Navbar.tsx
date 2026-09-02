@@ -32,6 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     getPendingSoftwareCount,
     setIsBookingOpen, 
     setIsRulesOpen,
+    firebaseConfig,
     resetToDemoData 
   } = useLab();
 
@@ -68,6 +69,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             </button>
 
             <span>•</span>
+
+            {firebaseConfig.isConnected && (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="hidden sm:inline">Nuvem Online</span>
+              </span>
+            )}
 
             {/* Identificação de Acesso */}
             {currentUser ? (
