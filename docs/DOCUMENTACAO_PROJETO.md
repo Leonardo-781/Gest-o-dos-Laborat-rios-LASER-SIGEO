@@ -1,12 +1,12 @@
-# 🏛️ Documento de Visão e Especificação do Projeto
-## Sistema de Gestão dos Laboratórios LASER & SIGEO
+# 🏛️ SILAB • Sistema Integrado de Gestão dos Laboratórios
+## Laboratórios LASER & SIGEO
 **Departamento de Engenharia de Agrimensura e Cartografia**
 
 ---
 
 ## 📌 1. Resumo Executivo
 
-O **Sistema de Gestão dos Laboratórios LASER & SIGEO** é uma solução web integrada desenvolvida sob medida para o Departamento de Engenharia de Agrimensura e Cartografia. O objetivo primordial da plataforma é modernizar, centralizar e desburocratizar o controle de uso, horários de aulas, agendamento de espaços práticos, chamados de manutenção de computadores/instrumentos e demandas de instalação de softwares nos laboratórios:
+O **SILAB (Sistema Integrado de Gestão dos Laboratórios)** é uma solução web desenvolvida sob medida para o Departamento de Engenharia de Agrimensura e Cartografia para unificar a gestão dos laboratórios **LASER** e **SIGEO**. O objetivo primordial da plataforma é modernizar, centralizar e desburocratizar o controle de uso, horários de aulas, agendamento de espaços práticos, chamados de manutenção de computadores/instrumentos e demandas de instalação de softwares nos laboratórios:
 
 * 📐 **LASER:** *Laboratório de Sensoriamento Remoto* (Sala 1B209) — Especializado em escaneamento a laser 3D terrestre/aéreo, GNSS RTK de alta precisão, estações totais robotizadas e fotogrametria.
 * 🛰️ **SIGEO:** *Laboratório de SIG e Geoprocessamento* (Sala 1B307) — Especializado em 24 Workstations de alto desempenho para processamento de nuvens de pontos, SIG (QGIS/ArcGIS), modelagem digital e impressão de cartas em Plotter A0.

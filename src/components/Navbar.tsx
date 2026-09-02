@@ -120,12 +120,14 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             className="flex items-center gap-2.5 cursor-pointer flex-shrink-0" 
             onClick={() => setActiveTab('grade')}
           >
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
-              AG
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs tracking-wider">
+              SI
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm text-slate-900 tracking-tight">Gestão dos Laboratórios</span>
+                <span className="font-extrabold text-sm text-slate-900 tracking-tight">SILAB</span>
+                <span className="text-slate-300 text-xs">•</span>
+                <span className="text-xs text-slate-600 font-semibold hidden md:inline">Gestão dos Labs</span>
                 <span className="px-1.5 py-0.2 bg-blue-50 text-blue-800 font-bold text-[10px] rounded border border-blue-200">LASER</span>
                 <span className="text-slate-300 text-xs">&</span>
                 <span className="px-1.5 py-0.2 bg-emerald-50 text-emerald-800 font-bold text-[10px] rounded border border-emerald-200">SIGEO</span>

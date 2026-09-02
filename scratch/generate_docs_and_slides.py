@@ -34,7 +34,7 @@ def create_pptx(output_path):
     C_TEXT_MUTED = RGBColor(100, 116, 139) # Slate 500
     C_WHITE = RGBColor(255, 255, 255)
 
-    def add_header(slide, title_text, category_text="GESTAO DOS LABORATORIOS LASER & SIGEO"):
+    def add_header(slide, title_text, category_text="SILAB • GESTÃO DOS LABORATÓRIOS LASER & SIGEO"):
         # Top bar line
         top_bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(0.12))
         top_bar.fill.solid()
@@ -77,28 +77,35 @@ def create_pptx(output_path):
     stripe.line.fill.background()
 
     # Title & Subtitle Box
-    tbox = s1.shapes.add_textbox(Inches(1.3), Inches(1.7), Inches(11.0), Inches(3.8))
+    tbox = s1.shapes.add_textbox(Inches(1.3), Inches(1.6), Inches(11.0), Inches(4.2))
     tf1 = tbox.text_frame
     tf1.word_wrap = True
     
     p1 = tf1.paragraphs[0]
-    p1.text = "Gestão dos Laboratórios LASER & SIGEO"
-    p1.font.size = Pt(36)
+    p1.text = "SILAB"
+    p1.font.size = Pt(44)
     p1.font.bold = True
     p1.font.color.rgb = C_WHITE
-    p1.space_after = Pt(12)
+    p1.space_after = Pt(6)
+
+    p1_sub = tf1.add_paragraph()
+    p1_sub.text = "Sistema Integrado de Gestão dos Laboratórios LASER & SIGEO"
+    p1_sub.font.size = Pt(22)
+    p1_sub.font.bold = True
+    p1_sub.font.color.rgb = RGBColor(96, 165, 250)
+    p1_sub.space_after = Pt(14)
 
     p2 = tf1.add_paragraph()
-    p2.text = "Plataforma Integrada de Governança de Horários, Equipamentos de Precisão e Suporte Técnico"
-    p2.font.size = Pt(18)
+    p2.text = "Governança de Horários, Equipamentos de Precisão, Suporte Técnico e Softwares"
+    p2.font.size = Pt(15)
     p2.font.color.rgb = RGBColor(148, 163, 184)
-    p2.space_after = Pt(28)
+    p2.space_after = Pt(22)
 
     p3 = tf1.add_paragraph()
     p3.text = "Departamento de Engenharia de Agrimensura e Cartografia • Sala 1B209 (LASER) | Sala 1B307 (SIGEO) | Sala 1B308 (Técnicos)"
-    p3.font.size = Pt(13)
+    p3.font.size = Pt(12)
     p3.font.bold = True
-    p3.font.color.rgb = RGBColor(96, 165, 250)
+    p3.font.color.rgb = RGBColor(147, 197, 253)
 
     # -------------------------------------------------------------------------
     # SLIDE 2: As Dores e o Cenário Atual
@@ -513,7 +520,7 @@ def create_slides_pdf(output_path):
     story = []
 
     slides_content = [
-        ("Capa", "Gestão dos Laboratórios LASER & SIGEO", "Plataforma Integrada de Governança de Horários, Equipamentos de Precisão e Suporte Técnico\n\nDepartamento de Engenharia de Agrimensura e Cartografia\n• LASER: Sala 1B209\n• SIGEO: Sala 1B307\n• Sala dos Técnicos: Sala 1B308"),
+        ("Capa", "SILAB • Sistema Integrado de Gestão dos Laboratórios", "Plataforma de Governança dos Laboratórios LASER & SIGEO\n\nDepartamento de Engenharia de Agrimensura e Cartografia\n• LASER: Sala 1B209\n• SIGEO: Sala 1B307\n• Sala dos Técnicos: Sala 1B308"),
         ("Diagnóstico", "O Cenário Atual: Gargalos no Uso dos Laboratórios", "• Conflito de Horários & Aulas Sobrepostas: Grade estática afixada em murais físicos.\n• Máquinas Inoperantes sem Registro: Equipamentos descalibrados ou travando sem abertura formal de chamado.\n• Softwares Faltando nas Aulas: Disciplinas que necessitam de plugins (QGIS, Metashape) sem tempo hábil para instalação."),
         ("Solução", "A Proposta: Plataforma Centralizada, Aberta e Inteligente", "• Acesso Democrático: Consulta da grade em tempo real sem necessidade de login prévio.\n• Validação Anti-Choque: Bloqueio automático de pedidos conflitantes com aulas da grade.\n• Rastreamento Unificado: Códigos públicos REQ- (Horários), MAN- (Manutenções) e SFT- (Softwares)."),
         ("Instalações", "Mapeamento Oficial das Instalações Integradas", "• LASER (Sala 1B209): Scanners 3D Laser (Leica BLK360/FARO), GNSS RTK Trimble, Estações Totais e Drones LiDAR.\n• SIGEO (Sala 1B307): 24 Workstations RTX 4070, Servidor Metashape e Plotter Colorida A0.\n• TÉCNICOS (Sala 1B308): Ponto de plantão técnico, calibração de instrumentos, triagem de chamados e suporte presencial."),
@@ -526,7 +533,7 @@ def create_slides_pdf(output_path):
     ]
 
     for i, (cat, title, content) in enumerate(slides_content):
-        story.append(Paragraph(f"SLIDE {i+1} • {cat.upper()} — GESTÃO DOS LABORATÓRIOS LASER & SIGEO", category_style))
+        story.append(Paragraph(f"SLIDE {i+1} • {cat.upper()} — SILAB • LABORATÓRIOS LASER & SIGEO", category_style))
         story.append(Paragraph(title, title_style))
         story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#1D4ED8'), spaceAfter=14))
         
@@ -611,13 +618,13 @@ def create_docs_pdf(output_path):
     story = []
 
     # Capa / Cabeçalho
-    story.append(Paragraph("Documento de Visão e Especificação do Projeto", doc_title_style))
-    story.append(Paragraph("Sistema Integrado de Gestão dos Laboratórios LASER & SIGEO<br/>Departamento de Engenharia de Agrimensura e Cartografia", doc_sub_style))
+    story.append(Paragraph("SILAB • Sistema Integrado de Gestão dos Laboratórios", doc_title_style))
+    story.append(Paragraph("Laboratórios LASER & SIGEO • Departamento de Engenharia de Agrimensura e Cartografia", doc_sub_style))
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#1D4ED8'), spaceAfter=12))
 
     # 1. Resumo Executivo
     story.append(Paragraph("1. Resumo Executivo", h2_style))
-    story.append(Paragraph("O <strong>Sistema de Gestão dos Laboratórios LASER & SIGEO</strong> é uma solução web integrada concebida para centralizar a gestão de horários de aulas práticas, agendamento de espaços, chamados de manutenção de computadores/instrumentos e demandas de instalação de softwares nos laboratórios do Departamento de Engenharia de Agrimensura e Cartografia.", p_style))
+    story.append(Paragraph("O <strong>SILAB (Sistema Integrado de Gestão dos Laboratórios)</strong> é uma solução web integrada concebida para centralizar a gestão de horários de aulas práticas, agendamento de espaços, chamados de manutenção de computadores/instrumentos e demandas de instalação de softwares nos laboratórios LASER e SIGEO do Departamento de Engenharia de Agrimensura e Cartografia.", p_style))
     story.append(Paragraph("• <strong>LASER (Sala 1B209):</strong> Laboratório de Sensoriamento Remoto, Scanners 3D Laser Terrestres (Leica/FARO), GNSS RTK Trimble, Estações Totais e Drones com LiDAR.", bullet_style))
     story.append(Paragraph("• <strong>SIGEO (Sala 1B307):</strong> Laboratório de SIG e Geoprocessamento com 24 Workstations de alta performance (RTX 4070), Servidor Metashape e Plotter A0.", bullet_style))
     story.append(Paragraph("• <strong>Sala dos Técnicos (Sala 1B308):</strong> Ponto de atendimento presencial, calibração, homologação de softwares e apoio técnico.", bullet_style))

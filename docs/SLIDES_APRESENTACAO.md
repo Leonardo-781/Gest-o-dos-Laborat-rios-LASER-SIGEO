@@ -1,6 +1,6 @@
 # 🖥️ Estrutura de Slides & Roteiro de Apresentação
-## Gestão dos Laboratórios LASER & SIGEO
-**Departamento de Engenharia de Agrimensura e Cartografia**
+## SILAB • Sistema Integrado de Gestão dos Laboratórios
+**Laboratórios LASER & SIGEO • Departamento de Engenharia de Agrimensura e Cartografia**
 
 ---
 
@@ -12,13 +12,13 @@
 ---
 
 ## 🎯 SLIDE 1: Capa & Apresentação do Projeto
-* **Título:** Gestão dos Laboratórios LASER & SIGEO
-* **Subtítulo:** Plataforma Integrada de Governança de Horários, Equipamentos de Precisão e Suporte Técnico
+* **Título:** SILAB
+* **Subtítulo:** Sistema Integrado de Gestão dos Laboratórios LASER & SIGEO
 * **Autor / Apresentador:** [Seu Nome / Equipe]
 * **Departamento:** Engenharia de Agrimensura e Cartografia
 
 > 🗣️ **Roteiro de Fala (Pitch Inicial):**  
-> *"Bom dia/boa tarde a todos. Hoje apresentamos o Sistema de Gestão dos Laboratórios LASER e SIGEO. Uma solução desenvolvida sob medida para integrar, organizar e modernizar o agendamento de espaços, a manutenção de equipamentos e o suporte técnico nos principais laboratórios do nosso departamento."*
+> *"Bom dia/boa tarde a todos. Hoje apresentamos o SILAB — Sistema Integrado de Gestão dos Laboratórios LASER e SIGEO. Uma solução desenvolvida sob medida para integrar, organizar e modernizar o agendamento de espaços, a manutenção de equipamentos e o suporte técnico nos principais laboratórios do nosso departamento."*
 
 ---
 

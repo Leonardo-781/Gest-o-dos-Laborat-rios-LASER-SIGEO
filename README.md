@@ -1,6 +1,7 @@
-# Gestão dos Laboratórios LASER & SIGEO 🏛️
+# SILAB • Sistema Integrado de Gestão dos Laboratórios 🏛️
+### Laboratórios LASER & SIGEO • Departamento de Engenharia de Agrimensura e Cartografia
 
-Sistema Integrado de Gestão de Horários, Solicitação de Espaços, Equipamentos de Alta Precisão e Apoio Técnico desenvolvido para o **Departamento de Engenharia de Agrimensura e Cartografia**.
+Sistema Integrado de Gestão de Horários, Solicitação de Espaços, Chamados de Manutenção de Máquinas, Instalação de Softwares e Apoio Técnico.
 
 ---
 
