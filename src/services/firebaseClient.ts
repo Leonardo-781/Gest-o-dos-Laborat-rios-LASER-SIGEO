@@ -35,14 +35,14 @@ export function getSavedFirebaseConfig(): FirebaseConfig {
 
   // Permite ler do import.meta.env se configurado
   const envApiKey = (import.meta as any).env?.VITE_FIREBASE_API_KEY || '';
-  const envProjectId = (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || '';
-  const envAuthDomain = (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || (envProjectId ? `${envProjectId}.firebaseapp.com` : '');
+  const envProjectId = (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || 'silab-5f612';
+  const envAuthDomain = (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || `${envProjectId}.firebaseapp.com`;
 
   return {
     apiKey: envApiKey,
     authDomain: envAuthDomain,
     projectId: envProjectId,
-    storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || '',
+    storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || `${envProjectId}.firebasestorage.app`,
     messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
     appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID || '',
     isConnected: Boolean(envProjectId && envApiKey),

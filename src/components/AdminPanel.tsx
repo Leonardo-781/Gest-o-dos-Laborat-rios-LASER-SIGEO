@@ -65,9 +65,9 @@ export const AdminPanel: React.FC = () => {
 
   // Configuração Firebase
   const [fbApiKey, setFbApiKey] = useState(firebaseConfig.apiKey || '');
-  const [fbProjectId, setFbProjectId] = useState(firebaseConfig.projectId || '');
-  const [fbAuthDomain, setFbAuthDomain] = useState(firebaseConfig.authDomain || '');
-  const [fbStorageBucket, setFbStorageBucket] = useState(firebaseConfig.storageBucket || '');
+  const [fbProjectId, setFbProjectId] = useState(firebaseConfig.projectId || 'silab-5f612');
+  const [fbAuthDomain, setFbAuthDomain] = useState(firebaseConfig.authDomain || 'silab-5f612.firebaseapp.com');
+  const [fbStorageBucket, setFbStorageBucket] = useState(firebaseConfig.storageBucket || 'silab-5f612.firebasestorage.app');
   const [fbAppId, setFbAppId] = useState(firebaseConfig.appId || '');
   const [fbSnippet, setFbSnippet] = useState('');
   const [isTestingFb, setIsTestingFb] = useState(false);
