@@ -6,7 +6,7 @@
 import { EmailNotification, Reservation, MaintenanceRequest, SoftwareRequest } from '../types';
 import { syncDocToFirestore, getFirestoreDB } from './firebaseClient';
 
-const STORAGE_EMAILS_KEY = 'silab_sent_emails_v2';
+const STORAGE_EMAILS_KEY = 'silab_sent_emails_v3';
 
 export function getStoredEmails(): EmailNotification[] {
   try {

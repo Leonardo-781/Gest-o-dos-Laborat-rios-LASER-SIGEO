@@ -428,9 +428,15 @@ export const ScheduleView: React.FC = () => {
                                     {ev.title}
                                   </div>
 
-                                  <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
-                                    {ev.responsible}
-                                  </div>
+                                  {ev.responsible ? (
+                                    <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                                      {ev.responsible}
+                                    </div>
+                                  ) : ev.subtitle ? (
+                                    <div className="text-[10px] text-slate-400 font-medium line-clamp-1 mt-0.5">
+                                      {ev.subtitle}
+                                    </div>
+                                  ) : null}
                                 </div>
                               );
                             })}
@@ -556,7 +562,7 @@ export const ScheduleView: React.FC = () => {
                   <th className="p-2.5">Horário</th>
                   <th className="p-2.5">Lab</th>
                   <th className="p-2.5">Disciplina</th>
-                  <th className="p-2.5">Docente</th>
+                  <th className="p-2.5">Código / Turma</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -570,7 +576,11 @@ export const ScheduleView: React.FC = () => {
                   const filtered = allEvents.filter(({ event: ev }) => {
                     if (!searchFilter) return true;
                     const search = searchFilter.toLowerCase();
-                    return ev.title.toLowerCase().includes(search) || ev.responsible.toLowerCase().includes(search);
+                    return (
+                      ev.title.toLowerCase().includes(search) || 
+                      (ev.responsible && ev.responsible.toLowerCase().includes(search)) ||
+                      (ev.subtitle && ev.subtitle.toLowerCase().includes(search))
+                    );
                   });
 
                   return filtered.map(({ day, event: ev }, idx) => (
@@ -583,7 +593,7 @@ export const ScheduleView: React.FC = () => {
                       <td className="p-2.5 font-mono text-slate-700 font-semibold">{ev.startTime} - {ev.endTime}</td>
                       <td className="p-2.5 font-bold uppercase">{ev.labId}</td>
                       <td className="p-2.5 font-bold text-slate-900">{ev.title}</td>
-                      <td className="p-2.5 text-slate-600">{ev.responsible}</td>
+                      <td className="p-2.5 text-slate-600">{ev.responsible || ev.subtitle || '—'}</td>
                     </tr>
                   ));
                 })()}

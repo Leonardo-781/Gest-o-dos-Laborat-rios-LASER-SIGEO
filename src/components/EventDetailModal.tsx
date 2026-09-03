@@ -119,19 +119,21 @@ export const EventDetailModal: React.FC = () => {
             )}
           </div>
 
-          {/* Docente / Responsável */}
+          {/* Identificação da Turma / Responsável */}
           <div className="border-t border-slate-100 pt-4 space-y-2">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Docente / Responsável</span>
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">Identificação da Turma</span>
             
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 font-bold">
                 <User className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-slate-900">{ev.responsible}</div>
+                <div className="text-xs font-bold text-slate-900">
+                  {ev.responsible || 'Turma Oficial de Graduação'}
+                </div>
                 {fixedClassItem && (
                   <div className="text-[11px] text-slate-500">
-                    Semestre: {fixedClassItem.semester} • Turma: {fixedClassItem.courseCode}
+                    Semestre: {fixedClassItem.semester} • Código: {fixedClassItem.courseCode}
                   </div>
                 )}
                 {fixedClassItem?.notes && (

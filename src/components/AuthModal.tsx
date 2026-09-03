@@ -7,19 +7,13 @@ import {
   User, 
   Lock, 
   Mail, 
-  Sparkles,
-  GraduationCap,
-  Briefcase,
-  Wrench,
-  Building,
-  Info,
-  Eye,
-  EyeOff,
-  AlertCircle
+  Info, 
+  Eye, 
+  EyeOff, 
+  AlertCircle 
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { UserRole, UserAccount } from '../types';
-import { INITIAL_USERS } from '../data/initialData';
 import { validateEmailStrict, hashPassword, generateSalt } from '../services/authSecurity';
 
 export const AuthModal: React.FC = () => {
@@ -133,21 +127,6 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleQuickLogin = async (user: UserAccount) => {
-    await login(user.email, undefined, user);
-    setIsAuthModalOpen(false);
-  };
-
-  const getRoleIcon = (role: UserRole) => {
-    switch (role) {
-      case 'aluno': return <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" />;
-      case 'professor': return <Briefcase className="w-3.5 h-3.5 text-indigo-600 shrink-0" />;
-      case 'tecnico': return <Wrench className="w-3.5 h-3.5 text-amber-600 shrink-0" />;
-      case 'coordenador': return <Building className="w-3.5 h-3.5 text-emerald-600 shrink-0" />;
-      default: return <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />;
-    }
-  };
-
   const getRoleDescription = (role: UserRole) => {
     switch (role) {
       case 'aluno': return 'Visualiza horários e solicita laboratório / apoio técnico';
@@ -157,9 +136,6 @@ export const AuthModal: React.FC = () => {
       default: return 'Visualização pública';
     }
   };
-
-  // Apenas perfis genéricos de teste são exibidos para demonstração rápida (Master Leonardo é estritamente confidencial)
-  const demoUsers = INITIAL_USERS.filter(u => u.id !== 'usr-master');
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in">
@@ -399,41 +375,17 @@ export const AuthModal: React.FC = () => {
                 </form>
               )}
 
-              {/* 3. SEÇÃO DE CONTAS DE DEMONSTRAÇÃO (POSICIONADA ABAIXO DO LOGIN, NUNCA ATRAPALHA) */}
-              <div className="pt-3 border-t border-slate-100 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-blue-500" />
-                  <span>Demonstração Rápida para Avaliadores (1-clique):</span>
-                </span>
-
-                <div className="grid grid-cols-2 gap-1.5">
-                  {demoUsers.map(u => (
-                    <button
-                      key={u.id}
-                      onClick={() => handleQuickLogin(u)}
-                      className="p-2 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 rounded-xl border border-slate-200 text-left transition cursor-pointer group flex items-center gap-2"
-                    >
-                      <div className="p-1 rounded-lg bg-white border border-slate-200 group-hover:border-blue-300 shrink-0">
-                        {getRoleIcon(u.role)}
-                      </div>
-                      <div className="leading-tight min-w-0 flex-1">
-                        <div className="text-[11px] font-bold text-slate-800 group-hover:text-blue-600 truncate">{u.name.split(' ')[0]}</div>
-                        <span className="text-[9px] text-slate-400 uppercase font-semibold block truncate">
-                          {u.roleTitle || u.role}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+              {/* Informação Institucional de Acesso */}
+              <div className="pt-2 border-t border-slate-100">
+                <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-[11px] text-slate-600 space-y-1">
+                  <div className="font-bold text-slate-800 flex items-center gap-1">
+                    <Info className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Acesso Institucional SILAB:</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    Utilize seu e-mail institucional cadastrado e senha para entrar. Novos alunos, docentes e técnicos devem solicitar acesso na aba <strong>Criar Nova Conta</strong> acima.
+                  </p>
                 </div>
-              </div>
-
-              {/* Informação Resumida de Permissões */}
-              <div className="p-2.5 bg-blue-50/60 rounded-xl border border-blue-100 text-[10px] text-slate-500 space-y-0.5">
-                <div className="font-bold text-slate-700 flex items-center gap-1">
-                  <Info className="w-3 h-3 text-blue-600" /> Regra de Acesso:
-                </div>
-                <p>• <strong>Alunos e Professores:</strong> Solicitam reservas e acompanham protocolos.</p>
-                <p>• <strong>Técnicos e Coordenação:</strong> Aprovam pedidos na Sala 1B308.</p>
               </div>
             </>
           )}

@@ -10,8 +10,8 @@ export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
     location: 'Sala 1B209 (Sala dos Técnicos: 1B308)',
     capacity: 25,
     workstationsCount: 6,
-    responsibleTeacher: 'Prof. Dr. Marcos Vinicius R.',
-    responsibleEmail: 'laser.agrimensura@universidade.edu.br',
+    responsibleTeacher: 'Coordenação dos Laboratórios',
+    responsibleEmail: 'laser.agrimensura@ufu.br',
     accentColor: '#2563eb',
     badgeBg: 'bg-blue-50',
     badgeBorder: 'border-blue-200',
@@ -39,8 +39,8 @@ export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
     location: 'Sala 1B307 (Sala dos Técnicos: 1B308)',
     capacity: 35,
     workstationsCount: 24,
-    responsibleTeacher: 'Profa. Dra. Helena S. Guimarães',
-    responsibleEmail: 'sigeo.agrimensura@universidade.edu.br',
+    responsibleTeacher: 'Coordenação dos Laboratórios',
+    responsibleEmail: 'sigeo.agrimensura@ufu.br',
     accentColor: '#16a34a',
     badgeBg: 'bg-emerald-50',
     badgeBorder: 'border-emerald-200',
@@ -63,7 +63,7 @@ export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
 };
 
 export const INITIAL_USERS: UserAccount[] = [
-  // 1. USUÁRIO MASTER / ADMINISTRADOR
+  // 1. USUÁRIO MASTER / ADMINISTRADOR OFICIAL
   {
     id: MASTER_USER_CONFIG.id,
     name: MASTER_USER_CONFIG.name,
@@ -86,113 +86,6 @@ export const INITIAL_USERS: UserAccount[] = [
       canViewAudit: true,
     },
     createdAt: '2026-01-01T08:00:00Z'
-  },
-  {
-    id: 'usr-coord',
-    name: 'Prof. Dr. Marcos Vinicius (Coordenador)',
-    email: 'marcos.vinicius@universidade.edu.br',
-    role: 'coordenador',
-    roleTitle: 'Coordenador de Laboratório',
-    documentId: 'SIAPE 1849201',
-    department: 'Depto. de Engenharia de Agrimensura',
-    status: 'ativo',
-    avatarInitials: 'MV',
-    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
-    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
-    emailVerified: true,
-    permissions: {
-      canViewEmails: false, // Depende de liberação explícita do Master Leonardo Cardoso
-      canApproveBookings: true,
-      canManageTechnicians: false,
-      canManageEquipment: true,
-      canManageSoftware: true,
-      canViewAudit: true,
-    },
-    createdAt: '2026-01-15T08:00:00Z'
-  },
-  {
-    id: 'usr-mon',
-    name: 'Gabriel Alencar (Técnico de Laboratório)',
-    email: 'gabriel.tecnico@universidade.edu.br',
-    role: 'tecnico',
-    roleTitle: 'Técnico de Laboratório (Sala 1B308)',
-    documentId: 'SIAPE 20230012',
-    department: 'Corpo Técnico dos Laboratórios',
-    status: 'ativo',
-    avatarInitials: 'GA',
-    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
-    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
-    emailVerified: true,
-    permissions: {
-      canViewEmails: false, // Depende de liberação explícita do Master Leonardo Cardoso
-      canApproveBookings: true,
-      canManageTechnicians: false,
-      canManageEquipment: true,
-      canManageSoftware: false,
-      canViewAudit: false,
-    },
-    createdAt: '2026-02-01T10:00:00Z'
-  },
-  {
-    id: 'usr-prof',
-    name: 'Profa. Dra. Helena S. Guimarães',
-    email: 'helena.guimaraes@universidade.edu.br',
-    role: 'professor',
-    roleTitle: 'Docente / Pesquisadora',
-    documentId: 'SIAPE 2019482',
-    department: 'Depto. de Engenharia de Agrimensura',
-    status: 'ativo',
-    avatarInitials: 'HG',
-    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
-    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
-    emailVerified: true,
-    permissions: {
-      canViewEmails: false,
-      canApproveBookings: false,
-      canManageTechnicians: false,
-      canManageEquipment: false,
-      canManageSoftware: false,
-      canViewAudit: false,
-    },
-    createdAt: '2026-01-15T08:30:00Z'
-  },
-  {
-    id: 'usr-aluno',
-    name: 'Lucas Ferreira dos Santos',
-    email: 'lucas.santos@aluno.universidade.edu.br',
-    role: 'aluno',
-    roleTitle: 'Aluno de Graduação',
-    documentId: 'Matrícula 2022014589',
-    department: 'Engenharia de Agrimensura',
-    status: 'ativo',
-    avatarInitials: 'LS',
-    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
-    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
-    emailVerified: true,
-    permissions: {
-      canViewEmails: false,
-      canApproveBookings: false,
-      canManageTechnicians: false,
-      canManageEquipment: false,
-      canManageSoftware: false,
-      canViewAudit: false,
-    },
-    createdAt: '2026-02-10T14:00:00Z'
-  },
-  {
-    id: 'usr-pendente-1',
-    name: 'Carolina Mendes (Nova Aluna)',
-    email: 'carolina.mendes@aluno.universidade.edu.br',
-    role: 'aluno',
-    roleTitle: 'Aluna Ingressante',
-    documentId: 'Matrícula 2026004112',
-    department: 'Engenharia de Agrimensura',
-    status: 'pendente',
-    avatarInitials: 'CM',
-    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
-    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
-    emailVerified: false,
-    createdAt: '2026-08-25T19:00:00Z'
   }
 ];
 
@@ -229,7 +122,7 @@ export const INITIAL_EQUIPMENTS: Equipment[] = [
     specs: 'Leitura com prisma até 3500m / Laser 500m',
     maintenanceReason: 'Descalibração no compensador de eixo duplo e verificação de prisma',
     maintenanceSince: '2026-08-28T09:00:00Z',
-    assignedTechnician: 'Gabriel Alencar'
+    assignedTechnician: 'Corpo Técnico (Sala 1B308)'
   },
   {
     id: 'eq-laser-04',
@@ -307,6 +200,7 @@ export const INITIAL_EQUIPMENTS: Equipment[] = [
 
 // ==============================================================================
 // GRADE HORÁRIA OFICIAL EXTRAÍDA DIRETAMENTE DAS FOTOS DO SIGEO E LASER
+// (Apenas disciplinas oficiais das fotos das planilhas, sem docentes inventados)
 // ==============================================================================
 export const INITIAL_FIXED_CLASSES: FixedClass[] = [
   // ----------------------------------------------------------------------------
@@ -320,7 +214,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '12:20',
     courseCode: 'AGR-SIG',
     courseName: 'SIG (Sistemas de Informação Geográfica)',
-    professor: 'Profa. Dra. Helena S. Guimarães',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 08:50 às 12:20 (4 tempos)'
   },
@@ -332,7 +226,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '08:50',
     courseCode: 'AGR-SNF',
     courseName: 'Senso Flores (Sensoriamento Remoto Florestal)',
-    professor: 'Prof. Carlos Eduardo Mendes',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 07:10 às 08:50 (2 tempos)'
   },
@@ -344,7 +238,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '12:20',
     courseCode: 'AGR-DTOP',
     courseName: 'Des. Top (Desenho Topográfico)',
-    professor: 'Prof. Roberto F. Alcantara',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 08:50 às 12:20 (4 tempos)'
   },
@@ -356,7 +250,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '17:40',
     courseCode: 'ENG-FLOR',
     courseName: 'Florestal (Engenharia Florestal)',
-    professor: 'Prof. Convidado - Depto. Florestal',
+    professor: '',
     semester: '2026/1',
     highlightColor: 'bg-rose-100 text-rose-950 border-rose-300',
     notes: 'Turma de Engenharia Florestal (3 tempos à tarde)'
@@ -369,7 +263,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '10:40',
     courseCode: 'AGR-CDIG',
     courseName: 'Cart. Dig (Cartografia Digital)',
-    professor: 'Profa. Dra. Helena S. Guimarães',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 07:10 às 10:40 (4 tempos)'
   },
@@ -381,7 +275,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '08:50',
     courseCode: 'AGR-PDI',
     courseName: 'PDI (Processamento Digital de Imagens)',
-    professor: 'Prof. Carlos Eduardo Mendes',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 07:10 às 08:50 (2 tempos)'
   },
@@ -393,7 +287,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '11:30',
     courseCode: 'ENG-FLOR',
     courseName: 'Florestal (Engenharia Florestal)',
-    professor: 'Prof. Convidado - Depto. Florestal',
+    professor: '',
     semester: '2026/1',
     highlightColor: 'bg-rose-100 text-rose-950 border-rose-300',
     notes: 'Turma de Engenharia Florestal (3 tempos pela manhã)'
@@ -406,7 +300,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '12:20',
     courseCode: 'AGR-PINT',
     courseName: 'Prog. Inter (Programação / Interpretação)',
-    professor: 'Prof. Carlos Eduardo Mendes',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 10:40 às 12:20 (2 tempos)'
   },
@@ -418,7 +312,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '16:50',
     courseCode: 'AGR-IPC',
     courseName: 'IPC (Introdução à Programação de Computadores)',
-    professor: 'Prof. Dr. Marcos Vinicius',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 13:10 às 16:50 (4 tempos à tarde)'
   },
@@ -434,7 +328,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '08:50',
     courseCode: 'AGR-MOD3D',
     courseName: 'Modelagem (Modelagem 3D e Topográfica)',
-    professor: 'Prof. Dr. Marcos Vinicius',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 07:10 às 08:50 (2 tempos)'
   },
@@ -446,7 +340,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '12:20',
     courseCode: 'AGR-SENSO',
     courseName: 'Senso (Sensoriamento Remoto)',
-    professor: 'Profa. Dra. Helena S. Guimarães',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 08:50 às 12:20 (4 tempos)'
   },
@@ -458,7 +352,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '17:40',
     courseCode: 'ENG-AGRO',
     courseName: 'Agronomia (Topografia p/ Agronomia)',
-    professor: 'Prof. Roberto F. Alcantara',
+    professor: '',
     semester: '2026/1',
     highlightColor: 'bg-rose-100 text-rose-950 border-rose-300',
     notes: 'Turma de Agronomia (3 tempos à tarde)'
@@ -471,7 +365,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '10:40',
     courseCode: 'AGR-FDIG',
     courseName: 'Foto. Digital (Fotogrametria Digital)',
-    professor: 'Prof. Dr. Marcos Vinicius',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 07:10 às 10:40 (4 tempos)'
   },
@@ -483,7 +377,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '12:20',
     courseCode: 'AGR-FOTO',
     courseName: 'Foto (Fotogrametria Prática)',
-    professor: 'Prof. Dr. Marcos Vinicius',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 10:40 às 12:20 (2 tempos)'
   },
@@ -495,7 +389,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '16:50',
     courseCode: 'AGR-FDIG2',
     courseName: 'Foto Dig (Fotogrametria Digital Prática)',
-    professor: 'Profa. Dra. Helena S. Guimarães',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 13:10 às 16:50 (4 tempos à tarde)'
   },
@@ -507,7 +401,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '08:50',
     courseCode: 'AGR-PARC',
     courseName: 'Parcelamento (Parcelamento do Solo)',
-    professor: 'Prof. Roberto F. Alcantara',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 07:10 às 08:50 (2 tempos)'
   },
@@ -519,7 +413,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '10:40',
     courseCode: 'AGR-MODGEO',
     courseName: 'Modelagem (Modelagem Geoespacial)',
-    professor: 'Prof. Dr. Marcos Vinicius',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 08:50 às 10:40 (2 tempos)'
   },
@@ -531,7 +425,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '12:20',
     courseCode: 'AGR-FOTO2',
     courseName: 'Foto (Fotogrametria Aplicada)',
-    professor: 'Prof. Dr. Marcos Vinicius',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 10:40 às 12:20 (2 tempos)'
   },
@@ -543,7 +437,7 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '12:20',
     courseCode: 'AGR-HIDRO',
     courseName: 'Hidroclima (Hidroclimatologia)',
-    professor: 'Prof. Carlos Eduardo Mendes',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 08:50 às 12:20 (4 tempos)'
   },
@@ -555,255 +449,14 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     endTime: '10:40',
     courseCode: 'AGR-PLAMB',
     courseName: 'Pla. Amb (Planejamento Ambiental)',
-    professor: 'Profa. Dra. Helena S. Guimarães',
+    professor: '',
     semester: '2026/1',
     notes: 'Aulas práticas das 07:10 às 10:40 (4 tempos)'
   }
 ];
 
-export const INITIAL_RESERVATIONS: Reservation[] = [
-  {
-    id: 'res-001',
-    protocol: 'REQ-2026-0801',
-    labId: 'laser',
-    date: '2026-08-28',
-    startTime: '16:00',
-    endTime: '18:30',
-    purposeType: 'tcc',
-    title: 'Calibração do Scanner 3D para Levantamento de Patrimônio',
-    description: 'Ensaio prático e teste de calibração geométrica das miras de referência para coleta de dados de TCC.',
-    applicantName: 'Lucas Ferreira dos Santos',
-    applicantEmail: 'lucas.santos@aluno.universidade.edu.br',
-    applicantPhone: '(41) 98765-4321',
-    applicantRole: 'aluno',
-    applicantId: '2022014589',
-    supervisorName: 'Prof. Dr. Marcos Vinicius',
-    expectedAttendees: 3,
-    requestedEquipments: ['eq-laser-01'],
-    status: 'aprovada',
-    createdById: 'usr-aluno',
-    reviewedBy: {
-      userId: 'usr-coord',
-      userName: 'Prof. Dr. Marcos Vinicius',
-      userEmail: 'marcos.vinicius@universidade.edu.br',
-      userRole: 'coordenador',
-      actionDate: '2026-08-24T14:30:00Z'
-    },
-    adminNotes: 'Aprovado. O solicitante deve retirar a chave com o técnico Gabriel na Sala 1B308.',
-    createdAt: '2026-08-24T10:15:00Z',
-    updatedAt: '2026-08-24T14:30:00Z'
-  },
-  {
-    id: 'res-002',
-    protocol: 'REQ-2026-0802',
-    labId: 'sigeo',
-    date: '2026-08-27',
-    startTime: '13:10',
-    endTime: '16:00',
-    purposeType: 'iniciacao_cientifica',
-    title: 'Processamento de Mosaico Ortorretificado com Agisoft Metashape',
-    description: 'Renderização em lote de 1.400 fotos de drone do projeto de monitoramento de bacias hidrográficas.',
-    applicantName: 'Mariana Costa Lima',
-    applicantEmail: 'mariana.lima@aluno.universidade.edu.br',
-    applicantPhone: '(41) 99123-8877',
-    applicantRole: 'aluno',
-    applicantId: '2021039811',
-    supervisorName: 'Profa. Dra. Helena S. Guimarães',
-    expectedAttendees: 2,
-    requestedEquipments: ['eq-sigeo-03'],
-    status: 'aprovada',
-    reviewedBy: {
-      userId: 'usr-mon',
-      userName: 'Gabriel Alencar (Técnico de Laboratório)',
-      userEmail: 'gabriel.tecnico@universidade.edu.br',
-      userRole: 'tecnico',
-      actionDate: '2026-08-23T16:20:00Z'
-    },
-    adminNotes: 'Estação de trabalho Servidor 01 liberada para processamento.',
-    createdAt: '2026-08-23T11:00:00Z',
-    updatedAt: '2026-08-23T16:20:00Z'
-  },
-  {
-    id: 'res-003',
-    protocol: 'REQ-2026-0803',
-    labId: 'laser',
-    date: '2026-08-29',
-    startTime: '08:00',
-    endTime: '12:00',
-    purposeType: 'projeto_extensao',
-    title: 'Treinamento de Equipe em Receptores GNSS RTK',
-    description: 'Capacitação prática para bolsistas do projeto de demarcação fundiária e regularização de assentamentos rurais.',
-    applicantName: 'Felipe Augusto Nogueira',
-    applicantEmail: 'felipe.nogueira@universidade.edu.br',
-    applicantPhone: '(41) 99888-1122',
-    applicantRole: 'professor',
-    applicantId: 'SIAPE 1849201',
-    expectedAttendees: 10,
-    requestedEquipments: ['eq-laser-04', 'eq-laser-05'],
-    status: 'pendente',
-    createdAt: '2026-08-25T15:45:00Z',
-    updatedAt: '2026-08-25T15:45:00Z'
-  },
-  {
-    id: 'res-004',
-    protocol: 'REQ-2026-0804',
-    labId: 'sigeo',
-    date: '2026-08-28',
-    startTime: '16:50',
-    endTime: '18:30',
-    purposeType: 'apoio_tecnico',
-    title: 'Plantão Técnico e Oficinas de QGIS',
-    description: 'Atendimento técnico aberto para a comunidade acadêmica sobre introdução ao geoprocessamento em software livre.',
-    applicantName: 'Gabriel Alencar (Técnico de Laboratório)',
-    applicantEmail: 'gabriel.tecnico@universidade.edu.br',
-    applicantPhone: '(41) 98877-6655',
-    applicantRole: 'tecnico',
-    applicantId: 'SIAPE 20230012',
-    expectedAttendees: 20,
-    requestedEquipments: ['eq-sigeo-01'],
-    status: 'pendente',
-    createdAt: '2026-08-25T20:00:00Z',
-    updatedAt: '2026-08-25T20:00:00Z'
-  }
-];
-
-export const INITIAL_AUDIT_LOGS: AuditLog[] = [
-  {
-    id: 'aud-001',
-    actionType: 'solicitacao_aprovada',
-    targetId: 'res-001',
-    targetType: 'reserva',
-    targetTitle: 'Calibração do Scanner 3D (REQ-2026-0801)',
-    performedBy: {
-      id: 'usr-coord',
-      name: 'Prof. Dr. Marcos Vinicius',
-      email: 'marcos.vinicius@universidade.edu.br',
-      role: 'coordenador'
-    },
-    applicantDetails: {
-      name: 'Lucas Ferreira dos Santos',
-      email: 'lucas.santos@aluno.universidade.edu.br',
-      id: '2022014589',
-      role: 'aluno'
-    },
-    details: 'Reserva no Laboratório LASER para 28/08 APROVADA pelo coordenador.',
-    timestamp: '2026-08-24T14:30:00Z'
-  },
-  {
-    id: 'aud-002',
-    actionType: 'solicitacao_aprovada',
-    targetId: 'res-002',
-    targetType: 'reserva',
-    targetTitle: 'Processamento Agisoft Metashape (REQ-2026-0802)',
-    performedBy: {
-      id: 'usr-mon',
-      name: 'Gabriel Alencar (Técnico de Laboratório)',
-      email: 'gabriel.tecnico@universidade.edu.br',
-      role: 'tecnico'
-    },
-    applicantDetails: {
-      name: 'Mariana Costa Lima',
-      email: 'mariana.lima@aluno.universidade.edu.br',
-      id: '2021039811',
-      role: 'aluno'
-    },
-    details: 'Reserva no Laboratório SIGEO para 27/08 APROVADA pelo técnico responsável.',
-    timestamp: '2026-08-23T16:20:00Z'
-  }
-];
-
-export const INITIAL_MAINTENANCE_REQUESTS: MaintenanceRequest[] = [
-  {
-    id: 'man-001',
-    protocol: 'MAN-2026-1041',
-    labId: 'sigeo',
-    equipmentName: 'Workstation 07 (Bancada 07)',
-    urgency: 'alta',
-    problemDescription: 'A máquina desliga sozinha durante a renderização pesada de nuvem de pontos no Metashape. Suspeita de superaquecimento da placa de vídeo (GPU RTX 4070).',
-    applicantName: 'Lucas Ferreira dos Santos',
-    applicantEmail: 'lucas.santos@aluno.universidade.edu.br',
-    applicantRole: 'aluno',
-    applicantId: '2022014589',
-    status: 'em_averiguacao',
-    assignedTechnician: 'Gabriel Alencar',
-    technicianNotes: 'Verificado. Realizada limpeza dos coolers da GPU e troca de pasta térmica. Em fase de testes de benchmark.',
-    createdAt: '2026-08-28T14:30:00Z',
-    updatedAt: '2026-08-29T10:00:00Z'
-  },
-  {
-    id: 'man-002',
-    protocol: 'MAN-2026-1042',
-    labId: 'laser',
-    equipmentName: 'Estação Total Leica TS07 (ET-01)',
-    urgency: 'critica',
-    problemDescription: 'O display apresenta erro no compensador automático ao nivelar a base nivelante no tripé. Não permite iniciar o levantamento de campo.',
-    applicantName: 'Profa. Dra. Helena S. Guimarães',
-    applicantEmail: 'helena.guimaraes@universidade.edu.br',
-    applicantRole: 'professor',
-    applicantId: 'SIAPE 2019482',
-    status: 'em_manutencao',
-    assignedTechnician: 'Gabriel Alencar',
-    technicianNotes: 'Equipamento isolado na Sala 1B308. Enviado chamado para calibração com a assistência técnica autorizada Leica.',
-    createdAt: '2026-08-27T11:15:00Z',
-    updatedAt: '2026-08-28T09:00:00Z'
-  },
-  {
-    id: 'man-003',
-    protocol: 'MAN-2026-1043',
-    labId: 'sigeo',
-    equipmentName: 'Plotter Colorida HP DesignJet T830',
-    urgency: 'media',
-    problemDescription: 'Alinhamento incorreto do rolo de papel A0 e manchas azuis nas impressões de cartas topográficas.',
-    applicantName: 'Carolina Mendes (Nova Aluna)',
-    applicantEmail: 'carolina.mendes@aluno.universidade.edu.br',
-    applicantRole: 'aluno',
-    applicantId: '2026004112',
-    status: 'pendente',
-    createdAt: '2026-08-30T16:20:00Z',
-    updatedAt: '2026-08-30T16:20:00Z'
-  }
-];
-
-export const INITIAL_SOFTWARE_REQUESTS: SoftwareRequest[] = [
-  {
-    id: 'sft-001',
-    protocol: 'SFT-2026-0501',
-    labId: 'sigeo',
-    softwareName: 'CloudCompare',
-    softwareVersion: 'v2.13.2',
-    targetScope: 'todas_maquinas',
-    licenseType: 'open_source_gratuito',
-    downloadUrl: 'https://www.cloudcompare.org/release/',
-    justification: 'Necessário para a disciplina de Modelagem Geoespacial e processamento de nuvens de pontos 3D obtidas com o Laser Scanner do LASER.',
-    courseOrProject: 'AGR-MODGEO / TCC 2026',
-    deadlineDate: '2026-09-05',
-    applicantName: 'Prof. Dr. Marcos Vinicius',
-    applicantEmail: 'marcos.vinicius@universidade.edu.br',
-    applicantRole: 'coordenador',
-    applicantId: 'SIAPE 1849201',
-    status: 'em_instalacao',
-    technicianNotes: 'Pacote homologado e script de instalação em lote (deploy silencioso) preparado para as 24 bancadas.',
-    createdAt: '2026-08-26T15:00:00Z',
-    updatedAt: '2026-08-28T11:00:00Z'
-  },
-  {
-    id: 'sft-002',
-    protocol: 'SFT-2026-0502',
-    labId: 'sigeo',
-    softwareName: 'Plugin Semi-Automatic Classification Plugin (SCP) para QGIS',
-    softwareVersion: 'v8.2.0',
-    targetScope: 'todas_maquinas',
-    licenseType: 'open_source_gratuito',
-    downloadUrl: 'https://plugins.qgis.org/plugins/SemiAutomaticClassificationPlugin/',
-    justification: 'Indispensável para as aulas de PDI (Processamento Digital de Imagens) para classificação supervisionada de imagens Sentinel-2 e Landsat-9.',
-    courseOrProject: 'AGR-PDI',
-    deadlineDate: '2026-09-02',
-    applicantName: 'Profa. Dra. Helena S. Guimarães',
-    applicantEmail: 'helena.guimaraes@universidade.edu.br',
-    applicantRole: 'professor',
-    applicantId: 'SIAPE 2019482',
-    status: 'pendente',
-    createdAt: '2026-08-29T17:40:00Z',
-    updatedAt: '2026-08-29T17:40:00Z'
-  }
-];
+// Dados operacionais limpos (zero registros fictícios)
+export const INITIAL_RESERVATIONS: Reservation[] = [];
+export const INITIAL_AUDIT_LOGS: AuditLog[] = [];
+export const INITIAL_MAINTENANCE_REQUESTS: MaintenanceRequest[] = [];
+export const INITIAL_SOFTWARE_REQUESTS: SoftwareRequest[] = [];

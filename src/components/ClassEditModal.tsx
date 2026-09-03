@@ -202,11 +202,10 @@ export const ClassEditModal: React.FC = () => {
           {/* Professor e Semestre */}
           <div className="grid grid-cols-3 gap-2.5">
             <div className="col-span-2">
-              <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Professor Docente Responsável:</label>
+              <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Docente / Professor (Opcional):</label>
               <input
                 type="text"
-                required
-                placeholder="Profa. Dra. Helena Guimarães"
+                placeholder="Nome do docente (opcional)"
                 value={professor}
                 onChange={(e) => setProfessor(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs focus:ring-1 focus:ring-blue-500"

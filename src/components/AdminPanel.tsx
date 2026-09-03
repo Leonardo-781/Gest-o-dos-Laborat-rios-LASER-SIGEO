@@ -467,7 +467,7 @@ export const AdminPanel: React.FC = () => {
                       </td>
                       <td className="p-3 font-mono text-slate-500">{fc.courseCode}</td>
                       <td className="p-3 font-bold text-slate-900">{fc.courseName}</td>
-                      <td className="p-3">{fc.professor}</td>
+                      <td className="p-3 text-slate-500">{fc.professor || '—'}</td>
                       <td className="p-3">
                         {fc.highlightColor ? (
                           <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px]">

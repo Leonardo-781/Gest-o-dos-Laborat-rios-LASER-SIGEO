@@ -186,13 +186,13 @@ interface LabContextType {
 const LabContext = createContext<LabContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  CLASSES: 'laser_sigeo_classes_official_v5',
-  RESERVATIONS: 'laser_sigeo_reservations_v5',
-  EQUIPMENTS: 'laser_sigeo_equipments_v5',
-  AUDIT: 'laser_sigeo_audit_v5',
-  USERS_LIST: 'laser_sigeo_users_list_v5',
-  MAINTENANCE: 'laser_sigeo_maintenance_v5',
-  SOFTWARE: 'laser_sigeo_software_v5'
+  CLASSES: 'laser_sigeo_classes_official_v6',
+  RESERVATIONS: 'laser_sigeo_reservations_v6',
+  EQUIPMENTS: 'laser_sigeo_equipments_v6',
+  AUDIT: 'laser_sigeo_audit_v6',
+  USERS_LIST: 'laser_sigeo_users_list_v6',
+  MAINTENANCE: 'laser_sigeo_maintenance_v6',
+  SOFTWARE: 'laser_sigeo_software_v6'
 };
 
 export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

@@ -43,7 +43,7 @@ export const MaintenanceManagementView: React.FC = () => {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [selectedEqId, setSelectedEqId] = useState('');
   const [manualReason, setManualReason] = useState('');
-  const [manualTech, setManualTech] = useState(currentUser?.name || 'Gabriel Alencar');
+  const [manualTech, setManualTech] = useState(currentUser?.name || 'Técnico Responsável');
 
   // Modal de Resolução de Chamado de Manutenção
   const [resolvingReq, setResolvingReq] = useState<MaintenanceRequest | null>(null);
@@ -266,7 +266,7 @@ export const MaintenanceManagementView: React.FC = () => {
                       <strong>Motivo:</strong> {eq.maintenanceReason || 'Manutenção preventiva e aferição de rotina.'}
                     </div>
                     <div className="text-[11px] text-amber-800">
-                      <strong>Técnico Responsável:</strong> {eq.assignedTechnician || 'Gabriel Alencar'}
+                      <strong>Técnico Responsável:</strong> {eq.assignedTechnician || 'Corpo Técnico (Sala 1B308)'}
                     </div>
                     {eq.maintenanceSince && (
                       <div className="text-[10px] text-amber-700">
