@@ -76,7 +76,7 @@ export const StatsView: React.FC = () => {
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Fila Pendente</span>
             <div className="text-2xl font-black text-slate-900 mt-0.5">{pendingReservations}</div>
-            <span className="text-[10px] text-amber-600 font-semibold">Aguardando monitor</span>
+            <span className="text-[10px] text-amber-600 font-semibold">Aguardando triagem técnica</span>
           </div>
         </div>
 

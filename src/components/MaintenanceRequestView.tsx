@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, MaintenanceUrgency } from '../types';
+import { validateEmailStrict } from '../services/authSecurity';
 
 export const MaintenanceRequestView: React.FC = () => {
   const { 
@@ -76,6 +77,13 @@ export const MaintenanceRequestView: React.FC = () => {
       return;
     }
 
+    const targetEmail = (applicantEmail || currentUser?.email || '').trim();
+    const emailValidation = validateEmailStrict(targetEmail);
+    if (!emailValidation.isValid) {
+      alert(emailValidation.error || 'E-mail inválido para recebimento das notificações do chamado.');
+      return;
+    }
+
     const res = createMaintenanceRequest({
       labId,
       equipmentId: equipmentId || undefined,
@@ -83,7 +91,7 @@ export const MaintenanceRequestView: React.FC = () => {
       urgency,
       problemDescription,
       applicantName: applicantName || currentUser?.name || 'Solicitante Anônimo',
-      applicantEmail: applicantEmail || currentUser?.email || 'email@universidade.edu.br',
+      applicantEmail: targetEmail,
       applicantPhone,
       applicantRole: currentUser?.role || 'aluno',
       applicantId: applicantId || currentUser?.documentId || 'Não informado'

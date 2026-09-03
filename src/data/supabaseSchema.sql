@@ -5,7 +5,7 @@
 
 -- 1. ENUMS E TIPOS
 CREATE TYPE lab_identifier AS ENUM ('laser', 'sigeo');
-CREATE TYPE user_profile_type AS ENUM ('aluno', 'professor', 'pesquisador', 'monitor', 'admin');
+CREATE TYPE user_profile_type AS ENUM ('aluno', 'professor', 'pesquisador', 'tecnico', 'admin');
 CREATE TYPE reservation_status_type AS ENUM ('pendente', 'aprovada', 'recusada', 'cancelada');
 CREATE TYPE purpose_type_enum AS ENUM (
     'aula_regular', 
@@ -13,7 +13,7 @@ CREATE TYPE purpose_type_enum AS ENUM (
     'tcc', 
     'iniciacao_cientifica', 
     'projeto_extensao', 
-    'monitoria', 
+    'apoio_tecnico', 
     'reuniao', 
     'manutencao'
 );

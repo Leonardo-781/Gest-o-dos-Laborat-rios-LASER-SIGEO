@@ -19,6 +19,7 @@ import {
 import { useLab } from '../context/LabContext';
 import { LabId, PurposeType, UserRole } from '../types';
 import { formatDateBR } from '../utils/dateHelpers';
+import { validateEmailStrict } from '../services/authSecurity';
 
 export const BookingModal: React.FC = () => {
   const { 
@@ -113,13 +114,20 @@ export const BookingModal: React.FC = () => {
       return;
     }
 
+    const targetEmail = (applicantEmail || currentUser?.email || '').trim();
+    const emailValidation = validateEmailStrict(targetEmail);
+    if (!emailValidation.isValid) {
+      alert(emailValidation.error || 'E-mail inválido para recebimento das notificações do SILAB.');
+      return;
+    }
+
     if (!conflictStatus.available) {
       alert('Horário indisponível devido a conflito de ocupação.');
       return;
     }
 
     const fullDescription = needsTechSupport 
-      ? `[SOLICITAÇÃO DE APOIO TÉCNICO DE MONITOR/TÉCNICO INCLUSA]\n${description}`
+      ? `[SOLICITAÇÃO DE APOIO TÉCNICO PRESENCIAL (SALA 1B308) INCLUSA]\n${description}`
       : description;
 
     const res = createReservation({
@@ -131,7 +139,7 @@ export const BookingModal: React.FC = () => {
       title,
       description: fullDescription,
       applicantName: applicantName || currentUser?.name || 'Solicitante',
-      applicantEmail: applicantEmail || currentUser?.email || 'email@universidade.edu.br',
+      applicantEmail: targetEmail,
       applicantPhone,
       applicantRole: applicantRole || currentUser?.role || 'aluno',
       applicantId: applicantId || currentUser?.documentId || 'Pendente',

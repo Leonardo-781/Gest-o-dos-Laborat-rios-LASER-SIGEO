@@ -13,7 +13,8 @@ import {
   LogIn,
   Wrench,
   Laptop,
-  Mail
+  Mail,
+  Crown
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { ActiveTab } from '../types';
@@ -55,12 +56,17 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
       
       {/* Top Bar Institucional */}
-      <div className="border-b border-slate-100 bg-slate-50/80 text-[11px] text-slate-500">
+      <div className="border-b border-slate-100 bg-slate-50/90 text-[11px] text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-700">Agrimensura & Cartografia</span>
+            <span className="font-bold text-slate-800 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+              UFU • Universidade Federal de Uberlândia
+            </span>
             <span>•</span>
-            <span className="hidden sm:inline">Laboratórios LASER (1B209) e SIGEO (1B307)</span>
+            <span className="font-medium text-slate-600">Agrimensura & Cartografia</span>
+            <span className="hidden sm:inline text-slate-300">•</span>
+            <span className="hidden lg:inline text-slate-400">LASER (1B209) • SIGEO (1B307) • Sala dos Técnicos (1B308)</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -106,12 +112,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             {currentUser ? (
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md font-bold transition cursor-pointer border border-blue-200"
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-bold transition cursor-pointer border ${
+                  currentUser.id === 'usr-master'
+                    ? 'bg-gradient-to-r from-amber-50 to-amber-100/80 text-amber-950 border-amber-300 hover:border-amber-400 shadow-2xs'
+                    : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-200'
+                }`}
               >
-                <div className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">
-                  {currentUser.avatarInitials || currentUser.name[0]}
-                </div>
-                <span>{currentUser.name.split(' ')[0]} ({currentUser.role.toUpperCase()})</span>
+                {currentUser.id === 'usr-master' ? (
+                  <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                ) : (
+                  <div className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">
+                    {currentUser.avatarInitials || currentUser.name[0]}
+                  </div>
+                )}
+                <span>
+                  {currentUser.name.split(' ')[0]} {currentUser.id === 'usr-master' ? '(Master / Técnico)' : `(${currentUser.role.toUpperCase()})`}
+                </span>
               </button>
             ) : (
               <button

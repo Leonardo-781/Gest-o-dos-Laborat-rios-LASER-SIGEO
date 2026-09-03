@@ -91,7 +91,7 @@ export const AuditLogView: React.FC = () => {
               </h3>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Registro auditável completo de todas as solicitações, quem solicitou, e o responsável (monitor/coordenador) que aprovou ou recusou.
+              Registro auditável completo de todas as solicitações, quem solicitou, e o responsável (técnico/coordenador) que aprovou ou recusou.
             </p>
           </div>
 

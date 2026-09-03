@@ -3,7 +3,7 @@ import {
   Compass, 
   MapPin, 
   Users, 
-  Monitor, 
+  Laptop, 
   Mail, 
   PlusCircle, 
   Radio, 
@@ -213,7 +213,7 @@ export const LabHeader: React.FC = () => {
               <span>Capacidade: <strong>{labs.sigeo.capacity}</strong></span>
             </div>
             <div className="flex items-center gap-2 text-slate-700 font-medium">
-              <Monitor className="w-4 h-4 text-emerald-600" />
+              <Laptop className="w-4 h-4 text-emerald-600" />
               <span><strong>{labs.sigeo.workstationsCount}</strong> Workstations</span>
             </div>
           </div>

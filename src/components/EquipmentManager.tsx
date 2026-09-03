@@ -147,7 +147,7 @@ export const EquipmentManager: React.FC = () => {
                 )}
               </div>
 
-              {/* Ação de Modificar Status para Monitores / Admin */}
+              {/* Ação de Modificar Status para Técnicos / Coordenação */}
               {canEditStatus ? (
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
                   <span className="text-[11px] font-semibold text-slate-400">Alterar Status:</span>
