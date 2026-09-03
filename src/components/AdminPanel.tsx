@@ -25,10 +25,13 @@ import {
   Flame,
   Database,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Crown,
+  Mail,
+  Key
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { LabId, FixedClass, FirebaseConfig } from '../types';
+import { LabId, FixedClass, FirebaseConfig, UserPermissions } from '../types';
 import { formatDateBR, formatDateTimeBR, getPurposeBadge } from '../utils/dateHelpers';
 import { testSupabaseConnection } from '../services/supabaseClient';
 import { testFirebaseConnection } from '../services/firebaseClient';
@@ -45,6 +48,7 @@ export const AdminPanel: React.FC = () => {
     usersList,
     approveUserAccount,
     rejectUserAccount,
+    updateUserPermissions,
     labs,
     equipments,
     currentUser,
@@ -57,7 +61,8 @@ export const AdminPanel: React.FC = () => {
     showToast
   } = useLab();
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'fila' | 'aulas' | 'usuarios' | 'nuvem' | 'historico'>('fila');
+  const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+  const [activeAdminTab, setActiveAdminTab] = useState<'fila' | 'aulas' | 'usuarios' | 'nuvem' | 'historico' | 'permissoes'>('fila');
   
   // Modal de rejeição
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -263,6 +268,21 @@ export const AdminPanel: React.FC = () => {
           >
             Histórico ({processedRequests.length})
           </button>
+
+          {/* Aba Exclusiva do Master Leonardo Cardoso */}
+          {isMaster && (
+            <button
+              onClick={() => setActiveAdminTab('permissoes')}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                activeAdminTab === 'permissoes'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-xs'
+                  : 'text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold border border-amber-200'
+              }`}
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-700" />
+              <span>Permissões Técnicas (Master)</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -878,6 +898,220 @@ export const AdminPanel: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* 6. ABA EXCLUSIVA DO MASTER: CONTROLE E DELEGAÇÃO DE PERMISSÕES TÉCNICAS */}
+      {activeAdminTab === 'permissoes' && isMaster && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-slate-900 to-blue-950 p-6 rounded-3xl text-white border border-blue-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-amber-500 text-slate-950 rounded-2xl font-black shadow-md">
+                <Crown className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-lg font-bold">Painel de Governança & Delegação Técnica</h4>
+                  <span className="px-2 py-0.5 bg-amber-400 text-slate-950 text-[10px] font-black rounded uppercase">
+                    Exclusivo Leonardo Cardoso
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Como Administrador Master, somente você tem autoridade para declarar e revogar quais técnicos ou usuários possuem permissão para inspecionar a Central de E-mails, aprovar reservas, atender manutenções e homologar softwares.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-right shrink-0 bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-xs">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Usuários no Sistema</div>
+              <div className="text-lg font-black text-amber-400">{usersList.length} cadastrados</div>
+            </div>
+          </div>
+
+          {/* Lista de Usuários e Suas Permissões Granulares */}
+          <div className="space-y-4">
+            {usersList
+              .filter(u => u.id !== 'usr-master' && u.email.toLowerCase() !== 'leonardo.cardoso@ufu.br')
+              .map(u => {
+                const perms = u.permissions || {};
+                return (
+                  <div 
+                    key={u.id}
+                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4 hover:border-slate-300 transition"
+                  >
+                    {/* Cabeçalho do Usuário */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs">
+                          {u.avatarInitials || u.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-slate-900">{u.name}</span>
+                            <span className="px-2 py-0.2 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-800 border border-blue-200">
+                              {u.roleTitle || u.role}
+                            </span>
+                            <span className={`px-2 py-0.2 rounded text-[10px] font-bold uppercase ${
+                              u.status === 'ativo' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {u.status}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-500 font-mono mt-0.5">
+                            {u.email} • {u.documentId}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-400">
+                        {u.department}
+                      </div>
+                    </div>
+
+                    {/* Matriz de Permissões Toggles */}
+                    <div className="space-y-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                        Permissões Atribuídas por Leonardo Cardoso:
+                      </span>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        
+                        {/* 1. Central de E-mails */}
+                        <button
+                          type="button"
+                          onClick={() => updateUserPermissions(u.id, { canViewEmails: !perms.canViewEmails })}
+                          className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-start gap-2.5 ${
+                            perms.canViewEmails 
+                              ? 'bg-blue-50/80 border-blue-300 ring-2 ring-blue-500/20 text-blue-950'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${perms.canViewEmails ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                            <Mail className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold flex items-center justify-between">
+                              <span>Central de E-mails</span>
+                              <span className={`text-[10px] font-black uppercase ${perms.canViewEmails ? 'text-blue-700' : 'text-slate-400'}`}>
+                                {perms.canViewEmails ? 'Liberado ✓' : 'Bloqueado'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                              Permite ler e inspecionar e-mails e protocolos de todos os solicitantes.
+                            </p>
+                          </div>
+                        </button>
+
+                        {/* 2. Homologar Reservas */}
+                        <button
+                          type="button"
+                          onClick={() => updateUserPermissions(u.id, { canApproveBookings: !perms.canApproveBookings })}
+                          className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-start gap-2.5 ${
+                            perms.canApproveBookings 
+                              ? 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500/20 text-emerald-950'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${perms.canApproveBookings ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                            <Calendar className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold flex items-center justify-between">
+                              <span>Aprovar / Recusar Horários</span>
+                              <span className={`text-[10px] font-black uppercase ${perms.canApproveBookings ? 'text-emerald-700' : 'text-slate-400'}`}>
+                                {perms.canApproveBookings ? 'Liberado ✓' : 'Bloqueado'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                              Permite aceitar ou indeferir agendamentos de salas LASER e SIGEO.
+                            </p>
+                          </div>
+                        </button>
+
+                        {/* 3. Atender Manutenções */}
+                        <button
+                          type="button"
+                          onClick={() => updateUserPermissions(u.id, { canManageEquipment: !perms.canManageEquipment })}
+                          className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-start gap-2.5 ${
+                            perms.canManageEquipment 
+                              ? 'bg-purple-50/80 border-purple-300 ring-2 ring-purple-500/20 text-purple-950'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${perms.canManageEquipment ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                            <Cpu className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold flex items-center justify-between">
+                              <span>Gestão de Máquinas</span>
+                              <span className={`text-[10px] font-black uppercase ${perms.canManageEquipment ? 'text-purple-700' : 'text-slate-400'}`}>
+                                {perms.canManageEquipment ? 'Liberado ✓' : 'Bloqueado'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                              Permite intervir em computadores e instrumentos com chamado técnico.
+                            </p>
+                          </div>
+                        </button>
+
+                        {/* 4. Homologar Softwares */}
+                        <button
+                          type="button"
+                          onClick={() => updateUserPermissions(u.id, { canManageSoftware: !perms.canManageSoftware })}
+                          className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-start gap-2.5 ${
+                            perms.canManageSoftware 
+                              ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-500/20 text-indigo-950'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${perms.canManageSoftware ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                            <Layers className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold flex items-center justify-between">
+                              <span>Homologar Softwares</span>
+                              <span className={`text-[10px] font-black uppercase ${perms.canManageSoftware ? 'text-indigo-700' : 'text-slate-400'}`}>
+                                {perms.canManageSoftware ? 'Liberado ✓' : 'Bloqueado'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                              Permite instalar programas solicitados por docentes e alunos nas bancadas.
+                            </p>
+                          </div>
+                        </button>
+
+                        {/* 5. Trilha de Auditoria */}
+                        <button
+                          type="button"
+                          onClick={() => updateUserPermissions(u.id, { canViewAudit: !perms.canViewAudit })}
+                          className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-start gap-2.5 ${
+                            perms.canViewAudit 
+                              ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-500/20 text-amber-950'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${perms.canViewAudit ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold flex items-center justify-between">
+                              <span>Trilha de Auditoria</span>
+                              <span className={`text-[10px] font-black uppercase ${perms.canViewAudit ? 'text-amber-700' : 'text-slate-400'}`}>
+                                {perms.canViewAudit ? 'Liberado ✓' : 'Bloqueado'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                              Permite exportar e auditar todas as ações executadas no SILAB.
+                            </p>
+                          </div>
+                        </button>
+
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       )}
 

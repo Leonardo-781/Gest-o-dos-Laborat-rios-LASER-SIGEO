@@ -152,8 +152,7 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  // Usuário master para destaque
-  const masterUser = INITIAL_USERS.find(u => u.id === 'usr-master');
+  // Apenas perfis genéricos de teste são exibidos para demonstração rápida (Master Leonardo é estritamente confidencial)
   const demoUsers = INITIAL_USERS.filter(u => u.id !== 'usr-master');
 
   return (
@@ -223,46 +222,16 @@ export const AuthModal: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* Usuário Master e Contas de Demonstração */}
+              {/* Contas de Demonstração Rápidas para Teste */}
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Acesso Rápido para Apresentação & Demonstração:</span>
+                    <span>Ambiente de Teste • Contas Rápidas para Avaliação:</span>
                   </span>
                 </div>
 
-                {/* Card de Destaque Master: Leonardo Cardoso */}
-                {masterUser && (
-                  <button
-                    onClick={() => handleQuickLogin(masterUser)}
-                    className="w-full p-3 bg-gradient-to-r from-slate-900 to-blue-950 text-white rounded-xl border border-blue-500/40 text-left hover:border-blue-400 hover:shadow-md transition cursor-pointer group flex items-start gap-3 relative overflow-hidden"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0 mt-0.5">
-                      <Crown className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white group-hover:text-amber-300 transition truncate">
-                          {masterUser.name}
-                        </span>
-                        <span className="px-1.5 py-0.5 text-[9px] font-black bg-amber-400 text-slate-950 rounded uppercase tracking-wider">
-                          Master
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-300 font-mono mt-0.5">
-                        {masterUser.email}
-                      </div>
-                      <div className="text-[10px] text-blue-200 mt-1 flex items-center gap-1">
-                        <span>Perfil: {masterUser.roleTitle || 'Técnico Geral'}</span>
-                        <span>•</span>
-                        <span>Senha: <code className="bg-slate-800 px-1 py-0.2 rounded text-amber-300 font-mono">swordfish781</code></span>
-                      </div>
-                    </div>
-                  </button>
-                )}
-
-                {/* Outras contas de teste */}
+                {/* Contas de teste (Aluno, Professor, Coordenador, Técnico) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {demoUsers.map(u => (
                     <button
@@ -324,7 +293,7 @@ export const AuthModal: React.FC = () => {
                       <input
                         type="text"
                         required
-                        placeholder="leonardo.cardoso@ufu.br"
+                        placeholder="seu.email@ufu.br"
                         value={loginEmail}
                         onChange={(e) => handleLoginEmailChange(e.target.value)}
                         className={`w-full text-xs bg-slate-50 border rounded-xl px-3 py-2.5 pl-9 focus:ring-2 focus:ring-blue-500 ${

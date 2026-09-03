@@ -17,7 +17,8 @@ import {
   SoftwareRequest,
   MaintenanceStatus,
   SoftwareRequestStatus,
-  EmailNotification
+  EmailNotification,
+  UserPermissions
 } from '../types';
 import { 
   LABS_INFO, 
@@ -88,6 +89,7 @@ interface LabContextType {
   registerUser: (user: UserAccount) => void;
   approveUserAccount: (userId: string) => void;
   rejectUserAccount: (userId: string) => void;
+  updateUserPermissions: (userId: string, newPermissions: Partial<UserPermissions>) => void;
 
   // Notificações por E-mail (Envios em tempo real)
   emails: EmailNotification[];
@@ -569,6 +571,51 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     showToast(`Cadastro de ${target?.name} recusado.`);
+  };
+
+  const updateUserPermissions = (userId: string, newPermissions: Partial<UserPermissions>) => {
+    const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+    if (!isMaster) {
+      showToast('Apenas o Administrador Master (Leonardo Cardoso) pode alterar permissões técnicas.');
+      return;
+    }
+
+    let targetUser: UserAccount | undefined;
+
+    setUsersList(prev => prev.map(u => {
+      if (u.id === userId) {
+        const merged: UserAccount = {
+          ...u,
+          permissions: {
+            canViewEmails: false,
+            canApproveBookings: false,
+            canManageTechnicians: false,
+            canManageEquipment: false,
+            canManageSoftware: false,
+            canViewAudit: false,
+            ...u.permissions,
+            ...newPermissions
+          }
+        };
+        targetUser = merged;
+        if (firebaseConfig.isConnected) {
+          syncDocToFirestore('usuarios', merged, firebaseConfig);
+        }
+        return merged;
+      }
+      return u;
+    }));
+
+    if (targetUser) {
+      logAudit(
+        'usuario_aprovado',
+        targetUser.id,
+        'usuario',
+        `${targetUser.name} (${targetUser.role.toUpperCase()})`,
+        `Níveis de permissão atualizados pelo Administrador Master Leonardo Cardoso.`
+      );
+      showToast(`Permissões de ${targetUser.name} atualizadas por Leonardo Cardoso!`);
+    }
   };
 
   const logAudit = (
@@ -1360,6 +1407,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registerUser,
         approveUserAccount,
         rejectUserAccount,
+        updateUserPermissions,
         emails,
         isEmailModalOpen,
         setIsEmailModalOpen,

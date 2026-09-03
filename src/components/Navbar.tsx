@@ -51,6 +51,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
   // Apenas Coordenadores e Técnicos têm acesso privilegiado
   const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
+  const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+  const canViewEmails = isMaster || currentUser?.permissions?.canViewEmails === true;
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
@@ -80,26 +82,29 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             <span>•</span>
 
-            {/* Central de E-mails / Notificações */}
-            <button
-              onClick={() => setIsEmailModalOpen(true)}
-              className="flex items-center gap-1.5 text-slate-600 hover:text-blue-600 font-medium transition cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-slate-200/60"
-              title="Central de E-mails e Notificações Institucionais"
-            >
-              <Mail className="w-3.5 h-3.5 text-slate-500" />
-              <span className="hidden sm:inline font-semibold">E-mails</span>
-              {emails.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
-                  unreadEmailsCount > 0 
-                    ? 'bg-blue-600 text-white animate-pulse' 
-                    : 'bg-slate-200 text-slate-700'
-                }`}>
-                  {emails.length}
-                </span>
-              )}
-            </button>
-
-            <span>•</span>
+            {/* Central de E-mails / Notificações (Apenas Leonardo Cardoso e Técnicos Autorizados) */}
+            {canViewEmails && (
+              <>
+                <button
+                  onClick={() => setIsEmailModalOpen(true)}
+                  className="flex items-center gap-1.5 text-slate-600 hover:text-blue-600 font-medium transition cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-slate-200/60"
+                  title="Central de E-mails e Notificações Institucionais (Acesso Restrito)"
+                >
+                  <Mail className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="hidden sm:inline font-semibold">E-mails</span>
+                  {emails.length > 0 && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                      unreadEmailsCount > 0 
+                        ? 'bg-blue-600 text-white animate-pulse' 
+                        : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {emails.length}
+                    </span>
+                  )}
+                </button>
+                <span>•</span>
+              </>
+            )}
 
             {firebaseConfig.isConnected && (
               <span className="flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">

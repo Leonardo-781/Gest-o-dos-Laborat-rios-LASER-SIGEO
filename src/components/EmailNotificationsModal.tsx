@@ -23,13 +23,42 @@ export const EmailNotificationsModal: React.FC = () => {
     setIsEmailModalOpen, 
     emails, 
     markEmailAsRead, 
-    clearEmails 
+    clearEmails,
+    currentUser
   } = useLab();
 
   const [selectedEmail, setSelectedEmail] = useState<EmailNotification | null>(null);
   const [filterCategory, setFilterCategory] = useState<'all' | 'login' | 'solicitacao_criada' | 'solicitacao_atualizada' | 'manutencao' | 'software'>('all');
 
   if (!isEmailModalOpen) return null;
+
+  const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+  const canViewEmails = isMaster || currentUser?.permissions?.canViewEmails === true;
+
+  if (!canViewEmails) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">Acesso Restrito à Central de E-mails</h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            A visualização das mensagens e notificações institucionais é restrita ao Administrador Master (<strong>Leonardo Cardoso</strong>) e técnicos expressamente autorizados.
+          </p>
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600">
+            Para consultar o andamento da sua solicitação individual, utilize a aba <strong>Rastrear</strong> com seu protocolo (ex: REQ-2026-XXXX).
+          </div>
+          <button
+            onClick={() => setIsEmailModalOpen(false)}
+            className="w-full py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition cursor-pointer"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const filteredEmails = emails.filter(e => {
     if (filterCategory === 'all') return true;

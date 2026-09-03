@@ -34,6 +34,15 @@ export type UserRole = 'visitante' | 'aluno' | 'professor' | 'tecnico' | 'coorde
 
 export type AccountStatus = 'ativo' | 'pendente' | 'bloqueado';
 
+export interface UserPermissions {
+  canViewEmails?: boolean;
+  canApproveBookings?: boolean;
+  canManageTechnicians?: boolean;
+  canManageEquipment?: boolean;
+  canManageSoftware?: boolean;
+  canViewAudit?: boolean;
+}
+
 export interface UserAccount {
   id: string;
   name: string;
@@ -48,6 +57,7 @@ export interface UserAccount {
   passwordSalt?: string;
   emailVerified?: boolean;
   verificationCode?: string;
+  permissions?: UserPermissions;
   createdAt: string;
 }
 

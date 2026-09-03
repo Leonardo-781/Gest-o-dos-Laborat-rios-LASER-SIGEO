@@ -461,6 +461,14 @@ const USERS = [
     passwordSalt: 'silab_ufu_agrimensura_2026',
     passwordHash: '8b9d5c312fb10168d1f73600571343aa58e727694ff8a38ecff61d36d2ad3f6e',
     emailVerified: true,
+    permissions: {
+      canViewEmails: true,
+      canApproveBookings: true,
+      canManageTechnicians: true,
+      canManageEquipment: true,
+      canManageSoftware: true,
+      canViewAudit: true,
+    },
     createdAt: '2026-01-01T08:00:00Z'
   },
   {
@@ -472,6 +480,14 @@ const USERS = [
     department: 'Depto. de Engenharia de Agrimensura',
     status: 'ativo',
     avatarInitials: 'MV',
+    permissions: {
+      canViewEmails: false, // Depende de liberação explícita de Leonardo Cardoso
+      canApproveBookings: true,
+      canManageTechnicians: false,
+      canManageEquipment: true,
+      canManageSoftware: true,
+      canViewAudit: true,
+    },
     createdAt: '2026-01-15T08:00:00Z'
   },
   {
@@ -483,6 +499,14 @@ const USERS = [
     department: 'Corpo Técnico dos Laboratórios',
     status: 'ativo',
     avatarInitials: 'GA',
+    permissions: {
+      canViewEmails: false, // Depende de liberação explícita de Leonardo Cardoso
+      canApproveBookings: true,
+      canManageTechnicians: false,
+      canManageEquipment: true,
+      canManageSoftware: false,
+      canViewAudit: false,
+    },
     createdAt: '2026-02-01T10:00:00Z'
   },
   {
@@ -494,6 +518,14 @@ const USERS = [
     department: 'Depto. de Engenharia de Agrimensura',
     status: 'ativo',
     avatarInitials: 'HG',
+    permissions: {
+      canViewEmails: false,
+      canApproveBookings: false,
+      canManageTechnicians: false,
+      canManageEquipment: false,
+      canManageSoftware: false,
+      canViewAudit: false,
+    },
     createdAt: '2026-01-15T08:30:00Z'
   },
   {
@@ -505,6 +537,14 @@ const USERS = [
     department: 'Engenharia de Agrimensura',
     status: 'ativo',
     avatarInitials: 'LS',
+    permissions: {
+      canViewEmails: false,
+      canApproveBookings: false,
+      canManageTechnicians: false,
+      canManageEquipment: false,
+      canManageSoftware: false,
+      canViewAudit: false,
+    },
     createdAt: '2026-02-10T14:00:00Z'
   },
   {
@@ -516,6 +556,14 @@ const USERS = [
     department: 'Engenharia de Agrimensura',
     status: 'pendente',
     avatarInitials: 'CM',
+    permissions: {
+      canViewEmails: false,
+      canApproveBookings: false,
+      canManageTechnicians: false,
+      canManageEquipment: false,
+      canManageSoftware: false,
+      canViewAudit: false,
+    },
     createdAt: '2026-08-25T19:00:00Z'
   }
 ];

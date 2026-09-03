@@ -77,6 +77,14 @@ export const INITIAL_USERS: UserAccount[] = [
     passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
     passwordHash: MASTER_USER_CONFIG.passwordHash,
     emailVerified: true,
+    permissions: {
+      canViewEmails: true,
+      canApproveBookings: true,
+      canManageTechnicians: true,
+      canManageEquipment: true,
+      canManageSoftware: true,
+      canViewAudit: true,
+    },
     createdAt: '2026-01-01T08:00:00Z'
   },
   {
@@ -92,6 +100,14 @@ export const INITIAL_USERS: UserAccount[] = [
     passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
     passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     emailVerified: true,
+    permissions: {
+      canViewEmails: false, // Depende de liberação explícita do Master Leonardo Cardoso
+      canApproveBookings: true,
+      canManageTechnicians: false,
+      canManageEquipment: true,
+      canManageSoftware: true,
+      canViewAudit: true,
+    },
     createdAt: '2026-01-15T08:00:00Z'
   },
   {
@@ -107,6 +123,14 @@ export const INITIAL_USERS: UserAccount[] = [
     passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
     passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     emailVerified: true,
+    permissions: {
+      canViewEmails: false, // Depende de liberação explícita do Master Leonardo Cardoso
+      canApproveBookings: true,
+      canManageTechnicians: false,
+      canManageEquipment: true,
+      canManageSoftware: false,
+      canViewAudit: false,
+    },
     createdAt: '2026-02-01T10:00:00Z'
   },
   {
@@ -122,6 +146,14 @@ export const INITIAL_USERS: UserAccount[] = [
     passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
     passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     emailVerified: true,
+    permissions: {
+      canViewEmails: false,
+      canApproveBookings: false,
+      canManageTechnicians: false,
+      canManageEquipment: false,
+      canManageSoftware: false,
+      canViewAudit: false,
+    },
     createdAt: '2026-01-15T08:30:00Z'
   },
   {
@@ -137,6 +169,14 @@ export const INITIAL_USERS: UserAccount[] = [
     passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
     passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     emailVerified: true,
+    permissions: {
+      canViewEmails: false,
+      canApproveBookings: false,
+      canManageTechnicians: false,
+      canManageEquipment: false,
+      canManageSoftware: false,
+      canViewAudit: false,
+    },
     createdAt: '2026-02-10T14:00:00Z'
   },
   {
