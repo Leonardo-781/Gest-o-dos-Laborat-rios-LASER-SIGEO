@@ -449,6 +449,21 @@ const EQUIPMENTS = [
 
 const USERS = [
   {
+    id: 'usr-master',
+    name: 'Leonardo Cardoso (Administrador Master)',
+    email: 'leonardo.cardoso@ufu.br',
+    role: 'tecnico',
+    roleTitle: 'Administrador Master / Técnico Geral',
+    documentId: 'SIAPE 781001 / Coordenação Técnica UFU',
+    department: 'Engenharia de Agrimensura e Cartografia - UFU',
+    status: 'ativo',
+    avatarInitials: 'LC',
+    passwordSalt: 'silab_ufu_agrimensura_2026',
+    passwordHash: '8b9d5c312fb10168d1f73600571343aa58e727694ff8a38ecff61d36d2ad3f6e',
+    emailVerified: true,
+    createdAt: '2026-01-01T08:00:00Z'
+  },
+  {
     id: 'usr-coord',
     name: 'Prof. Dr. Marcos Vinicius (Coordenador)',
     email: 'marcos.vinicius@universidade.edu.br',

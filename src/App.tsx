@@ -16,6 +16,7 @@ import { ClassEditModal } from './components/ClassEditModal';
 import { MaintenanceRequestView } from './components/MaintenanceRequestView';
 import { SoftwareRequestView } from './components/SoftwareRequestView';
 import { MaintenanceManagementView } from './components/MaintenanceManagementView';
+import { EmailNotificationsModal } from './components/EmailNotificationsModal';
 import { ActiveTab } from './types';
 
 const AppContent: React.FC = () => {
@@ -95,6 +96,7 @@ const AppContent: React.FC = () => {
       <ClassEditModal />
       <LabRulesModal />
       <AuthModal />
+      <EmailNotificationsModal />
 
       {/* Rodapé Institucional */}
       <footer className="bg-white border-t border-slate-200 text-slate-500 text-xs py-6 mt-10 no-print">

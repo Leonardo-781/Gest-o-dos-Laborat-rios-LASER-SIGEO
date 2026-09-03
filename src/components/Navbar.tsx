@@ -12,7 +12,8 @@ import {
   FileSpreadsheet,
   LogIn,
   Wrench,
-  Laptop
+  Laptop,
+  Mail
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { ActiveTab } from '../types';
@@ -33,7 +34,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     setIsBookingOpen, 
     setIsRulesOpen,
     firebaseConfig,
-    resetToDemoData 
+    resetToDemoData,
+    emails,
+    unreadEmailsCount,
+    setIsEmailModalOpen
   } = useLab();
 
   const pendingRequests = getPendingRequestsCount();
@@ -66,6 +70,27 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             >
               <BookOpen className="w-3 h-3" />
               <span>Normas dos Labs</span>
+            </button>
+
+            <span>•</span>
+
+            {/* Central de E-mails / Notificações */}
+            <button
+              onClick={() => setIsEmailModalOpen(true)}
+              className="flex items-center gap-1.5 text-slate-600 hover:text-blue-600 font-medium transition cursor-pointer px-1.5 py-0.5 rounded-md hover:bg-slate-200/60"
+              title="Central de E-mails e Notificações Institucionais"
+            >
+              <Mail className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden sm:inline font-semibold">E-mails</span>
+              {emails.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                  unreadEmailsCount > 0 
+                    ? 'bg-blue-600 text-white animate-pulse' 
+                    : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {emails.length}
+                </span>
+              )}
             </button>
 
             <span>•</span>

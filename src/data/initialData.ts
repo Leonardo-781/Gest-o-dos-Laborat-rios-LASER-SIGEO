@@ -1,4 +1,5 @@
 import { LabInfo, Equipment, FixedClass, Reservation, UserAccount, AuditLog, MaintenanceRequest, SoftwareRequest } from '../types';
+import { MASTER_USER_CONFIG, DEFAULT_TEST_PASSWORD_HASH, DEFAULT_INSTITUTIONAL_SALT } from '../services/authSecurity';
 
 export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
   laser: {
@@ -62,15 +63,35 @@ export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
 };
 
 export const INITIAL_USERS: UserAccount[] = [
+  // 1. USUÁRIO MASTER / ADMINISTRADOR
+  {
+    id: MASTER_USER_CONFIG.id,
+    name: MASTER_USER_CONFIG.name,
+    email: MASTER_USER_CONFIG.email,
+    role: 'tecnico',
+    roleTitle: MASTER_USER_CONFIG.roleTitle,
+    documentId: MASTER_USER_CONFIG.documentId,
+    department: MASTER_USER_CONFIG.department,
+    status: 'ativo',
+    avatarInitials: 'LC',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: MASTER_USER_CONFIG.passwordHash,
+    emailVerified: true,
+    createdAt: '2026-01-01T08:00:00Z'
+  },
   {
     id: 'usr-coord',
     name: 'Prof. Dr. Marcos Vinicius (Coordenador)',
     email: 'marcos.vinicius@universidade.edu.br',
     role: 'coordenador',
+    roleTitle: 'Coordenador de Laboratório',
     documentId: 'SIAPE 1849201',
     department: 'Depto. de Engenharia de Agrimensura',
     status: 'ativo',
     avatarInitials: 'MV',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
+    emailVerified: true,
     createdAt: '2026-01-15T08:00:00Z'
   },
   {
@@ -78,10 +99,14 @@ export const INITIAL_USERS: UserAccount[] = [
     name: 'Gabriel Alencar (Técnico de Laboratório)',
     email: 'gabriel.tecnico@universidade.edu.br',
     role: 'tecnico',
+    roleTitle: 'Técnico de Laboratório (Sala 1B308)',
     documentId: 'SIAPE 20230012',
     department: 'Corpo Técnico dos Laboratórios',
     status: 'ativo',
     avatarInitials: 'GA',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
+    emailVerified: true,
     createdAt: '2026-02-01T10:00:00Z'
   },
   {
@@ -89,10 +114,14 @@ export const INITIAL_USERS: UserAccount[] = [
     name: 'Profa. Dra. Helena S. Guimarães',
     email: 'helena.guimaraes@universidade.edu.br',
     role: 'professor',
+    roleTitle: 'Docente / Pesquisadora',
     documentId: 'SIAPE 2019482',
     department: 'Depto. de Engenharia de Agrimensura',
     status: 'ativo',
     avatarInitials: 'HG',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
+    emailVerified: true,
     createdAt: '2026-01-15T08:30:00Z'
   },
   {
@@ -100,10 +129,14 @@ export const INITIAL_USERS: UserAccount[] = [
     name: 'Lucas Ferreira dos Santos',
     email: 'lucas.santos@aluno.universidade.edu.br',
     role: 'aluno',
+    roleTitle: 'Aluno de Graduação',
     documentId: 'Matrícula 2022014589',
     department: 'Engenharia de Agrimensura',
     status: 'ativo',
     avatarInitials: 'LS',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
+    emailVerified: true,
     createdAt: '2026-02-10T14:00:00Z'
   },
   {
@@ -111,10 +144,14 @@ export const INITIAL_USERS: UserAccount[] = [
     name: 'Carolina Mendes (Nova Aluna)',
     email: 'carolina.mendes@aluno.universidade.edu.br',
     role: 'aluno',
+    roleTitle: 'Aluna Ingressante',
     documentId: 'Matrícula 2026004112',
     department: 'Engenharia de Agrimensura',
     status: 'pendente',
     avatarInitials: 'CM',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
+    emailVerified: false,
     createdAt: '2026-08-25T19:00:00Z'
   }
 ];

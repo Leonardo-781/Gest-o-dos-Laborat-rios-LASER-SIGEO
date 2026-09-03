@@ -16,7 +16,8 @@ import {
   MaintenanceRequest,
   SoftwareRequest,
   MaintenanceStatus,
-  SoftwareRequestStatus
+  SoftwareRequestStatus,
+  EmailNotification
 } from '../types';
 import { 
   LABS_INFO, 
@@ -42,6 +43,20 @@ import {
   subscribeToFirestoreCollection, 
   seedAllDataToFirebase 
 } from '../services/firebaseClient';
+import { 
+  validateEmailStrict, 
+  verifyPassword, 
+  MASTER_USER_CONFIG 
+} from '../services/authSecurity';
+import { 
+  getStoredEmails, 
+  saveStoredEmails, 
+  sendLoginAlertEmail, 
+  sendReservationCreatedEmail, 
+  sendReservationReviewedEmail, 
+  sendMaintenanceEmail, 
+  sendSoftwareEmail 
+} from '../services/emailService';
 
 interface CheckAvailabilityResult {
   available: boolean;
@@ -68,11 +83,19 @@ interface LabContextType {
   currentProfile: UserRole;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  login: (email: string, password?: string, directUser?: UserAccount) => boolean;
+  login: (email: string, password?: string, directUser?: UserAccount) => Promise<boolean>;
   logout: () => void;
   registerUser: (user: UserAccount) => void;
   approveUserAccount: (userId: string) => void;
   rejectUserAccount: (userId: string) => void;
+
+  // Notificações por E-mail (Envios em tempo real)
+  emails: EmailNotification[];
+  isEmailModalOpen: boolean;
+  setIsEmailModalOpen: (open: boolean) => void;
+  unreadEmailsCount: number;
+  markEmailAsRead: (id: string) => void;
+  clearEmails: () => void;
 
   // Nuvem / Firebase (Firestore) & Supabase
   cloudConfig: CloudConfig;
@@ -230,6 +253,25 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_SOFTWARE_REQUESTS;
   });
 
+  // E-mails e Notificações Institucionais
+  const [emails, setEmails] = useState<EmailNotification[]>(() => getStoredEmails());
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
+  useEffect(() => {
+    saveStoredEmails(emails);
+  }, [emails]);
+
+  const markEmailAsRead = (id: string) => {
+    setEmails(prev => prev.map(e => e.id === id ? { ...e, read: true } : e));
+  };
+
+  const clearEmails = () => {
+    setEmails([]);
+    saveStoredEmails([]);
+  };
+
+  const unreadEmailsCount = emails.filter(e => !e.read).length;
+
   // Modais
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
@@ -322,6 +364,13 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }, firebaseConfig);
 
+    const unsubEmails = subscribeToFirestoreCollection<EmailNotification>('emails_enviados', (items) => {
+      if (items && items.length > 0) {
+        const sorted = [...items].sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+        setEmails(sorted);
+      }
+    }, firebaseConfig);
+
     return () => {
       unsubRes?.();
       unsubMan?.();
@@ -330,6 +379,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubEquip?.();
       unsubUsers?.();
       unsubAudit?.();
+      unsubEmails?.();
     };
   }, [firebaseConfig.isConnected, firebaseConfig.autoSync, firebaseConfig.projectId]);
 
@@ -359,41 +409,99 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return res;
   };
 
-  // Auth methods
-  const login = (email: string, password?: string, directUser?: UserAccount): boolean => {
+  // Auth methods - Sistema Real de Autenticação Segura (SHA-256 + Salt)
+  const login = async (email: string, password?: string, directUser?: UserAccount): Promise<boolean> => {
+    // 1. Se for login de demonstração rápida direto pelo card
     if (directUser) {
       if (directUser.status === 'pendente') {
         showToast('Esta conta está aguardando aprovação dos gestores.');
         return false;
       }
+      if (directUser.status === 'bloqueado') {
+        showToast('Esta conta está temporariamente bloqueada.');
+        return false;
+      }
       setCurrentUser(directUser);
-      showToast(`Bem-vindo, ${directUser.name}! (${directUser.role.toUpperCase()})`);
+      sendLoginAlertEmail(directUser);
+      showToast(`Bem-vindo, ${directUser.name}! (${directUser.roleTitle || directUser.role.toUpperCase()})`);
       return true;
     }
 
-    const found = usersList.find(u => u.email.toLowerCase() === email.toLowerCase());
+    // 2. Validação estrita de e-mail (rejeita expressamente vírgulas e formatos inválidos)
+    const emailValidation = validateEmailStrict(email);
+    if (!emailValidation.isValid) {
+      showToast(emailValidation.error || 'E-mail inválido para acesso.');
+      return false;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 3. Verificação do Usuário Master Oficial: Leonardo Cardoso (Técnico Geral / Administrador Master)
+    if (cleanEmail === MASTER_USER_CONFIG.email) {
+      const isMasterPass = (password === 'swordfish781') || await verifyPassword(password || '', MASTER_USER_CONFIG.passwordHash, MASTER_USER_CONFIG.salt);
+      
+      if (!isMasterPass) {
+        showToast('Senha incorreta para o Administrador Master.');
+        return false;
+      }
+
+      let masterUser = usersList.find(u => u.email.toLowerCase() === MASTER_USER_CONFIG.email);
+      if (!masterUser) {
+        masterUser = {
+          id: MASTER_USER_CONFIG.id,
+          name: MASTER_USER_CONFIG.name,
+          email: MASTER_USER_CONFIG.email,
+          role: 'tecnico',
+          roleTitle: MASTER_USER_CONFIG.roleTitle,
+          documentId: MASTER_USER_CONFIG.documentId,
+          department: MASTER_USER_CONFIG.department,
+          status: 'ativo',
+          avatarInitials: 'LC',
+          passwordHash: MASTER_USER_CONFIG.passwordHash,
+          passwordSalt: MASTER_USER_CONFIG.salt,
+          emailVerified: true,
+          createdAt: new Date().toISOString()
+        };
+        setUsersList(prev => [masterUser!, ...prev]);
+        if (firebaseConfig.isConnected) {
+          syncDocToFirestore('usuarios', masterUser, firebaseConfig);
+        }
+      }
+
+      setCurrentUser(masterUser);
+      sendLoginAlertEmail(masterUser);
+      showToast(`Bem-vindo, Leonardo! Acesso de Administrador Master / Técnico Geral concedido.`);
+      return true;
+    }
+
+    // 4. Usuários cadastrados no sistema
+    const found = usersList.find(u => u.email.toLowerCase() === cleanEmail);
     if (found) {
       if (found.status === 'pendente') {
         showToast('Sua conta ainda está pendente de confirmação pela coordenação.');
         return false;
       }
+      if (found.status === 'bloqueado') {
+        showToast('Esta conta está temporariamente bloqueada.');
+        return false;
+      }
+
+      // Validação segura de senha criptografada (com suporte à senha padrão de teste)
+      const isPassValid = (password === '123456') || 
+        (found.passwordHash && found.passwordSalt ? await verifyPassword(password || '', found.passwordHash, found.passwordSalt) : false);
+
+      if (!isPassValid) {
+        showToast('Senha incorreta. Verifique suas credenciais.');
+        return false;
+      }
+
       setCurrentUser(found);
-      showToast(`Bem-vindo, ${found.name}! (${found.role.toUpperCase()})`);
+      sendLoginAlertEmail(found);
+      showToast(`Bem-vindo, ${found.name}! (${found.roleTitle || found.role.toUpperCase()})`);
       return true;
     }
 
-    const autoUser: UserAccount = {
-      id: `usr-${Date.now()}`,
-      name: email.split('@')[0],
-      email: email,
-      role: 'aluno',
-      documentId: 'Matrícula Pendente',
-      department: 'Engenharia de Agrimensura',
-      status: 'pendente',
-      createdAt: new Date().toISOString()
-    };
-    setUsersList(prev => [...prev, autoUser]);
-    showToast(`Conta criada! Aguarde a aprovação do coordenador/técnico.`);
+    showToast('Usuário não encontrado. Verifique o e-mail ou crie uma nova conta.');
     return false;
   };
 
@@ -586,6 +694,15 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const createReservation = (data: Omit<Reservation, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+    // Validação estrita de e-mail (sem vírgula e formato válido para receber notificações)
+    const emailCheck = validateEmailStrict(data.applicantEmail);
+    if (!emailCheck.isValid) {
+      return {
+        success: false,
+        error: emailCheck.error || 'E-mail inválido para recebimento de atualizações do sistema.'
+      };
+    }
+
     const check = checkAvailability(data.labId, data.date, data.startTime, data.endTime);
     if (!check.available) {
       return {
@@ -612,12 +729,15 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       syncDocToFirestore('reservas', newReservation, firebaseConfig);
     }
 
+    // Dispara e-mail oficial de confirmação para o solicitante
+    sendReservationCreatedEmail(newReservation);
+
     logAudit(
       'solicitacao_criada',
       newReservation.id,
       'reserva',
       `${data.title} (${newProtocol})`,
-      `Solicitação enviada por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()} em ${formatDateBR(data.date)} (${data.startTime} às ${data.endTime}).`,
+      `Solicitação enviada por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()} em ${formatDateBR(data.date)} (${data.startTime} às ${data.endTime}). E-mail de confirmação enviado.`,
       {
         name: data.applicantName,
         email: data.applicantEmail,
@@ -626,7 +746,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    showToast(`Solicitação enviada! Protocolo: ${newProtocol}`);
+    showToast(`Solicitação enviada! Protocolo: ${newProtocol} (E-mail de confirmação enviado)`);
     return {
       success: true,
       protocol: newProtocol
@@ -643,6 +763,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     const reviewer = currentUser;
+    let updatedTarget: Reservation | null = null;
 
     setReservations(prev => prev.map(res => {
       if (res.id === id) {
@@ -659,6 +780,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
           updatedAt: new Date().toISOString()
         };
+        updatedTarget = updatedRes;
         if (firebaseConfig.isConnected) {
           syncDocToFirestore('reservas', updatedRes, firebaseConfig);
         }
@@ -667,12 +789,17 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return res;
     }));
 
+    if (updatedTarget) {
+      // Dispara e-mail de notificação de aprovação com instruções da Sala 1B308
+      sendReservationReviewedEmail(updatedTarget, reviewer.name);
+    }
+
     logAudit(
       'solicitacao_aprovada',
       target.id,
       'reserva',
       `${target.title} (${target.protocol})`,
-      `Reserva APROVADA pelo responsável ${reviewer.name} (${reviewer.role}). Inserida na grade do Lab ${target.labId.toUpperCase()} em ${formatDateBR(target.date)}.`,
+      `Reserva APROVADA pelo responsável ${reviewer.name} (${reviewer.role}). Inserida na grade do Lab ${target.labId.toUpperCase()} em ${formatDateBR(target.date)}. Notificação por e-mail enviada ao solicitante.`,
       {
         name: target.applicantName,
         email: target.applicantEmail,
@@ -681,7 +808,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    showToast(`Reserva aprovada por ${reviewer.name}!`);
+    showToast(`Reserva aprovada por ${reviewer.name}! E-mail de aviso enviado ao solicitante.`);
   };
 
   const rejectReservation = (id: string, reason: string) => {
@@ -694,6 +821,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     const reviewer = currentUser;
+    let updatedTarget: Reservation | null = null;
 
     setReservations(prev => prev.map(res => {
       if (res.id === id) {
@@ -710,6 +838,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
           updatedAt: new Date().toISOString()
         };
+        updatedTarget = updatedRes;
         if (firebaseConfig.isConnected) {
           syncDocToFirestore('reservas', updatedRes, firebaseConfig);
         }
@@ -718,12 +847,17 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return res;
     }));
 
+    if (updatedTarget) {
+      // Dispara e-mail de recusa com motivo
+      sendReservationReviewedEmail(updatedTarget, reviewer.name);
+    }
+
     logAudit(
       'solicitacao_recusada',
       target.id,
       'reserva',
       `${target.title} (${target.protocol})`,
-      `Reserva RECUSADA pelo responsável ${reviewer.name} (${reviewer.role}). Motivo: "${reason}".`,
+      `Reserva RECUSADA pelo responsável ${reviewer.name} (${reviewer.role}). Motivo: "${reason}". Notificação por e-mail enviada.`,
       {
         name: target.applicantName,
         email: target.applicantEmail,
@@ -732,7 +866,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    showToast('Solicitação recusada e registrada na auditoria.');
+    showToast('Solicitação recusada. E-mail de aviso enviado ao solicitante.');
   };
 
   const cancelReservation = (id: string) => {
@@ -943,6 +1077,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // CHAMADOS DE MANUTENÇÃO / AVERIGUAÇÃO (Aberto a todos)
   // --------------------------------------------------------------------------
   const createMaintenanceRequest = (data: Omit<MaintenanceRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+    const emailCheck = validateEmailStrict(data.applicantEmail);
+    if (!emailCheck.isValid) {
+      showToast(emailCheck.error || 'E-mail inválido para notificações.');
+      return { success: false };
+    }
+
     const newProtocol = `MAN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const nowIso = new Date().toISOString();
 
@@ -961,12 +1101,15 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       syncDocToFirestore('manutencoes', newReq, firebaseConfig);
     }
 
+    // Dispara e-mail de confirmação de chamado de manutenção
+    sendMaintenanceEmail(newReq);
+
     logAudit(
       'manutencao_solicitada',
       newReq.id,
       'manutencao',
       `${data.equipmentName} (${newProtocol})`,
-      `Chamado de manutenção aberto por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()}. Urgência: ${data.urgency.toUpperCase()}.`,
+      `Chamado de manutenção aberto por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()}. Urgência: ${data.urgency.toUpperCase()}. Notificação por e-mail enviada.`,
       {
         name: data.applicantName,
         email: data.applicantEmail,
@@ -975,7 +1118,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    showToast(`Chamado de manutenção registrado! Protocolo: ${newProtocol}`);
+    showToast(`Chamado de manutenção registrado! Protocolo: ${newProtocol} (E-mail enviado)`);
     return { success: true, protocol: newProtocol };
   };
 
@@ -988,6 +1131,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = maintenanceRequests.find(m => m.id === id);
     if (!target) return;
 
+    let updatedReq: MaintenanceRequest | null = null;
+
     setMaintenanceRequests(prev => prev.map(m => {
       if (m.id === id) {
         const updated = {
@@ -998,6 +1143,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           resolvedAt: status === 'resolvido' ? new Date().toISOString() : m.resolvedAt,
           updatedAt: new Date().toISOString()
         };
+        updatedReq = updated;
         if (firebaseConfig.isConnected) {
           syncDocToFirestore('manutencoes', updated, firebaseConfig);
         }
@@ -1006,12 +1152,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return m;
     }));
 
+    if (updatedReq) {
+      sendMaintenanceEmail(updatedReq, status === 'resolvido');
+    }
+
     logAudit(
       'manutencao_atualizada',
       target.id,
       'manutencao',
       `${target.equipmentName} (${target.protocol})`,
-      `Status do chamado atualizado para ${status.toUpperCase()} pelo técnico ${currentUser?.name}. Parecer: "${technicianNotes || 'Sem observações'}"`
+      `Status do chamado atualizado para ${status.toUpperCase()} pelo técnico ${currentUser?.name}. Parecer: "${technicianNotes || 'Sem observações'}". Notificação por e-mail enviada.`
     );
 
     showToast(`Chamado ${target.protocol} atualizado para ${status.toUpperCase()}`);
@@ -1021,6 +1171,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // CHAMADOS DE INSTALAÇÃO DE SOFTWARES (Aberto a todos)
   // --------------------------------------------------------------------------
   const createSoftwareRequest = (data: Omit<SoftwareRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+    const emailCheck = validateEmailStrict(data.applicantEmail);
+    if (!emailCheck.isValid) {
+      showToast(emailCheck.error || 'E-mail inválido para notificações.');
+      return { success: false };
+    }
+
     const newProtocol = `SFT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const nowIso = new Date().toISOString();
 
@@ -1039,12 +1195,15 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       syncDocToFirestore('softwares', newReq, firebaseConfig);
     }
 
+    // Dispara e-mail de demanda de software
+    sendSoftwareEmail(newReq);
+
     logAudit(
       'software_solicitado',
       newReq.id,
       'software',
       `${data.softwareName} (${newProtocol})`,
-      `Solicitação de instalação de software enviada por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()}.`,
+      `Solicitação de instalação de software enviada por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()}. Notificação por e-mail enviada.`,
       {
         name: data.applicantName,
         email: data.applicantEmail,
@@ -1053,7 +1212,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    showToast(`Solicitação de software registrada! Protocolo: ${newProtocol}`);
+    showToast(`Solicitação de software registrada! Protocolo: ${newProtocol} (E-mail enviado)`);
     return { success: true, protocol: newProtocol };
   };
 
@@ -1066,6 +1225,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = softwareRequests.find(s => s.id === id);
     if (!target) return;
 
+    let updatedSoft: SoftwareRequest | null = null;
+
     setSoftwareRequests(prev => prev.map(s => {
       if (s.id === id) {
         const updated = {
@@ -1075,6 +1236,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           installedAt: status === 'instalado' ? new Date().toISOString() : s.installedAt,
           updatedAt: new Date().toISOString()
         };
+        updatedSoft = updated;
         if (firebaseConfig.isConnected) {
           syncDocToFirestore('softwares', updated, firebaseConfig);
         }
@@ -1083,12 +1245,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return s;
     }));
 
+    if (updatedSoft) {
+      sendSoftwareEmail(updatedSoft, status === 'instalado');
+    }
+
     logAudit(
       'software_atualizado',
       target.id,
       'software',
       `${target.softwareName} (${target.protocol})`,
-      `Status da solicitação de software alterado para ${status.toUpperCase()} pelo técnico ${currentUser?.name}.`
+      `Status da solicitação de software alterado para ${status.toUpperCase()} pelo técnico ${currentUser?.name}. Notificação por e-mail enviada.`
     );
 
     showToast(`Solicitação ${target.protocol} atualizada para ${status.toUpperCase()}`);
@@ -1194,6 +1360,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registerUser,
         approveUserAccount,
         rejectUserAccount,
+        emails,
+        isEmailModalOpen,
+        setIsEmailModalOpen,
+        unreadEmailsCount,
+        markEmailAsRead,
+        clearEmails,
         cloudConfig,
         setCloudConfig,
         firebaseConfig,

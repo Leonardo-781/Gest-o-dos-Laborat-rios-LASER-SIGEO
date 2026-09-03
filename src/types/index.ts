@@ -39,11 +39,29 @@ export interface UserAccount {
   name: string;
   email: string;
   role: UserRole;
+  roleTitle?: string; // Título descritivo como "Administrador Master / Técnico Geral"
   documentId: string; // Matrícula ou SIAPE
   department: string;
   status: AccountStatus;
   avatarInitials?: string;
+  passwordHash?: string;
+  passwordSalt?: string;
+  emailVerified?: boolean;
+  verificationCode?: string;
   createdAt: string;
+}
+
+export interface EmailNotification {
+  id: string;
+  to: string;
+  recipientName: string;
+  subject: string;
+  preview: string;
+  htmlBody: string;
+  category: 'login' | 'solicitacao_criada' | 'solicitacao_atualizada' | 'manutencao' | 'software' | 'verificacao_email';
+  sentAt: string;
+  read: boolean;
+  protocol?: string;
 }
 
 export interface Equipment {
