@@ -339,8 +339,8 @@ export const ScheduleView: React.FC = () => {
               ))}
             </div>
 
-            {/* Linhas da Grade de Horários Oficiais */}
-            <div className="divide-y divide-slate-100 max-h-[660px] overflow-y-auto">
+            {/* Linhas da Grade de Horários Oficiais - Página Única Sem Scroll Interno */}
+            <div className="divide-y divide-slate-100">
               {officialTimeSlots.map((slot, sIdx) => {
                 const slotStartMin = timeToMinutes(slot.start);
                 const slotEndMin = timeToMinutes(slot.end);
