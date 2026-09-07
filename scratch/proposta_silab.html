@@ -1,8 +1,4 @@
-import fs from 'fs';
-import { execSync } from 'child_process';
-import path from 'path';
-
-const htmlContent = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -509,31 +505,4 @@ const htmlContent = `<!DOCTYPE html>
   </div>
 
 </body>
-</html>`;
-
-const workspaceDir = 'C:/Users/Leonardo/OneDrive/Documentos/VS Code/Agrimensura';
-const artifactsDir = 'C:/Users/Leonardo/.gemini/antigravity/brain/43f5cd44-c7eb-481f-842d-995e1a972285';
-const htmlPath = path.join(workspaceDir, 'scratch', 'proposta_silab.html');
-const pdfPathWorkspace = path.join(workspaceDir, 'Proposta_Implantacao_SILAB_Coordenacao.pdf');
-const pdfPathArtifacts = path.join(artifactsDir, 'Proposta_Implantacao_SILAB_Coordenacao.pdf');
-const edgePath = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
-
-fs.writeFileSync(htmlPath, htmlContent, 'utf-8');
-console.log('✓ HTML gerado em:', htmlPath);
-
-const cmd = `"${edgePath}" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf="${pdfPathWorkspace}" "${htmlPath}"`;
-console.log('✓ Executando conversão via Microsoft Edge...');
-execSync(cmd);
-
-if (fs.existsSync(pdfPathWorkspace)) {
-  const stats = fs.statSync(pdfPathWorkspace);
-  console.log(`✓ PDF gerado com sucesso no Workspace: ${pdfPathWorkspace} (${stats.size} bytes)`);
-  
-  // Copia também para a pasta de artefatos
-  fs.copyFileSync(pdfPathWorkspace, pdfPathArtifacts);
-  console.log(`✓ PDF copiado com sucesso para Artifacts: ${pdfPathArtifacts}`);
-} else {
-  console.error('ERRO: PDF não foi gerado.');
-  process.exit(1);
-}
-
+</html>
