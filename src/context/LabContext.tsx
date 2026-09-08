@@ -810,36 +810,29 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     const reviewer = currentUser;
-    let updatedTarget: Reservation | null = null;
+    const nowIso = new Date().toISOString();
+    const updatedRes: Reservation = {
+      ...target,
+      status: 'aprovada' as ReservationStatus,
+      adminNotes: adminNotes || target.adminNotes,
+      reviewedBy: {
+        userId: reviewer.id,
+        userName: reviewer.name,
+        userEmail: reviewer.email,
+        userRole: reviewer.role,
+        actionDate: nowIso
+      },
+      updatedAt: nowIso
+    };
 
-    setReservations(prev => prev.map(res => {
-      if (res.id === id) {
-        const updatedRes = {
-          ...res,
-          status: 'aprovada' as ReservationStatus,
-          adminNotes: adminNotes || res.adminNotes,
-          reviewedBy: {
-            userId: reviewer.id,
-            userName: reviewer.name,
-            userEmail: reviewer.email,
-            userRole: reviewer.role,
-            actionDate: new Date().toISOString()
-          },
-          updatedAt: new Date().toISOString()
-        };
-        updatedTarget = updatedRes;
-        if (firebaseConfig.isConnected) {
-          syncDocToFirestore('reservas', updatedRes, firebaseConfig);
-        }
-        return updatedRes;
-      }
-      return res;
-    }));
+    setReservations(prev => prev.map(res => res.id === id ? updatedRes : res));
 
-    if (updatedTarget) {
-      // Dispara e-mail de notificação de aprovação com instruções da Sala 1B308
-      sendReservationReviewedEmail(updatedTarget, reviewer.name);
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('reservas', updatedRes, firebaseConfig);
     }
+
+    // Dispara e-mail de notificação de aprovação com instruções da Sala 1B308
+    sendReservationReviewedEmail(updatedRes, reviewer.name);
 
     logAudit(
       'solicitacao_aprovada',
@@ -868,36 +861,29 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     const reviewer = currentUser;
-    let updatedTarget: Reservation | null = null;
+    const nowIso = new Date().toISOString();
+    const updatedRes: Reservation = {
+      ...target,
+      status: 'recusada' as ReservationStatus,
+      rejectionReason: reason,
+      reviewedBy: {
+        userId: reviewer.id,
+        userName: reviewer.name,
+        userEmail: reviewer.email,
+        userRole: reviewer.role,
+        actionDate: nowIso
+      },
+      updatedAt: nowIso
+    };
 
-    setReservations(prev => prev.map(res => {
-      if (res.id === id) {
-        const updatedRes = {
-          ...res,
-          status: 'recusada' as ReservationStatus,
-          rejectionReason: reason,
-          reviewedBy: {
-            userId: reviewer.id,
-            userName: reviewer.name,
-            userEmail: reviewer.email,
-            userRole: reviewer.role,
-            actionDate: new Date().toISOString()
-          },
-          updatedAt: new Date().toISOString()
-        };
-        updatedTarget = updatedRes;
-        if (firebaseConfig.isConnected) {
-          syncDocToFirestore('reservas', updatedRes, firebaseConfig);
-        }
-        return updatedRes;
-      }
-      return res;
-    }));
+    setReservations(prev => prev.map(res => res.id === id ? updatedRes : res));
 
-    if (updatedTarget) {
-      // Dispara e-mail de recusa com motivo
-      sendReservationReviewedEmail(updatedTarget, reviewer.name);
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('reservas', updatedRes, firebaseConfig);
     }
+
+    // Dispara e-mail de recusa com motivo
+    sendReservationReviewedEmail(updatedRes, reviewer.name);
 
     logAudit(
       'solicitacao_recusada',
@@ -920,16 +906,18 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = reservations.find(r => r.id === id);
     if (!target) return;
 
-    setReservations(prev => prev.map(res => {
-      if (res.id === id) {
-        return {
-          ...res,
-          status: 'cancelada' as ReservationStatus,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return res;
-    }));
+    const nowIso = new Date().toISOString();
+    const updatedRes: Reservation = {
+      ...target,
+      status: 'cancelada' as ReservationStatus,
+      updatedAt: nowIso
+    };
+
+    setReservations(prev => prev.map(res => res.id === id ? updatedRes : res));
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('reservas', updatedRes, firebaseConfig);
+    }
 
     logAudit(
       'solicitacao_cancelada',

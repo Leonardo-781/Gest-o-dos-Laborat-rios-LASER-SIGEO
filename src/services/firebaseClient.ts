@@ -139,6 +139,28 @@ export async function testFirebaseConnection(config: FirebaseConfig): Promise<{ 
 }
 
 /**
+ * Remove recursivamente campos com valor undefined para o Firestore aceitar
+ */
+export function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) {
+    return null as any;
+  }
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeForFirestore(item)) as any;
+  }
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned;
+  }
+  return data;
+}
+
+/**
  * Envia um documento individual para o Firestore
  */
 export async function syncDocToFirestore<T extends { id: string }>(
@@ -151,10 +173,11 @@ export async function syncDocToFirestore<T extends { id: string }>(
 
   try {
     const docRef = doc(db, collectionName, item.id);
-    await setDoc(docRef, item, { merge: true });
+    const cleanItem = sanitizeForFirestore(item);
+    await setDoc(docRef, cleanItem, { merge: true });
     return true;
   } catch (err) {
-    console.warn(`Erro ao sincronizar documento em ${collectionName}:`, err);
+    console.error(`Erro ao sincronizar documento em ${collectionName}:`, err);
     return false;
   }
 }
@@ -238,43 +261,43 @@ export async function seedAllDataToFirebase(
 
     // 1. Classes
     for (const fc of data.fixedClasses) {
-      await setDoc(doc(db, 'disciplinas', fc.id), fc, { merge: true });
+      await setDoc(doc(db, 'disciplinas', fc.id), sanitizeForFirestore(fc), { merge: true });
       count++;
     }
 
     // 2. Reservas
     for (const r of data.reservations) {
-      await setDoc(doc(db, 'reservas', r.id), r, { merge: true });
+      await setDoc(doc(db, 'reservas', r.id), sanitizeForFirestore(r), { merge: true });
       count++;
     }
 
     // 3. Manutenção
     for (const m of data.maintenanceRequests) {
-      await setDoc(doc(db, 'manutencoes', m.id), m, { merge: true });
+      await setDoc(doc(db, 'manutencoes', m.id), sanitizeForFirestore(m), { merge: true });
       count++;
     }
 
     // 4. Softwares
     for (const s of data.softwareRequests) {
-      await setDoc(doc(db, 'softwares', s.id), s, { merge: true });
+      await setDoc(doc(db, 'softwares', s.id), sanitizeForFirestore(s), { merge: true });
       count++;
     }
 
     // 5. Equipamentos
     for (const e of data.equipments) {
-      await setDoc(doc(db, 'equipamentos', e.id), e, { merge: true });
+      await setDoc(doc(db, 'equipamentos', e.id), sanitizeForFirestore(e), { merge: true });
       count++;
     }
 
     // 6. Usuários
     for (const u of data.usersList) {
-      await setDoc(doc(db, 'usuarios', u.id), u, { merge: true });
+      await setDoc(doc(db, 'usuarios', u.id), sanitizeForFirestore(u), { merge: true });
       count++;
     }
 
     // 7. Auditoria
     for (const a of data.auditLogs) {
-      await setDoc(doc(db, 'auditoria', a.id), a, { merge: true });
+      await setDoc(doc(db, 'auditoria', a.id), sanitizeForFirestore(a), { merge: true });
       count++;
     }
 
