@@ -152,7 +152,19 @@ interface LabContextType {
   approveRecurringGroup: (groupId: string, adminNotes?: string) => void;
   rejectReservation: (id: string, reason: string) => void;
   rejectRecurringGroup: (groupId: string, reason: string) => void;
-  cancelReservation: (id: string) => void;
+  cancelReservation: (id: string, cancelWholeSeries?: boolean) => void;
+  deleteReservation: (id: string, deleteWholeSeries?: boolean) => void;
+  editReservation: (
+    id: string, 
+    updatedData: Partial<Reservation>,
+    updateWholeSeries?: boolean
+  ) => { success: boolean; error?: string };
+
+  // Modal de Edição de Reservas
+  isReservationModalOpen: boolean;
+  setIsReservationModalOpen: (open: boolean) => void;
+  editingReservation: Reservation | null;
+  openReservationModalForEdit: (res: Reservation) => void;
 
   // Ações de Aulas Fixas (Apenas Coordenadores e Técnicos)
   addFixedClass: (classData: Omit<FixedClass, 'id'>) => void;
@@ -288,6 +300,15 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Modal de Edição de Aulas
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<FixedClass | null>(null);
+
+  // Modal de Edição de Reservas
+  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+
+  const openReservationModalForEdit = (res: Reservation) => {
+    setEditingReservation(res);
+    setIsReservationModalOpen(true);
+  };
 
   const [bookingPreselection, setBookingPreselection] = useState<{ labId?: LabId; date?: string; startTime?: string }>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -1066,29 +1087,39 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Todas as ${targets.length} semanas da série foram recusadas.`);
   };
 
-  const cancelReservation = (id: string) => {
+  const cancelReservation = (id: string, cancelWholeSeries?: boolean) => {
     const target = reservations.find(r => r.id === id);
     if (!target) return;
 
+    const targets = (cancelWholeSeries && target.recurrenceGroupId)
+      ? reservations.filter(r => r.recurrenceGroupId === target.recurrenceGroupId)
+      : [target];
+
     const nowIso = new Date().toISOString();
-    const updatedRes: Reservation = {
-      ...target,
-      status: 'cancelada' as ReservationStatus,
-      updatedAt: nowIso
-    };
+    const updatedMap = new Map<string, Reservation>();
 
-    setReservations(prev => prev.map(res => res.id === id ? updatedRes : res));
+    targets.forEach(item => {
+      const updatedRes: Reservation = {
+        ...item,
+        status: 'cancelada' as ReservationStatus,
+        updatedAt: nowIso
+      };
+      updatedMap.set(item.id, updatedRes);
+      if (firebaseConfig.isConnected) {
+        syncDocToFirestore('reservas', updatedRes, firebaseConfig);
+      }
+    });
 
-    if (firebaseConfig.isConnected) {
-      syncDocToFirestore('reservas', updatedRes, firebaseConfig);
-    }
+    setReservations(prev => prev.map(res => updatedMap.get(res.id) || res));
 
     logAudit(
       'solicitacao_cancelada',
       target.id,
       'reserva',
-      `${target.title} (${target.protocol})`,
-      `Solicitação cancelada.`,
+      target.title,
+      cancelWholeSeries && target.recurrenceGroupId
+        ? `Toda a série recorrente de ${targets.length} semanas foi cancelada pelo usuário/gestor.`
+        : `Reserva cancelada em ${formatDateBR(target.date)}.`,
       {
         name: target.applicantName,
         email: target.applicantEmail,
@@ -1097,7 +1128,162 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    showToast('Reserva cancelada.');
+    showToast(
+      cancelWholeSeries && target.recurrenceGroupId
+        ? `Todas as ${targets.length} semanas da série foram canceladas.`
+        : 'Reserva cancelada com sucesso.'
+    );
+  };
+
+  const deleteReservation = (id: string, deleteWholeSeries?: boolean) => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas técnicos e coordenadores podem excluir reservas do sistema.');
+      return;
+    }
+
+    const target = reservations.find(r => r.id === id);
+    if (!target) return;
+
+    const targets = (deleteWholeSeries && target.recurrenceGroupId)
+      ? reservations.filter(r => r.recurrenceGroupId === target.recurrenceGroupId)
+      : [target];
+
+    const targetIds = new Set(targets.map(t => t.id));
+    setReservations(prev => prev.filter(res => !targetIds.has(res.id)));
+
+    if (firebaseConfig.isConnected) {
+      targets.forEach(item => {
+        removeDocFromFirestore('reservas', item.id, firebaseConfig);
+      });
+    }
+
+    logAudit(
+      'solicitacao_cancelada',
+      target.id,
+      'reserva',
+      target.title,
+      deleteWholeSeries && target.recurrenceGroupId
+        ? `${targets.length} semanas da série foram excluídas do banco de dados pelo gestor ${currentUser?.name}.`
+        : `Reserva excluída do banco de dados pelo gestor ${currentUser?.name}.`,
+      {
+        name: target.applicantName,
+        email: target.applicantEmail,
+        id: target.applicantId,
+        role: target.applicantRole
+      }
+    );
+
+    showToast(
+      deleteWholeSeries && target.recurrenceGroupId
+        ? `Todas as ${targets.length} semanas foram excluídas do banco de dados.`
+        : 'Horário/Reserva excluído com sucesso do banco de dados.'
+    );
+  };
+
+  const editReservation = (
+    id: string, 
+    updatedData: Partial<Reservation>,
+    updateWholeSeries?: boolean
+  ): { success: boolean; error?: string } => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas técnicos e coordenadores têm permissão para editar reservas.');
+      return { success: false, error: 'Permissão negada.' };
+    }
+
+    const target = reservations.find(r => r.id === id);
+    if (!target) return { success: false, error: 'Reserva não encontrada.' };
+
+    const nowIso = new Date().toISOString();
+
+    // Se for editar a série inteira (ex: mudou horário, lab ou título de todas as semanas)
+    if (updateWholeSeries && target.recurrenceGroupId) {
+      const targets = reservations.filter(r => r.recurrenceGroupId === target.recurrenceGroupId);
+      
+      // Validação de disponibilidade para todas as datas da série
+      if (updatedData.startTime || updatedData.endTime || updatedData.labId) {
+        const checkLabId = updatedData.labId || target.labId;
+        const checkStartTime = updatedData.startTime || target.startTime;
+        const checkEndTime = updatedData.endTime || target.endTime;
+
+        for (const item of targets) {
+          const check = checkAvailability(checkLabId, item.date, checkStartTime, checkEndTime, item.id);
+          if (!check.available) {
+            return {
+              success: false,
+              error: `Conflito na data ${formatDateBR(item.date)}: ${check.conflictReason || 'Horário ocupado'}`
+            };
+          }
+        }
+      }
+
+      const updatedMap = new Map<string, Reservation>();
+      targets.forEach(item => {
+        const updatedRes: Reservation = {
+          ...item,
+          ...updatedData,
+          date: item.date, // mantém a data individual de cada semana
+          id: item.id,
+          protocol: item.protocol,
+          updatedAt: nowIso
+        };
+        updatedMap.set(item.id, updatedRes);
+        if (firebaseConfig.isConnected) {
+          syncDocToFirestore('reservas', updatedRes, firebaseConfig);
+        }
+      });
+
+      setReservations(prev => prev.map(r => updatedMap.get(r.id) || r));
+
+      logAudit(
+        'solicitacao_atualizada' as any,
+        target.id,
+        'reserva',
+        updatedData.title || target.title,
+        `Série de ${targets.length} semanas modificada pelo gestor ${currentUser?.name}.`
+      );
+
+      showToast(`Todas as ${targets.length} semanas da série foram atualizadas!`);
+      return { success: true };
+    } else {
+      // Edição pontual desta reserva
+      const checkLabId = updatedData.labId || target.labId;
+      const checkDate = updatedData.date || target.date;
+      const checkStartTime = updatedData.startTime || target.startTime;
+      const checkEndTime = updatedData.endTime || target.endTime;
+
+      if (updatedData.startTime || updatedData.endTime || updatedData.date || updatedData.labId) {
+        const check = checkAvailability(checkLabId, checkDate, checkStartTime, checkEndTime, target.id);
+        if (!check.available) {
+          return {
+            success: false,
+            error: check.conflictReason || 'Horário indisponível devido a conflito de ocupação.'
+          };
+        }
+      }
+
+      const updatedRes: Reservation = {
+        ...target,
+        ...updatedData,
+        updatedAt: nowIso
+      };
+
+      setReservations(prev => prev.map(r => r.id === id ? updatedRes : r));
+
+      if (firebaseConfig.isConnected) {
+        syncDocToFirestore('reservas', updatedRes, firebaseConfig);
+      }
+
+      logAudit(
+        'solicitacao_atualizada' as any,
+        target.id,
+        'reserva',
+        updatedRes.title,
+        `Horário/dados atualizados pelo gestor ${currentUser?.name}. Data: ${formatDateBR(updatedRes.date)} (${updatedRes.startTime} às ${updatedRes.endTime}).`
+      );
+
+      showToast('Horário da reserva atualizado com sucesso no banco de dados!');
+      return { success: true };
+    }
   };
 
   const addFixedClass = (classData: Omit<FixedClass, 'id'>) => {
@@ -1594,6 +1780,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rejectReservation,
         rejectRecurringGroup,
         cancelReservation,
+        deleteReservation,
+        editReservation,
+        isReservationModalOpen,
+        setIsReservationModalOpen,
+        editingReservation,
+        openReservationModalForEdit,
         addFixedClass,
         editFixedClass,
         deleteFixedClass,

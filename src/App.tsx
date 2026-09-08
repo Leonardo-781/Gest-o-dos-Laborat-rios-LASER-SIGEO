@@ -13,6 +13,7 @@ import { AuthModal } from './components/AuthModal';
 import { PdfScheduleImporter } from './components/PdfScheduleImporter';
 import { AuditLogView } from './components/AuditLogView';
 import { ClassEditModal } from './components/ClassEditModal';
+import { ReservationEditModal } from './components/ReservationEditModal';
 import { MaintenanceRequestView } from './components/MaintenanceRequestView';
 import { SoftwareRequestView } from './components/SoftwareRequestView';
 import { MaintenanceManagementView } from './components/MaintenanceManagementView';
@@ -94,6 +95,7 @@ const AppContent: React.FC = () => {
       <BookingModal />
       <EventDetailModal />
       <ClassEditModal />
+      <ReservationEditModal />
       <LabRulesModal />
       <AuthModal />
       <EmailNotificationsModal />

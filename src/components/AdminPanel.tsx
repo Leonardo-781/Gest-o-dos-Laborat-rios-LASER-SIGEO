@@ -44,6 +44,8 @@ export const AdminPanel: React.FC = () => {
     approveRecurringGroup,
     rejectReservation, 
     rejectRecurringGroup,
+    deleteReservation,
+    openReservationModalForEdit,
     fixedClasses, 
     openClassModalForEdit,
     openClassModalForNew,
@@ -899,6 +901,7 @@ export const AdminPanel: React.FC = () => {
                 <th className="p-3">Solicitante</th>
                 <th className="p-3">Decisão / Responsável</th>
                 <th className="p-3">Status</th>
+                <th className="p-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -922,6 +925,29 @@ export const AdminPanel: React.FC = () => {
                     }`}>
                       {res.status}
                     </span>
+                  </td>
+                  <td className="p-3 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => openReservationModalForEdit(res)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200 transition cursor-pointer"
+                        title="Modificar dados ou horário da reserva"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const isRec = Boolean(res.isRecurring && res.recurrenceGroupId);
+                          const deleteWhole = isRec ? confirm(`Esta reserva faz parte de uma série recorrente.\n\nClique em OK para excluir TODAS as ${res.recurrenceTotalWeeks || ''} semanas.\nClique em CANCELAR para excluir apenas esta reserva de ${formatDateBR(res.date)}.`) : false;
+                          deleteReservation(res.id, deleteWhole);
+                        }}
+                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 transition cursor-pointer"
+                        title="Excluir definitivamente do banco de dados"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

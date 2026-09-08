@@ -10,7 +10,8 @@ import {
   Edit3,
   CheckCircle,
   Tag,
-  Repeat
+  Repeat,
+  Ban
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, getPurposeBadge, getStatusBadge } from '../utils/dateHelpers';
@@ -24,7 +25,10 @@ export const EventDetailModal: React.FC = () => {
     equipments, 
     currentUser, 
     cancelReservation,
-    openClassModalForEdit
+    deleteReservation,
+    deleteFixedClass,
+    openClassModalForEdit,
+    openReservationModalForEdit
   } = useLab();
 
   if (!selectedEventDetail) return null;
@@ -176,21 +180,93 @@ export const EventDetailModal: React.FC = () => {
             </div>
           )}
 
-          {/* AÇÕES DE GESTÃO (EDITAR AULA) SE FOR COORDENADOR OU TÉCNICO */}
-          {isManager && isFixedClass && fixedClassItem && (
-            <div className="border-t border-slate-200 pt-4 flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500">Ações do Gestor:</span>
-              
-              <button
-                onClick={() => {
-                  setSelectedEventDetail(null);
-                  openClassModalForEdit(fixedClassItem);
-                }}
-                className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Editar Informações desta Aula</span>
-              </button>
+          {/* AÇÕES DE GESTÃO PARA COORDENADOR OU TÉCNICO */}
+          {isManager && (
+            <div className="border-t border-slate-200 pt-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Ações do Gestor / Técnico:
+                </span>
+                <span className="text-[10px] text-blue-700 font-semibold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  Permissão de Gerenciamento
+                </span>
+              </div>
+
+              {/* Se for Aula Fixa da Grade */}
+              {isFixedClass && fixedClassItem && (
+                <div className="flex items-center justify-end gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      if (confirm(`Deseja realmente remover a disciplina "${fixedClassItem.courseName}" da grade semestral?`)) {
+                        deleteFixedClass(fixedClassItem.id);
+                        setSelectedEventDetail(null);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition cursor-pointer flex items-center gap-1.5"
+                    title="Exclui esta aula da grade"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Excluir da Grade</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSelectedEventDetail(null);
+                      openClassModalForEdit(fixedClassItem);
+                    }}
+                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Editar Horário & Informações</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Se for Reserva de Horário */}
+              {!isFixedClass && reservationItem && (
+                <div className="flex items-center justify-end gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      const isRec = Boolean(reservationItem.isRecurring && reservationItem.recurrenceGroupId);
+                      const deleteWhole = isRec ? confirm(`Esta é uma reserva recorrente.\n\nClique em OK para excluir TODA a série de ${reservationItem.recurrenceTotalWeeks || ''} semanas.\nClique em CANCELAR para excluir apenas este dia (${formatDateBR(reservationItem.date)}).`) : false;
+                      
+                      deleteReservation(reservationItem.id, deleteWhole);
+                      setSelectedEventDetail(null);
+                    }}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition cursor-pointer flex items-center gap-1.5"
+                    title="Exclui definitivamente do banco de dados"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Excluir Reserva</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const isRec = Boolean(reservationItem.isRecurring && reservationItem.recurrenceGroupId);
+                      const cancelWhole = isRec ? confirm(`Esta é uma reserva recorrente.\n\nClique em OK para cancelar TODA a série de ${reservationItem.recurrenceTotalWeeks || ''} semanas.\nClique em CANCELAR para cancelar apenas este dia (${formatDateBR(reservationItem.date)}).`) : false;
+
+                      cancelReservation(reservationItem.id, cancelWhole);
+                      setSelectedEventDetail(null);
+                    }}
+                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-xl border border-amber-300 transition cursor-pointer flex items-center gap-1.5"
+                    title="Cancela a reserva e libera o horário para outros usuários"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    <span>Cancelar Horário</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSelectedEventDetail(null);
+                      openReservationModalForEdit(reservationItem);
+                    }}
+                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Modificar Horário / Detalhes</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
