@@ -138,14 +138,20 @@ interface LabContextType {
     excludeReservationId?: string
   ) => CheckAvailabilityResult;
   
-  createReservation: (data: Omit<Reservation, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+  createReservation: (
+    data: Omit<Reservation, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>,
+    recurrenceOptions?: { isRecurring: boolean; weeksCount: number }
+  ) => {
     success: boolean;
     protocol?: string;
     error?: string;
+    totalCreated?: number;
   };
 
   approveReservation: (id: string, adminNotes?: string) => void;
+  approveRecurringGroup: (groupId: string, adminNotes?: string) => void;
   rejectReservation: (id: string, reason: string) => void;
+  rejectRecurringGroup: (groupId: string, reason: string) => void;
   cancelReservation: (id: string) => void;
 
   // Ações de Aulas Fixas (Apenas Coordenadores e Técnicos)
@@ -740,7 +746,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { available: true };
   };
 
-  const createReservation = (data: Omit<Reservation, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
+  const createReservation = (
+    data: Omit<Reservation, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>,
+    recurrenceOptions?: { isRecurring: boolean; weeksCount: number }
+  ) => {
     // Validação estrita de e-mail (sem vírgula e formato válido para receber notificações)
     const emailCheck = validateEmailStrict(data.applicantEmail);
     if (!emailCheck.isValid) {
@@ -750,41 +759,70 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
 
-    const check = checkAvailability(data.labId, data.date, data.startTime, data.endTime);
-    if (!check.available) {
-      return {
-        success: false,
-        error: check.conflictReason || 'Horário indisponível devido a conflito de ocupação.'
-      };
+    const isRecurring = Boolean(recurrenceOptions?.isRecurring && recurrenceOptions.weeksCount > 1);
+    const weeksCount = isRecurring ? Math.min(24, Math.max(2, recurrenceOptions!.weeksCount)) : 1;
+
+    // Calcula todas as datas da série
+    const initialDate = new Date(data.date + 'T00:00:00');
+    const dates: string[] = [];
+    for (let w = 0; w < weeksCount; w++) {
+      const nextDate = new Date(initialDate.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+      const dateStr = nextDate.toISOString().split('T')[0];
+      dates.push(dateStr);
+    }
+
+    // Validação de disponibilidade para cada semana da série
+    for (let i = 0; i < dates.length; i++) {
+      const dateStr = dates[i];
+      const check = checkAvailability(data.labId, dateStr, data.startTime, data.endTime);
+      if (!check.available) {
+        return {
+          success: false,
+          error: isRecurring
+            ? `Conflito na semana ${i + 1} (${formatDateBR(dateStr)}): ${check.conflictReason || 'Horário indisponível.'}`
+            : (check.conflictReason || 'Horário indisponível devido a conflito de ocupação.')
+        };
+      }
     }
 
     const newProtocol = generateProtocol();
     const nowIso = new Date().toISOString();
-    const newReservation: Reservation = {
+    const recurrenceGroupId = isRecurring ? `rec-${Date.now()}` : undefined;
+
+    const newReservations: Reservation[] = dates.map((dateStr, idx) => ({
       ...data,
-      id: `res-${Date.now()}`,
-      protocol: newProtocol,
-      status: 'pendente',
+      id: `res-${Date.now()}-${idx}`,
+      protocol: idx === 0 ? newProtocol : `${newProtocol}-S${idx + 1}`,
+      date: dateStr,
+      isRecurring,
+      recurrenceGroupId,
+      recurrenceWeekIndex: isRecurring ? idx + 1 : undefined,
+      recurrenceTotalWeeks: isRecurring ? dates.length : undefined,
+      status: 'pendente' as ReservationStatus,
       createdById: currentUser?.id,
       createdAt: nowIso,
       updatedAt: nowIso
-    };
+    }));
 
-    setReservations(prev => [newReservation, ...prev]);
+    setReservations(prev => [...newReservations, ...prev]);
 
     if (firebaseConfig.isConnected) {
-      syncDocToFirestore('reservas', newReservation, firebaseConfig);
+      for (const resItem of newReservations) {
+        syncDocToFirestore('reservas', resItem, firebaseConfig);
+      }
     }
 
-    // Dispara e-mail oficial de confirmação para o solicitante
-    sendReservationCreatedEmail(newReservation);
+    // Dispara e-mail oficial de confirmação para o solicitante (com informação da série)
+    sendReservationCreatedEmail(newReservations[0]);
 
     logAudit(
       'solicitacao_criada',
-      newReservation.id,
+      newReservations[0].id,
       'reserva',
-      `${data.title} (${newProtocol})`,
-      `Solicitação enviada por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()} em ${formatDateBR(data.date)} (${data.startTime} às ${data.endTime}). E-mail de confirmação enviado.`,
+      isRecurring ? `${data.title} (${newProtocol} - ${dates.length} semanas)` : `${data.title} (${newProtocol})`,
+      isRecurring
+        ? `Solicitação RECORRENTE (${dates.length} semanas, de ${formatDateBR(data.date)} até ${formatDateBR(dates[dates.length - 1])}) enviada por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()} (${data.startTime} às ${data.endTime}). E-mail de confirmação enviado.`
+        : `Solicitação enviada por ${data.applicantName} (${data.applicantRole}) para o Lab ${data.labId.toUpperCase()} em ${formatDateBR(data.date)} (${data.startTime} às ${data.endTime}). E-mail de confirmação enviado.`,
       {
         name: data.applicantName,
         email: data.applicantEmail,
@@ -793,10 +831,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    showToast(`Solicitação enviada! Protocolo: ${newProtocol} (E-mail de confirmação enviado)`);
+    showToast(
+      isRecurring
+        ? `Solicitação recorrente enviada! Protocolo: ${newProtocol} (${dates.length} semanas solicitadas)`
+        : `Solicitação enviada! Protocolo: ${newProtocol} (E-mail de confirmação enviado)`
+    );
+
     return {
       success: true,
-      protocol: newProtocol
+      protocol: newProtocol,
+      totalCreated: newReservations.length
     };
   };
 
@@ -900,6 +944,126 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     showToast('Solicitação recusada. E-mail de aviso enviado ao solicitante.');
+  };
+
+  const approveRecurringGroup = (groupId: string, adminNotes?: string) => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas técnicos e coordenadores têm permissão para aprovar reservas.');
+      return;
+    }
+
+    const targets = reservations.filter(r => r.recurrenceGroupId === groupId && r.status === 'pendente');
+    if (targets.length === 0) {
+      showToast('Nenhuma reserva pendente encontrada neste grupo recorrente.');
+      return;
+    }
+
+    const reviewer = currentUser;
+    const nowIso = new Date().toISOString();
+    const updatedMap = new Map<string, Reservation>();
+
+    targets.forEach(target => {
+      const updatedRes: Reservation = {
+        ...target,
+        status: 'aprovada' as ReservationStatus,
+        adminNotes: adminNotes || target.adminNotes,
+        reviewedBy: {
+          userId: reviewer.id,
+          userName: reviewer.name,
+          userEmail: reviewer.email,
+          userRole: reviewer.role,
+          actionDate: nowIso
+        },
+        updatedAt: nowIso
+      };
+      updatedMap.set(target.id, updatedRes);
+      if (firebaseConfig.isConnected) {
+        syncDocToFirestore('reservas', updatedRes, firebaseConfig);
+      }
+    });
+
+    setReservations(prev => prev.map(r => updatedMap.get(r.id) || r));
+
+    const firstRes = updatedMap.get(targets[0].id);
+    if (firstRes) {
+      sendReservationReviewedEmail(firstRes, reviewer.name);
+    }
+
+    logAudit(
+      'solicitacao_aprovada',
+      groupId,
+      'reserva',
+      `Série Recorrente (${targets.length} semanas)`,
+      `Série completa de ${targets.length} semanas APROVADA pelo responsável ${reviewer.name} (${reviewer.role}).`,
+      {
+        name: targets[0].applicantName,
+        email: targets[0].applicantEmail,
+        id: targets[0].applicantId,
+        role: targets[0].applicantRole
+      }
+    );
+
+    showToast(`Todas as ${targets.length} semanas da série foram aprovadas por ${reviewer.name}!`);
+  };
+
+  const rejectRecurringGroup = (groupId: string, reason: string) => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas técnicos e coordenadores têm permissão para recusar reservas.');
+      return;
+    }
+
+    const targets = reservations.filter(r => r.recurrenceGroupId === groupId && r.status === 'pendente');
+    if (targets.length === 0) {
+      showToast('Nenhuma reserva pendente encontrada neste grupo recorrente.');
+      return;
+    }
+
+    const reviewer = currentUser;
+    const nowIso = new Date().toISOString();
+    const updatedMap = new Map<string, Reservation>();
+
+    targets.forEach(target => {
+      const updatedRes: Reservation = {
+        ...target,
+        status: 'recusada' as ReservationStatus,
+        rejectionReason: reason,
+        reviewedBy: {
+          userId: reviewer.id,
+          userName: reviewer.name,
+          userEmail: reviewer.email,
+          userRole: reviewer.role,
+          actionDate: nowIso
+        },
+        updatedAt: nowIso
+      };
+      updatedMap.set(target.id, updatedRes);
+      if (firebaseConfig.isConnected) {
+        syncDocToFirestore('reservas', updatedRes, firebaseConfig);
+      }
+    });
+
+    setReservations(prev => prev.map(r => updatedMap.get(r.id) || r));
+
+    const firstRes = updatedMap.get(targets[0].id);
+    if (firstRes) {
+      sendReservationReviewedEmail(firstRes, reviewer.name);
+    }
+
+    logAudit(
+      'solicitacao_recusada',
+      groupId,
+      'reserva',
+      `Série Recorrente (${targets.length} semanas)`,
+      `Série completa de ${targets.length} semanas RECUSADA pelo responsável ${reviewer.name} (${reviewer.role}). Motivo: "${reason}".`,
+      {
+        name: targets[0].applicantName,
+        email: targets[0].applicantEmail,
+        id: targets[0].applicantId,
+        role: targets[0].applicantRole
+      }
+    );
+
+    showToast(`Todas as ${targets.length} semanas da série foram recusadas.`);
   };
 
   const cancelReservation = (id: string) => {
@@ -1335,6 +1499,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           type: res.purposeType,
           responsible: res.applicantName,
           status: res.status,
+          isRecurring: res.isRecurring,
+          recurrenceWeekIndex: res.recurrenceWeekIndex,
+          recurrenceTotalWeeks: res.recurrenceTotalWeeks,
           rawItem: res
         });
       });
@@ -1423,7 +1590,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         checkAvailability,
         createReservation,
         approveReservation,
+        approveRecurringGroup,
         rejectReservation,
+        rejectRecurringGroup,
         cancelReservation,
         addFixedClass,
         editFixedClass,

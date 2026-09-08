@@ -28,7 +28,8 @@ import {
   RefreshCw,
   Crown,
   Mail,
-  Key
+  Key,
+  Repeat
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, FixedClass, FirebaseConfig, UserPermissions } from '../types';
@@ -40,7 +41,9 @@ export const AdminPanel: React.FC = () => {
   const { 
     reservations, 
     approveReservation, 
+    approveRecurringGroup,
     rejectReservation, 
+    rejectRecurringGroup,
     fixedClasses, 
     openClassModalForEdit,
     openClassModalForNew,
@@ -67,6 +70,7 @@ export const AdminPanel: React.FC = () => {
   // Modal de rejeição
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState<string>('');
+  const [rejectWholeSeries, setRejectWholeSeries] = useState<boolean>(false);
 
   // Configuração Firebase
   const [fbApiKey, setFbApiKey] = useState(firebaseConfig.apiKey || '');
@@ -92,9 +96,15 @@ export const AdminPanel: React.FC = () => {
   const handleConfirmReject = (e: React.FormEvent) => {
     e.preventDefault();
     if (rejectingId && rejectReason.trim()) {
-      rejectReservation(rejectingId, rejectReason);
+      const target = reservations.find(r => r.id === rejectingId);
+      if (rejectWholeSeries && target?.recurrenceGroupId) {
+        rejectRecurringGroup(target.recurrenceGroupId, rejectReason);
+      } else {
+        rejectReservation(rejectingId, rejectReason);
+      }
       setRejectingId(null);
       setRejectReason('');
+      setRejectWholeSeries(false);
     }
   };
 
@@ -334,6 +344,13 @@ export const AdminPanel: React.FC = () => {
                         <span className={`text-[10px] font-semibold px-2 py-0.2 rounded border ${badge.bg} ${badge.text} ${badge.border}`}>
                           {badge.label}
                         </span>
+
+                        {res.isRecurring && (
+                          <span className="text-[10px] font-bold px-2 py-0.2 rounded border bg-indigo-50 text-indigo-800 border-indigo-200 flex items-center gap-1">
+                            <Repeat className="w-3 h-3 text-indigo-600" />
+                            Recorrência ({res.recurrenceWeekIndex ? `Semana ${res.recurrenceWeekIndex} de ${res.recurrenceTotalWeeks}` : 'Semanal'})
+                          </span>
+                        )}
                       </div>
 
                       <span className="text-[11px] text-slate-400">
@@ -390,11 +407,12 @@ export const AdminPanel: React.FC = () => {
                     )}
 
                     {/* Botões de Ação */}
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2 flex-wrap">
                       <button
                         onClick={() => {
                           setRejectingId(res.id);
                           setRejectReason('');
+                          setRejectWholeSeries(false);
                         }}
                         className="px-3.5 py-1.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 hover:bg-rose-100 transition cursor-pointer flex items-center gap-1"
                       >
@@ -405,8 +423,19 @@ export const AdminPanel: React.FC = () => {
                         onClick={() => approveReservation(res.id)}
                         className="px-4 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition cursor-pointer flex items-center gap-1 shadow-xs"
                       >
-                        <Check className="w-3.5 h-3.5" /> Aprovar Reserva
+                        <Check className="w-3.5 h-3.5" /> {res.isRecurring ? 'Aprovar Esta Semana' : 'Aprovar Reserva'}
                       </button>
+
+                      {res.isRecurring && res.recurrenceGroupId && (
+                        <button
+                          onClick={() => approveRecurringGroup(res.recurrenceGroupId!)}
+                          className="px-4 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                          title="Aprovar todas as semanas restantes desta série com 1 clique"
+                        >
+                          <Repeat className="w-3.5 h-3.5" />
+                          <span>Aprovar Toda a Série ({res.recurrenceTotalWeeks || 'Todas'} Semanas)</span>
+                        </button>
+                      )}
                     </div>
 
                   </div>
@@ -1116,43 +1145,69 @@ export const AdminPanel: React.FC = () => {
       )}
 
       {/* Modal de Recusa com Justificativa */}
-      {rejectingId && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
-            <h4 className="text-sm font-bold text-slate-900">Justificativa da Recusa</h4>
-            <p className="text-xs text-slate-500">
-              A justificativa será gravada na trilha de auditoria sob seu nome ({currentUser?.name}).
-            </p>
+      {rejectingId && (() => {
+        const targetRes = reservations.find(r => r.id === rejectingId);
+        return (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+              <h4 className="text-sm font-bold text-slate-900">Justificativa da Recusa</h4>
+              <p className="text-xs text-slate-500">
+                A justificativa será gravada na trilha de auditoria sob seu nome ({currentUser?.name}).
+              </p>
 
-            <form onSubmit={handleConfirmReject} className="space-y-3">
-              <textarea
-                required
-                rows={3}
-                placeholder="Informe o motivo da recusa para o solicitante..."
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-rose-500 font-medium"
-              />
+              <form onSubmit={handleConfirmReject} className="space-y-3">
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Informe o motivo da recusa para o solicitante..."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-rose-500 font-medium"
+                />
 
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRejectingId(null)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-500 cursor-pointer"
-                >
-                  Confirmar Recusa
-                </button>
-              </div>
-            </form>
+                {targetRes?.isRecurring && targetRes.recurrenceGroupId && (
+                  <label className="flex items-center gap-2 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rejectWholeSeries}
+                      onChange={(e) => setRejectWholeSeries(e.target.checked)}
+                      className="rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                    />
+                    <div>
+                      <span className="font-bold flex items-center gap-1">
+                        <Repeat className="w-3.5 h-3.5 text-rose-600" />
+                        Recusar toda a série ({targetRes.recurrenceTotalWeeks || 'todas'} semanas)
+                      </span>
+                      <p className="text-[10px] text-rose-700 font-normal">
+                        Se desmarcado, apenas esta data pontual será recusada.
+                      </p>
+                    </div>
+                  </label>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejectingId(null);
+                      setRejectWholeSeries(false);
+                    }}
+                    className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-500 cursor-pointer"
+                  >
+                    Confirmar Recusa
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );

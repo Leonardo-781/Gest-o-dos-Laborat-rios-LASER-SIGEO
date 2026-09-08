@@ -11,7 +11,8 @@ import {
   Globe, 
   Edit3,
   Layers,
-  Sparkles
+  Sparkles,
+  Repeat
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { ViewMode, ScheduleEvent, FixedClass, LabId } from '../types';
@@ -421,7 +422,14 @@ export const ScheduleView: React.FC = () => {
                                     }`}>
                                       {ev.labId.toUpperCase()}
                                     </span>
-                                    <span className="font-mono text-slate-600 font-semibold">{ev.startTime}-{ev.endTime}</span>
+                                    <div className="flex items-center gap-1 font-mono text-slate-600 font-semibold">
+                                      {ev.isRecurring && (
+                                        <span title={`Série Recorrente (${ev.recurrenceWeekIndex || 1}/${ev.recurrenceTotalWeeks || '?'})`}>
+                                          <Repeat className="w-2.5 h-2.5 text-indigo-600 inline flex-shrink-0" />
+                                        </span>
+                                      )}
+                                      <span>{ev.startTime}-{ev.endTime}</span>
+                                    </div>
                                   </div>
 
                                   <div className="text-[11px] font-bold leading-tight mt-0.5 line-clamp-1">
@@ -529,6 +537,12 @@ export const ScheduleView: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-3 text-right flex-shrink-0">
+                        {ev.isRecurring && (
+                          <span className="hidden sm:flex items-center gap-1 text-[10px] text-indigo-700 font-sans font-bold bg-indigo-100 px-2 py-0.5 rounded-full">
+                            <Repeat className="w-3 h-3 text-indigo-600" />
+                            Semana {ev.recurrenceWeekIndex || 1}/{ev.recurrenceTotalWeeks || '?'}
+                          </span>
+                        )}
                         <div className="text-xs font-bold text-slate-700 font-mono">
                           {ev.startTime} às {ev.endTime}
                         </div>

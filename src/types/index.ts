@@ -134,6 +134,12 @@ export interface Reservation {
     actionDate: string;
   };
 
+  // Campos de Recorrência Semanal
+  isRecurring?: boolean;
+  recurrenceGroupId?: string;
+  recurrenceWeekIndex?: number;
+  recurrenceTotalWeeks?: number;
+
   createdAt: string;
   updatedAt: string;
 }
@@ -212,6 +218,9 @@ export interface ScheduleEvent {
   responsible: string;
   status?: ReservationStatus;
   highlightColor?: string;
+  isRecurring?: boolean;
+  recurrenceWeekIndex?: number;
+  recurrenceTotalWeeks?: number;
   rawItem: FixedClass | Reservation;
 }
 

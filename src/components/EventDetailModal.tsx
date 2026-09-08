@@ -9,7 +9,8 @@ import {
   Trash2, 
   Edit3,
   CheckCircle,
-  Tag
+  Tag,
+  Repeat
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, getPurposeBadge, getStatusBadge } from '../utils/dateHelpers';
@@ -98,6 +99,21 @@ export const EventDetailModal: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Card de Recorrência Semanal */}
+          {reservationItem?.isRecurring && (
+            <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-2xl text-xs text-indigo-900 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                <span>
+                  Reserva Recorrente Semanal: <strong>Semana {reservationItem.recurrenceWeekIndex} de {reservationItem.recurrenceTotalWeeks}</strong>
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-indigo-700 font-bold bg-indigo-100 px-2 py-0.5 rounded-full">
+                Série Semanal
+              </span>
+            </div>
+          )}
 
           {/* Tipo e Status */}
           <div className="flex items-center justify-between gap-2">

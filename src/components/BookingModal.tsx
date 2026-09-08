@@ -14,7 +14,8 @@ import {
   Sparkles,
   LogIn,
   Wrench,
-  HelpCircle
+  HelpCircle,
+  Repeat
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, PurposeType, UserRole } from '../types';
@@ -53,6 +54,13 @@ export const BookingModal: React.FC = () => {
   const [agreedTerms, setAgreedTerms] = useState<boolean>(false);
   const [needsTechSupport, setNeedsTechSupport] = useState<boolean>(false);
 
+  // Estados de Recorrência Semanal
+  const [isRecurring, setIsRecurring] = useState<boolean>(false);
+  const [recurrenceWeeks, setRecurrenceWeeks] = useState<number>(16); // Padrão: 16 semanas (semestre completo)
+  const [recurrenceDates, setRecurrenceDates] = useState<string[]>([]);
+  const [recurringConflict, setRecurringConflict] = useState<string | null>(null);
+  const [totalCreatedCount, setTotalCreatedCount] = useState<number>(1);
+
   // Status de conflito e submissão
   const [conflictStatus, setConflictStatus] = useState<{ available: boolean; conflictReason?: string }>({ available: true });
   const [generatedProtocol, setGeneratedProtocol] = useState<string | null>(null);
@@ -83,15 +91,41 @@ export const BookingModal: React.FC = () => {
         setDate(tomorrow.toISOString().split('T')[0]);
       }
       setGeneratedProtocol(null);
+      setTotalCreatedCount(1);
     }
   }, [isBookingOpen, bookingPreselection]);
 
+  // Efeito para verificação de conflitos (considerando todas as semanas caso recorrente)
   useEffect(() => {
     if (date && startTime && endTime) {
       const result = checkAvailability(labId, date, startTime, endTime);
       setConflictStatus(result);
+
+      if (isRecurring && recurrenceWeeks > 1) {
+        const initialDate = new Date(date + 'T00:00:00');
+        const calculatedDates: string[] = [];
+        let conflictFound: string | null = null;
+
+        for (let w = 0; w < recurrenceWeeks; w++) {
+          const nextDate = new Date(initialDate.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+          const dStr = nextDate.toISOString().split('T')[0];
+          calculatedDates.push(dStr);
+
+          if (!conflictFound && w > 0) {
+            const chk = checkAvailability(labId, dStr, startTime, endTime);
+            if (!chk.available) {
+              conflictFound = `Semana ${w + 1} (${formatDateBR(dStr)}): ${chk.conflictReason || 'Horário já ocupado nesta data'}`;
+            }
+          }
+        }
+        setRecurrenceDates(calculatedDates);
+        setRecurringConflict(conflictFound);
+      } else {
+        setRecurrenceDates([date]);
+        setRecurringConflict(null);
+      }
     }
-  }, [labId, date, startTime, endTime]);
+  }, [labId, date, startTime, endTime, isRecurring, recurrenceWeeks]);
 
   const toggleEquipment = (eqId: string) => {
     setRequestedEquipments(prev => 
@@ -126,30 +160,41 @@ export const BookingModal: React.FC = () => {
       return;
     }
 
+    if (isRecurring && recurringConflict) {
+      alert(`Conflito detectado na série recorrente:\n${recurringConflict}\nPor favor, escolha outro horário ou reduza a quantidade de semanas.`);
+      return;
+    }
+
     const fullDescription = needsTechSupport 
       ? `[SOLICITAÇÃO DE APOIO TÉCNICO PRESENCIAL (SALA 1B308) INCLUSA]\n${description}`
       : description;
 
-    const res = createReservation({
-      labId,
-      date,
-      startTime,
-      endTime,
-      purposeType,
-      title,
-      description: fullDescription,
-      applicantName: applicantName || currentUser?.name || 'Solicitante',
-      applicantEmail: targetEmail,
-      applicantPhone,
-      applicantRole: applicantRole || currentUser?.role || 'aluno',
-      applicantId: applicantId || currentUser?.documentId || 'Pendente',
-      supervisorName: supervisorName || undefined,
-      expectedAttendees,
-      requestedEquipments
-    });
+    const res = createReservation(
+      {
+        labId,
+        date,
+        startTime,
+        endTime,
+        purposeType,
+        title,
+        description: fullDescription,
+        applicantName: applicantName || currentUser?.name || 'Solicitante',
+        applicantEmail: targetEmail,
+        applicantPhone,
+        applicantRole: applicantRole || currentUser?.role || 'aluno',
+        applicantId: applicantId || currentUser?.documentId || 'Pendente',
+        supervisorName: supervisorName || undefined,
+        expectedAttendees,
+        requestedEquipments
+      },
+      isRecurring ? { isRecurring: true, weeksCount: recurrenceWeeks } : undefined
+    );
 
     if (res.success && res.protocol) {
       setGeneratedProtocol(res.protocol);
+      setTotalCreatedCount(res.totalCreated || 1);
+    } else if (res.error) {
+      alert(`Não foi possível registrar a reserva:\n${res.error}`);
     }
   };
 
@@ -210,6 +255,13 @@ export const BookingModal: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {totalCreatedCount > 1 && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 max-w-sm mx-auto text-xs text-indigo-950 flex items-center justify-center gap-2 font-bold shadow-xs">
+                <Repeat className="w-4 h-4 text-indigo-600 flex-shrink-0 animate-spin-slow" />
+                <span>Série de {totalCreatedCount} semanas registradas com sucesso!</span>
+              </div>
+            )}
 
             <div className="pt-2">
               <button
@@ -342,6 +394,101 @@ export const BookingModal: React.FC = () => {
                   <div className="flex items-start gap-2 p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold">
                     <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
                     <span>{conflictStatus.conflictReason}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* OPÇÃO: REPETIR TODA SEMANA (RECORRÊNCIA SEMANAL) */}
+              <div className="mt-3.5 p-3.5 bg-indigo-50/40 border border-indigo-200/80 rounded-2xl space-y-3">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                      <Repeat className="w-3.5 h-3.5 text-indigo-600" />
+                      Repetir toda semana neste mesmo dia e horário
+                    </span>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                      Evite solicitar semanalmente de forma manual. Ideal para TCC, pesquisa, projetos contínuos ou monitoria.
+                    </p>
+                  </div>
+                </label>
+
+                {isRecurring && (
+                  <div className="pt-2.5 border-t border-indigo-200/60 space-y-3 animate-fade-in">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                        Duração da Repetição:
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { weeks: 4, label: '4 Semanas', desc: '~1 Mês' },
+                          { weeks: 8, label: '8 Semanas', desc: '~2 Meses' },
+                          { weeks: 12, label: '12 Semanas', desc: '~3 Meses' },
+                          { weeks: 16, label: '16 Semanas', desc: 'Semestre Todo', badge: 'Recomendado' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.weeks}
+                            type="button"
+                            onClick={() => setRecurrenceWeeks(opt.weeks)}
+                            className={`p-2 rounded-xl border text-left transition cursor-pointer relative ${
+                              recurrenceWeeks === opt.weeks
+                                ? 'bg-indigo-600 text-white border-indigo-600 font-bold shadow-xs'
+                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            {opt.badge && (
+                              <span className={`absolute -top-1.5 right-1.5 text-[8px] font-black px-1.5 py-0.2 rounded-full uppercase tracking-wider ${
+                                recurrenceWeeks === opt.weeks ? 'bg-amber-400 text-slate-900' : 'bg-indigo-100 text-indigo-800'
+                              }`}>
+                                {opt.badge}
+                              </span>
+                            )}
+                            <div className="text-xs">{opt.label}</div>
+                            <div className={`text-[10px] font-normal ${recurrenceWeeks === opt.weeks ? 'text-indigo-100' : 'text-slate-400'}`}>
+                              {opt.desc}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Resumo do Período e Conflito */}
+                    {recurrenceDates.length > 0 && (
+                      <div className="p-3 bg-white rounded-xl border border-indigo-200/70 text-xs space-y-1.5">
+                        <div className="flex items-center justify-between text-indigo-950 font-bold">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                            Série Recorrente ({recurrenceWeeks} semanas)
+                          </span>
+                          <span className="bg-indigo-100 text-indigo-800 font-extrabold px-2 py-0.5 rounded-full text-[10px]">
+                            {recurrenceWeeks} semanas vinculadas
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600">
+                          De <strong>{formatDateBR(recurrenceDates[0])}</strong> até{' '}
+                          <strong>{formatDateBR(recurrenceDates[recurrenceDates.length - 1])}</strong>, toda semana das{' '}
+                          <strong>{startTime} às {endTime}</strong>.
+                        </p>
+
+                        {/* Status de Conflito em Qualquer Semana */}
+                        {recurringConflict ? (
+                          <div className="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-[11px] flex items-start gap-1.5 font-medium">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600 flex-shrink-0 mt-0.5" />
+                            <span><strong>Conflito na série:</strong> {recurringConflict}</span>
+                          </div>
+                        ) : conflictStatus.available ? (
+                          <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5 font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            <span>Todas as {recurrenceWeeks} semanas consecutivas estão 100% livres e disponíveis!</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -534,7 +681,7 @@ export const BookingModal: React.FC = () => {
               
               <button
                 type="submit"
-                disabled={!conflictStatus.available || !agreedTerms}
+                disabled={!conflictStatus.available || !agreedTerms || (isRecurring && Boolean(recurringConflict))}
                 className="px-5 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
               >
                 <Sparkles className="w-4 h-4" />
