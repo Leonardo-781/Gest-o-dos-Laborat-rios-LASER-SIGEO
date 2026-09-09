@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   Compass,
   Globe,
-  Sparkles
+  Sparkles,
+  Palette
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, FixedClass } from '../types';
@@ -35,6 +36,8 @@ export const ClassEditModal: React.FC = () => {
   const [professor, setProfessor] = useState<string>('');
   const [semester, setSemester] = useState<string>('2026/1');
   const [isHighlighted, setIsHighlighted] = useState<boolean>(false);
+  const [isExternal, setIsExternal] = useState<boolean>(false);
+  const [customColor, setCustomColor] = useState<'padrao' | 'azul' | 'verde' | 'vermelho'>('padrao');
   const [notes, setNotes] = useState<string>('');
 
   const isEditing = Boolean(editingClass?.id);
@@ -49,8 +52,15 @@ export const ClassEditModal: React.FC = () => {
       setCourseName(editingClass.courseName);
       setProfessor(editingClass.professor);
       setSemester(editingClass.semester || '2026/1');
-      setIsHighlighted(Boolean(editingClass.highlightColor));
+      
+      const ext = Boolean(editingClass.isExternal || editingClass.highlightColor);
+      setIsHighlighted(ext);
+      setIsExternal(ext);
+      setCustomColor(editingClass.customColor || (ext ? 'vermelho' : (editingClass.labId === 'laser' ? 'azul' : 'verde')));
       setNotes(editingClass.notes || '');
+    } else if (isClassModalOpen && !editingClass) {
+      setIsExternal(false);
+      setCustomColor('padrao');
     }
   }, [isClassModalOpen, editingClass]);
 
@@ -59,36 +69,37 @@ export const ClassEditModal: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const highlightColor = isHighlighted 
-      ? 'bg-rose-100 text-rose-950 border-rose-300' 
-      : undefined;
+    const effectiveColor = customColor !== 'padrao'
+      ? customColor
+      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : 'verde'));
+
+    const highlightColor = (effectiveColor === 'vermelho' || isExternal)
+      ? 'bg-rose-100 text-rose-950 border-rose-300'
+      : (effectiveColor === 'azul'
+        ? 'bg-blue-50 text-blue-950 border-blue-200'
+        : (effectiveColor === 'verde'
+          ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
+          : undefined));
+
+    const payload = {
+      labId,
+      dayOfWeek,
+      startTime,
+      endTime,
+      courseCode,
+      courseName,
+      professor,
+      semester,
+      isExternal,
+      customColor: effectiveColor,
+      highlightColor,
+      notes
+    };
 
     if (isEditing && editingClass) {
-      editFixedClass(editingClass.id, {
-        labId,
-        dayOfWeek,
-        startTime,
-        endTime,
-        courseCode,
-        courseName,
-        professor,
-        semester,
-        highlightColor,
-        notes
-      });
+      editFixedClass(editingClass.id, payload);
     } else {
-      addFixedClass({
-        labId,
-        dayOfWeek,
-        startTime,
-        endTime,
-        courseCode,
-        courseName,
-        professor,
-        semester,
-        highlightColor,
-        notes
-      });
+      addFixedClass(payload);
     }
 
     setIsClassModalOpen(false);
@@ -266,22 +277,111 @@ export const ClassEditModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Destaque Visual (ex: Florestal / Agronomia em vermelho) */}
-          <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-xl">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isHighlighted}
-                onChange={(e) => setIsHighlighted(e.target.checked)}
-                className="rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
-              />
-              <div>
-                <span className="font-bold text-rose-950 block">Destacar na Grade com Cor Diferenciada (Vermelho/Laranja)</span>
-                <span className="text-[10px] text-rose-700 block mt-0.5">
-                  Recomendado para turmas externas (ex: Engenharia Florestal no SIGEO ou Agronomia no LASER).
-                </span>
+          {/* Destaque Visual e Cor da Aula */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5 text-slate-600" />
+                <span>Aula Externa / Outro Curso?</span>
+              </span>
+              <span className="text-[10px] text-slate-400">
+                Cor na Grade
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsExternal(false);
+                  setIsHighlighted(false);
+                  setCustomColor(labId === 'laser' ? 'azul' : 'verde');
+                }}
+                className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  !isExternal
+                    ? 'bg-white border-slate-300 text-slate-800 shadow-xs ring-2 ring-slate-400/20'
+                    : 'bg-slate-100/70 border-slate-200 text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                <span>Não (Turma Interna)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsExternal(true);
+                  setIsHighlighted(true);
+                  setCustomColor('vermelho');
+                }}
+                className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  isExternal
+                    ? 'bg-rose-50 border-rose-300 text-rose-800 shadow-xs ring-2 ring-rose-500/30'
+                    : 'bg-slate-100/70 border-slate-200 text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-600" />
+                <span>Sim (Aula Externa / Vermelho)</span>
+              </button>
+            </div>
+
+            {/* Seletor de cores da disciplina */}
+            <div className="pt-2 border-t border-slate-200 space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-600 block">
+                Cor da Disciplina na Grade:
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomColor('azul');
+                    setIsExternal(false);
+                    setIsHighlighted(false);
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    customColor === 'azul'
+                      ? 'bg-blue-50 border-blue-500 text-blue-900 ring-2 ring-blue-500/20 shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-blue-50/50'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0" />
+                  <span>Azul (LASER)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomColor('verde');
+                    setIsExternal(false);
+                    setIsHighlighted(false);
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    customColor === 'verde'
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-emerald-50/50'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex-shrink-0" />
+                  <span>Verde (SIGEO)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomColor('vermelho');
+                    setIsExternal(true);
+                    setIsHighlighted(true);
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    customColor === 'vermelho' || isExternal
+                      ? 'bg-rose-50 border-rose-500 text-rose-900 ring-2 ring-rose-500/20 shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-rose-50/50'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600 flex-shrink-0" />
+                  <span>Vermelho (Externa)</span>
+                </button>
               </div>
-            </label>
+            </div>
           </div>
 
           {/* Observações */}

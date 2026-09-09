@@ -202,7 +202,7 @@ export const ScheduleView: React.FC = () => {
 
           <div className="p-2.5 bg-blue-50/50 rounded-xl border border-blue-100 space-y-0.5">
             <div className="flex items-center justify-between font-bold text-blue-950">
-              <span>LASER (Sala 1B209)</span>
+              <span>LASER (Sala 1B309)</span>
               <span className="text-[10px] text-blue-700 font-mono font-bold">25 Vagas</span>
             </div>
             <p className="text-[11px] text-blue-800/80 leading-tight">
@@ -222,12 +222,23 @@ export const ScheduleView: React.FC = () => {
         </div>
 
         {/* LEGENDA DE CORES */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs text-[11px] text-slate-500 space-y-1.5">
-          <span className="font-bold text-slate-700 block">Legenda:</span>
-          <div className="flex flex-wrap gap-1.5">
-            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium">SIGEO</span>
-            <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium">LASER</span>
-            <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-950 border border-rose-300 font-bold">Cursos Externos (Florestal / Agro)</span>
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs text-xs space-y-2">
+          <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wider">
+            Legenda de Cores da Grade:
+          </span>
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 font-bold flex items-center gap-1.5 shadow-2xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0" />
+              Azul: LASER
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold flex items-center gap-1.5 shadow-2xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex-shrink-0" />
+              Verde: SIGEO
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-950 border border-rose-300 font-black flex items-center gap-1.5 shadow-2xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600 flex-shrink-0" />
+              Vermelho: Aula / Solicitação Externa
+            </span>
           </div>
         </div>
 
@@ -394,8 +405,9 @@ export const ScheduleView: React.FC = () => {
                           >
                             {/* Renderizar cartões de eventos */}
                             {startingEvents.map((ev) => {
-                              const isLaser = ev.labId === 'laser';
-                              const isHighlighted = Boolean(ev.highlightColor);
+                              const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
+                              const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
+                              const isGreen = ev.customColor === 'verde' || (!isExternal && ev.labId === 'sigeo');
 
                               return (
                                 <div
@@ -405,22 +417,22 @@ export const ScheduleView: React.FC = () => {
                                     setSelectedEventDetail(ev);
                                   }}
                                   className={`p-1.5 rounded-lg border text-left mb-1 transition hover:shadow-xs cursor-pointer ${
-                                    isHighlighted
+                                    isExternal
                                       ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
-                                      : isLaser
+                                      : isBlue
                                       ? 'bg-blue-50 border-blue-200 text-blue-950 hover:border-blue-300'
                                       : 'bg-emerald-50 border-emerald-200 text-emerald-950 hover:border-emerald-300'
                                   }`}
                                 >
                                   <div className="flex items-center justify-between gap-1 text-[9px] font-bold">
                                     <span className={`px-1 rounded ${
-                                      isHighlighted 
+                                      isExternal 
                                         ? 'bg-rose-700 text-white' 
-                                        : isLaser 
+                                        : isBlue 
                                         ? 'bg-blue-600 text-white' 
                                         : 'bg-emerald-600 text-white'
                                     }`}>
-                                      {ev.labId.toUpperCase()}
+                                      {isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
                                     </span>
                                     <div className="flex items-center gap-1 font-mono text-slate-600 font-semibold">
                                       {ev.isRecurring && (
@@ -509,17 +521,18 @@ export const ScheduleView: React.FC = () => {
                 }
 
                 return dayEvents.map(ev => {
-                  const isLaser = ev.labId === 'laser';
-                  const isHighlighted = Boolean(ev.highlightColor);
+                  const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
+                  const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
+                  const isGreen = ev.customColor === 'verde' || (!isExternal && ev.labId === 'sigeo');
 
                   return (
                     <div
                       key={ev.id}
                       onClick={() => setSelectedEventDetail(ev)}
                       className={`p-3.5 rounded-xl border transition hover:shadow-xs cursor-pointer flex items-center justify-between gap-4 ${
-                        isHighlighted
+                        isExternal
                           ? 'bg-rose-50 border-rose-200'
-                          : isLaser
+                          : isBlue
                           ? 'bg-blue-50/50 border-blue-200'
                           : 'bg-emerald-50/50 border-emerald-200'
                       }`}
@@ -527,9 +540,13 @@ export const ScheduleView: React.FC = () => {
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                            isHighlighted ? 'bg-rose-700 text-white' : isLaser ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'
+                            isExternal 
+                              ? 'bg-rose-700 text-white' 
+                              : isBlue 
+                              ? 'bg-blue-600 text-white' 
+                              : 'bg-emerald-600 text-white'
                           }`}>
-                            {ev.labId.toUpperCase()}
+                            {isExternal ? `${ev.labId.toUpperCase()} • EXTERNA` : ev.labId.toUpperCase()}
                           </span>
                           <span className="text-xs font-bold text-slate-900">{ev.title}</span>
                         </div>

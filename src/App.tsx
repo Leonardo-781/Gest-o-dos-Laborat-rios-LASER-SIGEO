@@ -106,7 +106,7 @@ const AppContent: React.FC = () => {
           <div>
             <span className="font-semibold text-slate-700">Departamento de Engenharia de Agrimensura e Cartografia</span>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Laboratório de Sensoriamento Remoto - LASER (Sala 1B209) • Laboratório de SIG e Geoprocessamento - SIGEO (Sala 1B307) • Sala dos Técnicos (Sala 1B308)
+              Laboratório de Sensoriamento Remoto - LASER (Sala 1B309) • Laboratório de SIG e Geoprocessamento - SIGEO (Sala 1B307) • Sala dos Técnicos (Sala 1B308)
             </p>
           </div>
           <div className="text-[11px] text-slate-400">

@@ -7,7 +7,7 @@ Sistema Integrado de Gestão de Horários, Solicitação de Espaços, Chamados d
 
 ## 📍 Laboratórios Integrados
 
-* 📐 **LASER:** **Laboratório de Sensoriamento Remoto** — *Sala 1B209*
+* 📐 **LASER:** **Laboratório de Sensoriamento Remoto** — *Sala 1B309*
 * 🛰️ **SIGEO:** **Laboratório de SIG e Geoprocessamento** — *Sala 1B307*
 * 🛠️ **Sala dos Técnicos:** Atendimento e Apoio Técnico — *Sala 1B308*
 

@@ -7,7 +7,7 @@ export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
     name: 'LASER',
     fullName: 'Laboratório de Sensoriamento Remoto (LASER)',
     description: 'Espaço especializado para calibração, operação de sensores ópticos e a laser (LiDAR), estações totais robotizadas, receptores GNSS, modelagem 3D e fotogrametria.',
-    location: 'Sala 1B209 (Sala dos Técnicos: 1B308)',
+    location: 'Sala 1B309 (Sala dos Técnicos: 1B308)',
     capacity: 25,
     workstationsCount: 6,
     responsibleTeacher: 'Coordenação dos Laboratórios',

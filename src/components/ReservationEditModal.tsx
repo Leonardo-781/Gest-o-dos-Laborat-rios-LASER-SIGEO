@@ -15,7 +15,8 @@ import {
   Sparkles,
   Globe,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  Palette
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, PurposeType, ReservationStatus } from '../types';
@@ -45,6 +46,8 @@ export const ReservationEditModal: React.FC = () => {
   const [adminNotes, setAdminNotes] = useState('');
   const [responsibleTeacher, setResponsibleTeacher] = useState('');
   const [userTeacher, setUserTeacher] = useState('');
+  const [isExternal, setIsExternal] = useState<boolean>(false);
+  const [customColor, setCustomColor] = useState<'padrao' | 'azul' | 'verde' | 'vermelho'>('padrao');
   const [updateWholeSeries, setUpdateWholeSeries] = useState(false);
   const [conflictStatus, setConflictStatus] = useState<{ available: boolean; conflictReason?: string }>({ available: true });
 
@@ -61,6 +64,10 @@ export const ReservationEditModal: React.FC = () => {
       setAdminNotes(editingReservation.adminNotes || '');
       setResponsibleTeacher(editingReservation.responsibleTeacher || editingReservation.supervisorName || '');
       setUserTeacher(editingReservation.userTeacher || '');
+      
+      const initialExternal = Boolean(editingReservation.isExternal || editingReservation.highlightColor?.includes('rose') || editingReservation.customColor === 'vermelho');
+      setIsExternal(initialExternal);
+      setCustomColor(editingReservation.customColor || (initialExternal ? 'vermelho' : (editingReservation.labId === 'laser' ? 'azul' : 'verde')));
       setUpdateWholeSeries(false);
     }
   }, [isReservationModalOpen, editingReservation]);
@@ -85,6 +92,18 @@ export const ReservationEditModal: React.FC = () => {
       return;
     }
 
+    const effectiveColor = customColor !== 'padrao'
+      ? customColor
+      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : 'verde'));
+
+    const highlightColor = (effectiveColor === 'vermelho' || isExternal)
+      ? 'bg-rose-100 text-rose-950 border-rose-300'
+      : (effectiveColor === 'azul'
+        ? 'bg-blue-50 text-blue-950 border-blue-200'
+        : (effectiveColor === 'verde'
+          ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
+          : undefined));
+
     const res = editReservation(
       editingReservation.id,
       {
@@ -99,7 +118,10 @@ export const ReservationEditModal: React.FC = () => {
         adminNotes: adminNotes || undefined,
         responsibleTeacher: responsibleTeacher.trim() || undefined,
         userTeacher: userTeacher.trim() || undefined,
-        supervisorName: responsibleTeacher.trim() || undefined
+        supervisorName: responsibleTeacher.trim() || undefined,
+        isExternal,
+        customColor: effectiveColor,
+        highlightColor
       },
       updateWholeSeries
     );
@@ -379,6 +401,108 @@ export const ReservationEditModal: React.FC = () => {
                   <p className="text-[9px] text-slate-500 mt-1">
                     Uso restrito a técnicos e coordenação (oculto ao público).
                   </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Opção de Aula Externa e Escolha de Cor */}
+            <div className="p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Palette className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Aula ou Atividade Externa?</span>
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Destaque Visual
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExternal(false);
+                    setCustomColor(labId === 'laser' ? 'azul' : 'verde');
+                  }}
+                  className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    !isExternal
+                      ? 'bg-white border-slate-300 text-slate-800 shadow-xs ring-2 ring-slate-400/20'
+                      : 'bg-slate-100/70 border-slate-200 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>Não (Interna)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExternal(true);
+                    setCustomColor('vermelho');
+                  }}
+                  className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    isExternal
+                      ? 'bg-rose-50 border-rose-300 text-rose-800 shadow-xs ring-2 ring-rose-500/30'
+                      : 'bg-slate-100/70 border-slate-200 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-rose-600" />
+                  <span>Sim (Aula Externa / Vermelho)</span>
+                </button>
+              </div>
+
+              {/* Seletor de Cor para Gestão Técnica */}
+              <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-600 block">
+                  Escolher Cor na Grade:
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomColor('azul');
+                      setIsExternal(false);
+                    }}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      customColor === 'azul'
+                        ? 'bg-blue-50 border-blue-500 text-blue-900 ring-2 ring-blue-500/20 shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-blue-50/50'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0" />
+                    <span>Azul (LASER)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomColor('verde');
+                      setIsExternal(false);
+                    }}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      customColor === 'verde'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20 shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-emerald-50/50'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex-shrink-0" />
+                    <span>Verde (SIGEO)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomColor('vermelho');
+                      setIsExternal(true);
+                    }}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      customColor === 'vermelho' || isExternal
+                        ? 'bg-rose-50 border-rose-500 text-rose-900 ring-2 ring-rose-500/20 shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-rose-50/50'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 flex-shrink-0" />
+                    <span>Vermelho (Externa)</span>
+                  </button>
                 </div>
               </div>
             </div>

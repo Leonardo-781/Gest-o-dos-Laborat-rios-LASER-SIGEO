@@ -99,6 +99,8 @@ export interface FixedClass {
   professor: string;
   semester: string;  // Ex: "2026/1"
   highlightColor?: string; // Cor personalizada de destaque (ex: vermelho/laranja para cursos externos)
+  isExternal?: boolean;    // Aula externa / Outro curso (ex: Agronomia, Florestal, FECIV)
+  customColor?: 'padrao' | 'azul' | 'verde' | 'vermelho'; // Azul = LASER, Verde = SIGEO, Vermelho = Externa
   notes?: string;
   importedFromPdf?: boolean;
 }
@@ -126,6 +128,9 @@ export interface Reservation {
   status: ReservationStatus;
   rejectionReason?: string;
   adminNotes?: string;
+  isExternal?: boolean;        // Solicitação de Aula/Atividade Externa (destacada em Vermelho na grade)
+  customColor?: 'padrao' | 'azul' | 'verde' | 'vermelho'; // Azul = LASER, Verde = SIGEO, Vermelho = Externa
+  highlightColor?: string;     // Classes CSS ou marcador de cor
   
   createdById?: string;
   reviewedBy?: {
@@ -225,6 +230,8 @@ export interface ScheduleEvent {
   recurrenceTotalWeeks?: number;
   responsibleTeacher?: string; // Interno
   userTeacher?: string;        // Público
+  isExternal?: boolean;
+  customColor?: 'padrao' | 'azul' | 'verde' | 'vermelho';
   rawItem: FixedClass | Reservation;
 }
 

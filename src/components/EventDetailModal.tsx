@@ -51,6 +51,8 @@ export const EventDetailModal: React.FC = () => {
     : [];
 
   const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
+  const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
+  const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
@@ -58,9 +60,9 @@ export const EventDetailModal: React.FC = () => {
         
         {/* Header com cor do Lab */}
         <div className={`p-6 text-white relative ${
-          ev.highlightColor 
-            ? 'bg-gradient-to-r from-rose-700 to-amber-700'
-            : isLaser 
+          isExternal 
+            ? 'bg-gradient-to-r from-rose-700 to-rose-950'
+            : isBlue 
             ? 'bg-gradient-to-r from-blue-700 to-blue-900' 
             : 'bg-gradient-to-r from-emerald-700 to-emerald-900'
         }`}>
@@ -71,10 +73,15 @@ export const EventDetailModal: React.FC = () => {
             <X className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded bg-white/20 backdrop-blur-xs">
               LAB {lab.name}
             </span>
+            {isExternal && (
+              <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded bg-rose-500/80 backdrop-blur-xs text-white border border-white/30">
+                🔴 Aula / Solicitação Externa
+              </span>
+            )}
             <span className="text-xs font-semibold text-white/90">
               {isFixedClass ? '• Grade Semestral Oficial' : `• Protocolo: ${reservationItem?.protocol}`}
             </span>

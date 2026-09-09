@@ -46,7 +46,7 @@ export const LabRulesModal: React.FC = () => {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-bold text-blue-900">
               <Compass className="w-5 h-5 text-blue-600" />
-              <span>Regulamento do Laboratório de Sensoriamento Remoto - LASER (Sala 1B209)</span>
+              <span>Regulamento do Laboratório de Sensoriamento Remoto - LASER (Sala 1B309)</span>
             </div>
             
             <ul className="space-y-2 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">

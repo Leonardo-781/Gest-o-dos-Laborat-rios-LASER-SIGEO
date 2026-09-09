@@ -54,7 +54,7 @@ function buildHtmlEmailTemplate(title: string, recipientName: string, bodyConten
   <div class="container">
     <div class="header">
       <h1>🏛️ SILAB • GESTÃO DOS LABORATÓRIOS</h1>
-      <p>LASER (Sala 1B209) • SIGEO (Sala 1B307) • Técnicos (Sala 1B308)</p>
+      <p>LASER (Sala 1B309) • SIGEO (Sala 1B307) • Técnicos (Sala 1B308)</p>
     </div>
     <div class="content">
       <div class="salutation">Olá, ${recipientName}!</div>
@@ -137,7 +137,7 @@ export async function sendLoginAlertEmail(user: { name: string; email: string; r
  * 2. E-mail de Confirmação de Solicitação de Horário Recebida
  */
 export async function sendReservationCreatedEmail(reservation: Reservation): Promise<EmailNotification> {
-  const labName = reservation.labId === 'laser' ? 'LASER (Sala 1B209)' : 'SIGEO (Sala 1B307)';
+  const labName = reservation.labId === 'laser' ? 'LASER (Sala 1B309)' : 'SIGEO (Sala 1B307)';
   const formattedDate = new Date(reservation.date + 'T00:00:00').toLocaleDateString('pt-BR');
 
   const body = `
@@ -186,7 +186,7 @@ export async function sendReservationReviewedEmail(
   reviewerName: string
 ): Promise<EmailNotification> {
   const isApproved = reservation.status === 'aprovada';
-  const labName = reservation.labId === 'laser' ? 'LASER (Sala 1B209)' : 'SIGEO (Sala 1B307)';
+  const labName = reservation.labId === 'laser' ? 'LASER (Sala 1B309)' : 'SIGEO (Sala 1B307)';
   const formattedDate = new Date(reservation.date + 'T00:00:00').toLocaleDateString('pt-BR');
 
   let statusHtml = isApproved 
@@ -244,7 +244,7 @@ export async function sendReservationReviewedEmail(
  * 4. E-mail de Chamado de Manutenção
  */
 export async function sendMaintenanceEmail(req: MaintenanceRequest, isResolved = false): Promise<EmailNotification> {
-  const labName = req.labId === 'laser' ? 'LASER (Sala 1B209)' : 'SIGEO (Sala 1B307)';
+  const labName = req.labId === 'laser' ? 'LASER (Sala 1B309)' : 'SIGEO (Sala 1B307)';
 
   const body = `
     <p>Seu chamado de manutenção de equipamento foi ${isResolved ? '<strong>concluído com sucesso</strong>' : '<strong>aberto e atribuído à equipe técnica</strong>'}.</p>

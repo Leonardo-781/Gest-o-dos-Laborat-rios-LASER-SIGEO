@@ -48,7 +48,7 @@
 ---
 
 ## 🏢 SLIDE 4: Os Espaços Integrados na Plataforma
-* 📐 **LASER (Sala 1B209):**  
+* 📐 **LASER (Sala 1B309):**  
   *Sensoriamento Remoto, Scanners 3D Laser (Leica BLK360/FARO), GNSS RTK Trimble, Estações Totais e Drones LiDAR.*
 * 🛰️ **SIGEO (Sala 1B307):**  
   *24 Workstations de Alto Desempenho (RTX 4070), Servidor Metashape e Plotter Colorida A0 para Cartografia.*
@@ -56,7 +56,7 @@
   *Ponto central de atendimento, calibração de instrumentos, triagem de chamados e suporte presencial.*
 
 > 🗣️ **Roteiro de Fala:**  
-> *"O sistema respeita rigorosamente a estrutura do nosso departamento, vinculando os instrumentos de alta precisão ao LASER na 1B209, as 24 workstations ao SIGEO na 1B307 e o plantão da equipe técnica na Sala 1B308."*
+> *"O sistema respeita rigorosamente a estrutura do nosso departamento, vinculando os instrumentos de alta precisão ao LASER na 1B309, as 24 workstations ao SIGEO na 1B307 e o plantão da equipe técnica na Sala 1B308."*
 
 ---
 

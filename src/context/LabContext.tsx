@@ -1653,6 +1653,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fixedClasses
       .filter(fc => (labFilter === 'all' || fc.labId === labFilter) && fc.dayOfWeek === dayOfWeek)
       .forEach(fc => {
+        const isExternal = Boolean(fc.isExternal || fc.highlightColor);
+        const customColor = fc.customColor || (isExternal ? 'vermelho' : (fc.labId === 'laser' ? 'azul' : 'verde'));
+        const highlightColor = (customColor === 'vermelho' || isExternal)
+          ? 'bg-rose-100 text-rose-950 border-rose-300'
+          : (customColor === 'azul'
+            ? 'bg-blue-50 text-blue-950 border-blue-200'
+            : (customColor === 'verde'
+              ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
+              : fc.highlightColor));
+
         events.push({
           id: `event-${fc.id}`,
           originType: 'fixed_class',
@@ -1664,7 +1674,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           endTime: fc.endTime,
           type: 'aula_regular',
           responsible: fc.professor,
-          highlightColor: fc.highlightColor,
+          isExternal,
+          customColor,
+          highlightColor,
           rawItem: fc
         });
       });
@@ -1672,6 +1684,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     reservations
       .filter(res => (labFilter === 'all' || res.labId === labFilter) && res.date === dateStr && res.status === 'aprovada')
       .forEach(res => {
+        const isExternal = Boolean(res.isExternal || res.highlightColor?.includes('rose') || res.customColor === 'vermelho');
+        const customColor = res.customColor || (isExternal ? 'vermelho' : (res.labId === 'laser' ? 'azul' : 'verde'));
+        const highlightColor = (customColor === 'vermelho' || isExternal)
+          ? 'bg-rose-100 text-rose-950 border-rose-300'
+          : (customColor === 'azul'
+            ? 'bg-blue-50 text-blue-950 border-blue-200'
+            : (customColor === 'verde'
+              ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
+              : undefined));
+
         events.push({
           id: `event-${res.id}`,
           originType: 'reservation',
@@ -1688,6 +1710,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           responsible: res.userTeacher ? res.userTeacher : res.applicantName,
           responsibleTeacher: res.responsibleTeacher || res.supervisorName,
           userTeacher: res.userTeacher,
+          isExternal,
+          customColor,
+          highlightColor,
           status: res.status,
           isRecurring: res.isRecurring,
           recurrenceWeekIndex: res.recurrenceWeekIndex,

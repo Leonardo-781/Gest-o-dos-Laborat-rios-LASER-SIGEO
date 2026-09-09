@@ -68,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             <span>•</span>
             <span className="font-medium text-slate-600">Agrimensura & Cartografia</span>
             <span className="hidden sm:inline text-slate-300">•</span>
-            <span className="hidden lg:inline text-slate-400">LASER (1B209) • SIGEO (1B307) • Sala dos Técnicos (1B308)</span>
+            <span className="hidden lg:inline text-slate-400">LASER (1B309) • SIGEO (1B307) • Sala dos Técnicos (1B308)</span>
           </div>
 
           <div className="flex items-center gap-3">

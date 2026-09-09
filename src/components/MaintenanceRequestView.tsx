@@ -215,7 +215,7 @@ export const MaintenanceRequestView: React.FC = () => {
                   <Compass className="w-5 h-5 text-blue-600" />
                   <div>
                     <span className="font-bold text-xs text-blue-950 block">LABORATÓRIO LASER</span>
-                    <span className="text-[11px] text-slate-500">Sala 1B209 • Sensores, GNSS & Scanners</span>
+                    <span className="text-[11px] text-slate-500">Sala 1B309 • Sensores, GNSS & Scanners</span>
                   </div>
                 </div>
                 {labId === 'laser' && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
