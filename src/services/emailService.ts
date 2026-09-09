@@ -150,6 +150,8 @@ export async function sendReservationCreatedEmail(reservation: Reservation): Pro
       <p><strong>Horário Solicitado:</strong> ${reservation.startTime} às ${reservation.endTime}</p>
       <p><strong>Título da Atividade:</strong> ${reservation.title}</p>
       <p><strong>Finalidade:</strong> ${reservation.purposeType.replace('_', ' ').toUpperCase()}</p>
+      ${reservation.userTeacher ? `<p><strong>Professor em Uso (Público):</strong> ${reservation.userTeacher}</p>` : ''}
+      ${(reservation.responsibleTeacher || reservation.supervisorName) ? `<p><strong>Professor Responsável (Interno):</strong> ${reservation.responsibleTeacher || reservation.supervisorName}</p>` : ''}
       ${reservation.applicantPhone ? `<p><strong>Telefone para Contato:</strong> ${reservation.applicantPhone}</p>` : ''}
     </div>
     <p>Você receberá um novo e-mail assim que o coordenador ou a equipe técnica emitir o parecer formal de aprovação.</p>

@@ -12,7 +12,10 @@ import {
   Ban, 
   FileText,
   Building,
-  Sparkles
+  Sparkles,
+  Globe,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, PurposeType, ReservationStatus } from '../types';
@@ -40,6 +43,8 @@ export const ReservationEditModal: React.FC = () => {
   const [purposeType, setPurposeType] = useState<PurposeType>('tcc');
   const [status, setStatus] = useState<ReservationStatus>('aprovada');
   const [adminNotes, setAdminNotes] = useState('');
+  const [responsibleTeacher, setResponsibleTeacher] = useState('');
+  const [userTeacher, setUserTeacher] = useState('');
   const [updateWholeSeries, setUpdateWholeSeries] = useState(false);
   const [conflictStatus, setConflictStatus] = useState<{ available: boolean; conflictReason?: string }>({ available: true });
 
@@ -54,6 +59,8 @@ export const ReservationEditModal: React.FC = () => {
       setPurposeType(editingReservation.purposeType || 'tcc');
       setStatus(editingReservation.status || 'aprovada');
       setAdminNotes(editingReservation.adminNotes || '');
+      setResponsibleTeacher(editingReservation.responsibleTeacher || editingReservation.supervisorName || '');
+      setUserTeacher(editingReservation.userTeacher || '');
       setUpdateWholeSeries(false);
     }
   }, [isReservationModalOpen, editingReservation]);
@@ -89,7 +96,10 @@ export const ReservationEditModal: React.FC = () => {
         endTime,
         purposeType,
         status,
-        adminNotes: adminNotes || undefined
+        adminNotes: adminNotes || undefined,
+        responsibleTeacher: responsibleTeacher.trim() || undefined,
+        userTeacher: userTeacher.trim() || undefined,
+        supervisorName: responsibleTeacher.trim() || undefined
       },
       updateWholeSeries
     );
@@ -317,6 +327,59 @@ export const ReservationEditModal: React.FC = () => {
                   <option value="cancelada">⚪ Cancelada (Horário Liberado)</option>
                   <option value="recusada">🔴 Recusada</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Professores: Em Uso (Público) e Responsável (Interno) */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+              <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                Professores Vinculados ao Horário:
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Globe className="w-3.5 h-3.5 text-blue-600" />
+                      Professor em Uso:
+                    </span>
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                      Público na Grade
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Prof. Dr. Silva"
+                    value={userTeacher}
+                    onChange={(e) => setUserTeacher(e.target.value)}
+                    className="w-full text-xs bg-white border border-slate-300 rounded-xl p-2.5 font-medium"
+                  />
+                  <p className="text-[9px] text-slate-500 mt-1">
+                    Exibido publicamente na grade de horários para todos.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Lock className="w-3.5 h-3.5 text-amber-600" />
+                      Professor Responsável:
+                    </span>
+                    <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                      Uso Interno
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Prof. Coordenador"
+                    value={responsibleTeacher}
+                    onChange={(e) => setResponsibleTeacher(e.target.value)}
+                    className="w-full text-xs bg-white border border-slate-300 rounded-xl p-2.5 font-medium"
+                  />
+                  <p className="text-[9px] text-slate-500 mt-1">
+                    Uso restrito a técnicos e coordenação (oculto ao público).
+                  </p>
+                </div>
               </div>
             </div>
 

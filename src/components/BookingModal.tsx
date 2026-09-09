@@ -15,7 +15,10 @@ import {
   LogIn,
   Wrench,
   HelpCircle,
-  Repeat
+  Repeat,
+  Lock,
+  Globe,
+  ShieldCheck
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, PurposeType, UserRole } from '../types';
@@ -49,6 +52,8 @@ export const BookingModal: React.FC = () => {
   const [applicantRole, setApplicantRole] = useState<UserRole>('aluno');
   const [applicantId, setApplicantId] = useState<string>('');
   const [supervisorName, setSupervisorName] = useState<string>('');
+  const [responsibleTeacher, setResponsibleTeacher] = useState<string>('');
+  const [userTeacher, setUserTeacher] = useState<string>('');
   const [expectedAttendees, setExpectedAttendees] = useState<number>(1);
   const [requestedEquipments, setRequestedEquipments] = useState<string[]>([]);
   const [agreedTerms, setAgreedTerms] = useState<boolean>(false);
@@ -183,7 +188,9 @@ export const BookingModal: React.FC = () => {
         applicantPhone,
         applicantRole: applicantRole || currentUser?.role || 'aluno',
         applicantId: applicantId || currentUser?.documentId || 'Pendente',
-        supervisorName: supervisorName || undefined,
+        supervisorName: responsibleTeacher || supervisorName || undefined,
+        responsibleTeacher: responsibleTeacher || supervisorName || undefined,
+        userTeacher: userTeacher || undefined,
         expectedAttendees,
         requestedEquipments
       },
@@ -548,6 +555,56 @@ export const BookingModal: React.FC = () => {
                     onChange={(e) => setExpectedAttendees(Number(e.target.value))}
                     className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-medium focus:ring-1 focus:ring-blue-500"
                   />
+                </div>
+              </div>
+
+              {/* DOCENTES: PROFESSOR EM USO (PÚBLICO) E PROFESSOR RESPONSÁVEL (INTERNO) */}
+              <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Professores Vinculados à Atividade:
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Controle de Visibilidade
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Professor em Uso - Público */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                      <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Nome do Professor em Uso (Público):</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Prof. Dr. João Silva"
+                      value={userTeacher}
+                      onChange={(e) => setUserTeacher(e.target.value)}
+                      className="w-full text-xs bg-white border border-slate-300 rounded-xl p-2.5 font-medium focus:ring-1 focus:ring-blue-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1 leading-tight">
+                      <strong className="text-emerald-700">Público:</strong> Aparece na grade de horários para todos identificarem quem estará ministrando/usando.
+                    </p>
+                  </div>
+
+                  {/* Professor Responsável - Interno */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                      <Lock className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Professor Responsável (Uso Interno):</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Prof. Carlos Eduardo (Orientador)"
+                      value={responsibleTeacher}
+                      onChange={(e) => setResponsibleTeacher(e.target.value)}
+                      className="w-full text-xs bg-white border border-slate-300 rounded-xl p-2.5 font-medium focus:ring-1 focus:ring-blue-500"
+                    />
+                    <p className="text-[10px] text-amber-800/80 mt-1 leading-tight">
+                      <strong className="text-amber-800">Interno:</strong> Visível apenas para a equipe técnica e coordenadores para autorizações.
+                    </p>
+                  </div>
                 </div>
               </div>
 

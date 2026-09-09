@@ -119,6 +119,8 @@ export interface Reservation {
   applicantRole: UserRole;
   applicantId: string;
   supervisorName?: string;
+  responsibleTeacher?: string; // Professor Responsável (Interno: visível apenas para técnicos/coordenadores)
+  userTeacher?: string;        // Professor em Uso / Docente (Público: visível na grade de horários para todos)
   expectedAttendees: number;
   requestedEquipments: string[];
   status: ReservationStatus;
@@ -221,6 +223,8 @@ export interface ScheduleEvent {
   isRecurring?: boolean;
   recurrenceWeekIndex?: number;
   recurrenceTotalWeeks?: number;
+  responsibleTeacher?: string; // Interno
+  userTeacher?: string;        // Público
   rawItem: FixedClass | Reservation;
 }
 

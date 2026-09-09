@@ -11,7 +11,9 @@ import {
   CheckCircle,
   Tag,
   Repeat,
-  Ban
+  Ban,
+  Globe,
+  Lock
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, getPurposeBadge, getStatusBadge } from '../utils/dateHelpers';
@@ -140,14 +142,16 @@ export const EventDetailModal: React.FC = () => {
           </div>
 
           {/* Identificação da Turma / Responsável */}
-          <div className="border-t border-slate-100 pt-4 space-y-2">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Identificação da Turma</span>
+          <div className="border-t border-slate-100 pt-4 space-y-3">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">
+              {isFixedClass ? 'Identificação da Turma & Docente' : 'Docentes & Solicitante'}
+            </span>
             
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 font-bold">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 font-bold flex-shrink-0">
                 <User className="w-4 h-4" />
               </div>
-              <div>
+              <div className="space-y-0.5">
                 <div className="text-xs font-bold text-slate-900">
                   {ev.responsible || 'Turma Oficial de Graduação'}
                 </div>
@@ -161,8 +165,59 @@ export const EventDetailModal: React.FC = () => {
                     {fixedClassItem.notes}
                   </div>
                 )}
+                {reservationItem && (
+                  <div className="text-[11px] text-slate-500">
+                    Solicitante: <strong>{reservationItem.applicantName}</strong> ({reservationItem.applicantRole})
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Professor em Uso (Público - Visível a Todos) */}
+            {(reservationItem?.userTeacher || ev.userTeacher) && (
+              <div className="flex items-center gap-2.5 p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-950">
+                <Globe className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="text-[10px] uppercase font-bold text-blue-700 flex items-center gap-1.5">
+                    Professor em Uso
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded border border-emerald-300">
+                      Público
+                    </span>
+                  </span>
+                  <span className="font-bold text-xs text-blue-950">
+                    {reservationItem?.userTeacher || ev.userTeacher}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Professor Responsável (Uso Interno - Apenas Técnicos, Coordenadores e o Próprio Solicitante) */}
+            {(isManager || (currentUser && reservationItem && (currentUser.id === reservationItem.createdById || currentUser.email.toLowerCase() === reservationItem.applicantEmail.toLowerCase()))) && (reservationItem?.responsibleTeacher || reservationItem?.supervisorName || ev.responsibleTeacher) && (
+              <div className="flex items-center justify-between gap-2.5 p-2.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950">
+                <div className="flex items-center gap-2.5">
+                  <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-amber-800 flex items-center gap-1.5">
+                      Professor Responsável
+                      <span className="text-[9px] font-bold text-amber-900 bg-amber-200/70 px-1.5 py-0.2 rounded border border-amber-300">
+                        Uso Interno
+                      </span>
+                    </span>
+                    <span className="font-bold text-xs text-amber-950">
+                      {reservationItem?.responsibleTeacher || reservationItem?.supervisorName || ev.responsibleTeacher}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Descrição da Atividade se houver */}
+            {reservationItem?.description && (
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Descrição:</span>
+                <p className="leading-relaxed">{reservationItem.description}</p>
+              </div>
+            )}
           </div>
 
           {/* Equipamentos Alocados */}

@@ -17,6 +17,7 @@ import {
   Sparkles,
   Cloud,
   Lock,
+  Globe,
   CheckCircle2,
   Edit3,
   Users,
@@ -368,7 +369,7 @@ export const AdminPanel: React.FC = () => {
                     </div>
 
                     {/* Metadados */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-2.5 bg-slate-50 rounded-xl text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 p-2.5 bg-slate-50 rounded-xl text-xs">
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-400 block">Data & Horário</span>
                         <span className="font-bold text-slate-800">{formatDateBR(res.date)} • {res.startTime} às {res.endTime}</span>
@@ -381,8 +382,19 @@ export const AdminPanel: React.FC = () => {
                       </div>
 
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Orientador / Supervisor</span>
-                        <span className="font-bold text-slate-800">{res.supervisorName || 'Não informado'}</span>
+                        <span className="text-[10px] uppercase font-bold text-blue-700 block flex items-center gap-1">
+                          <Globe className="w-3 h-3 text-blue-600" /> Prof. em Uso (Público)
+                        </span>
+                        <span className="font-bold text-slate-800">{res.userTeacher || 'Não informado'}</span>
+                        <span className="text-[9px] text-emerald-700 block">Visível na grade</span>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-amber-800 block flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-amber-600" /> Prof. Responsável (Interno)
+                        </span>
+                        <span className="font-bold text-slate-800">{res.responsibleTeacher || res.supervisorName || 'Não informado'}</span>
+                        <span className="text-[9px] text-amber-700 block">Apenas gestão</span>
                       </div>
                     </div>
 
@@ -913,11 +925,23 @@ export const AdminPanel: React.FC = () => {
                   <td className="p-3 font-bold text-slate-900">{res.title}</td>
                   <td className="p-3">{res.applicantName}</td>
                   <td className="p-3">
+                    {res.userTeacher && (
+                      <span className="text-[10px] text-blue-700 font-semibold block">
+                        Uso: <strong>{res.userTeacher}</strong>
+                      </span>
+                    )}
+                    {(res.responsibleTeacher || res.supervisorName) && (
+                      <span className="text-[10px] text-amber-800 font-medium block">
+                        Resp: {res.responsibleTeacher || res.supervisorName}
+                      </span>
+                    )}
                     {res.reviewedBy ? (
-                      <span className="text-[11px] text-slate-700 block">
+                      <span className="text-[10px] text-slate-500 block">
                         Por: <strong>{res.reviewedBy.userName}</strong> ({res.reviewedBy.userRole})
                       </span>
-                    ) : 'Automático'}
+                    ) : (
+                      <span className="text-[10px] text-slate-400 block">Automático</span>
+                    )}
                   </td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${

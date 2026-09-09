@@ -16,7 +16,9 @@ import {
   Check,
   ChevronRight,
   ExternalLink,
-  Key
+  Key,
+  Globe,
+  Lock
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, formatDateTimeBR, getPurposeBadge, getStatusBadge } from '../utils/dateHelpers';
@@ -29,7 +31,8 @@ export const RequestTracker: React.FC = () => {
     softwareRequests, 
     cancelReservation, 
     labs, 
-    equipments 
+    equipments,
+    currentUser
   } = useLab();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -152,6 +155,8 @@ export const RequestTracker: React.FC = () => {
             const lab = labs[res.labId];
             const badge = getPurposeBadge(res.purposeType);
             const status = getStatusBadge(res.status);
+            const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
+            const canSeeInternal = isManager || (currentUser && (currentUser.id === res.createdById || currentUser.email.toLowerCase() === res.applicantEmail.toLowerCase()));
 
             return (
               <div
@@ -202,6 +207,34 @@ export const RequestTracker: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Professores Vinculados */}
+                {(res.userTeacher || (canSeeInternal && (res.responsibleTeacher || res.supervisorName))) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {res.userTeacher && (
+                      <div className="flex items-center gap-2 p-2 bg-blue-50/70 border border-blue-200 rounded-xl text-blue-950">
+                        <Globe className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                        <span>
+                          Prof. em Uso: <strong>{res.userTeacher}</strong>
+                        </span>
+                      </div>
+                    )}
+
+                    {canSeeInternal && (res.responsibleTeacher || res.supervisorName) && (
+                      <div className="flex items-center justify-between gap-2 p-2 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-950">
+                        <div className="flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                          <span>
+                            Prof. Responsável: <strong>{res.responsibleTeacher || res.supervisorName}</strong>
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-bold text-amber-800 bg-amber-200/70 px-1.5 py-0.2 rounded border border-amber-300">
+                          Interno
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {res.adminNotes && (
                   <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
