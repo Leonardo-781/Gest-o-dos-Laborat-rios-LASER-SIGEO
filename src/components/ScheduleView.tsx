@@ -379,13 +379,6 @@ export const ScheduleView: React.FC = () => {
                           return evStartMin >= slotStartMin && evStartMin < slotEndMin;
                         });
 
-                        // Eventos que iniciaram antes desta faixa e continuam ativos nela
-                        const continuingEvents = dayEvents.filter((ev) => {
-                          const evStartMin = timeToMinutes(ev.startTime);
-                          const evEndMin = timeToMinutes(ev.endTime);
-                          return evStartMin < slotStartMin && evEndMin > slotStartMin;
-                        });
-
                         // Checa ocupação real de cada laboratório nesta faixa de horário
                         const isLaserOccupied = dayEvents.some((ev) => {
                           const evStartMin = timeToMinutes(ev.startTime);
@@ -424,12 +417,12 @@ export const ScheduleView: React.FC = () => {
                                 );
                               }
                             }}
-                            className={`p-1 border-r last:border-r-0 border-slate-100 relative cursor-pointer hover:bg-blue-50/20 transition-all ${
+                            className={`p-1 border-r last:border-r-0 border-slate-100 relative cursor-pointer hover:bg-blue-50/20 transition-all group ${
                               day.isToday ? 'bg-blue-50/10' : ''
                             }`}
                             title="Clique para solicitar horário ou apoio técnico"
                           >
-                            {/* 1. Renderizar cartões de eventos que iniciam neste horário */}
+                            {/* Renderizar cartões de eventos que iniciam neste horário */}
                             {startingEvents.map((ev) => {
                               const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
                               const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
@@ -442,7 +435,7 @@ export const ScheduleView: React.FC = () => {
                                     e.stopPropagation();
                                     setSelectedEventDetail(ev);
                                   }}
-                                  className={`p-1.5 rounded-lg border text-left mb-1 transition hover:shadow-xs cursor-pointer ${
+                                  className={`p-1.5 rounded-lg border text-left mb-1 transition-all duration-150 hover:shadow-xs cursor-pointer ${
                                     isExternal
                                       ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
                                       : isBlue
@@ -487,69 +480,13 @@ export const ScheduleView: React.FC = () => {
                               );
                             })}
 
-                            {/* 2. Renderizar cartões de continuação para aulas/reservas que abrangem este slot */}
-                            {continuingEvents.map((ev) => {
-                              const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
-                              const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
-
-                              return (
-                                <div
-                                  key={`cont-${ev.id}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedEventDetail(ev);
-                                  }}
-                                  className={`p-1.5 rounded-lg border border-dashed text-left mb-1 transition hover:shadow-xs cursor-pointer ${
-                                    isExternal
-                                      ? 'bg-rose-50/80 border-rose-300 text-rose-950'
-                                      : isBlue
-                                      ? 'bg-blue-50/70 border-blue-300 text-blue-950 hover:bg-blue-50'
-                                      : 'bg-emerald-50/70 border-emerald-300 text-emerald-950 hover:bg-emerald-50'
-                                  }`}
-                                  title={`${ev.title} (${ev.startTime} às ${ev.endTime}) • Clique para ver detalhes`}
-                                >
-                                  <div className="flex items-center justify-between gap-1 text-[8.5px] font-bold">
-                                    <span className={`px-1 rounded text-[8px] ${
-                                      isExternal 
-                                        ? 'bg-rose-700 text-white' 
-                                        : isBlue 
-                                        ? 'bg-blue-600 text-white' 
-                                        : 'bg-emerald-600 text-white'
-                                    }`}>
-                                      {isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
-                                    </span>
-                                    <span className="text-[8.5px] font-mono text-slate-500 font-semibold">
-                                      (até {ev.endTime})
-                                    </span>
-                                  </div>
-
-                                  <div className="text-[10px] font-bold leading-tight mt-0.5 line-clamp-1 flex items-center gap-1">
-                                    <span className="truncate">{ev.title}</span>
-                                    <span className="text-[8.5px] font-normal text-slate-400 flex-shrink-0">cont.</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-
-                            {/* 3. Quando vendo Todos os Labs, se um estiver ocupado e o outro livre, sugere o livre */}
-                            {selectedLab === 'all' && (!isLaserOccupied || !isSigeoOccupied) && (isLaserOccupied || isSigeoOccupied) && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openBookingWithPreselection(
-                                    labToPreselect,
-                                    day.dateStr,
-                                    slot.start,
-                                    slot.end
-                                  );
-                                }}
-                                className="w-full text-[9px] font-semibold py-0.5 px-1.5 rounded border border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/70 text-slate-500 hover:text-blue-700 transition flex items-center justify-center gap-1 cursor-pointer mt-0.5"
-                                title={`Solicitar reserva no ${labs[labToPreselect].name} (Horário livre)`}
-                              >
-                                <Plus className="w-2.5 h-2.5 text-slate-400" />
-                                <span>+ {labs[labToPreselect].name} livre</span>
-                              </button>
+                            {/* Indicador discreto apenas ao passar o mouse em células sem eventos */}
+                            {startingEvents.length === 0 && (
+                              <div className="h-full min-h-[38px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[10px] font-semibold text-blue-600 flex items-center gap-1 bg-white/90 px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                                  <Plus className="w-2.5 h-2.5 text-blue-600" /> Reservar
+                                </span>
+                              </div>
                             )}
                           </div>
                         );
