@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   LabId, 
+  LabGroupId,
   LabInfo, 
   FixedClass, 
   Reservation, 
@@ -83,6 +84,11 @@ interface LabContextType {
   maintenanceRequests: MaintenanceRequest[];
   softwareRequests: SoftwareRequest[];
   
+  // Hub e Navegação de Grupos de Laboratório
+  activeLabGroup: LabGroupId;
+  setActiveLabGroup: (group: LabGroupId) => void;
+  canUserManageLab: (labId: LabId) => boolean;
+
   // Autenticação & Usuário Ativo (Inicia SEMPRE deslogado como visitante)
   currentUser: UserAccount | null;
   currentProfile: UserRole;
@@ -93,7 +99,7 @@ interface LabContextType {
   registerUser: (user: UserAccount) => void;
   approveUserAccount: (userId: string) => void;
   rejectUserAccount: (userId: string) => void;
-  updateUserPermissions: (userId: string, newPermissions: Partial<UserPermissions>) => void;
+  updateUserPermissions: (userId: string, newPermissions: Partial<UserPermissions>, assignedLabs?: LabId[]) => void;
 
   // Notificações por E-mail (Envios em tempo real)
   emails: EmailNotification[];
@@ -220,11 +226,35 @@ const STORAGE_KEYS = {
 
 export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [labs] = useState<Record<LabId, LabInfo>>(LABS_INFO);
+  const [activeLabGroup, setActiveLabGroupState] = useState<LabGroupId>('portal');
   const [selectedLab, setSelectedLab] = useState<'all' | LabId>('all');
   const [referenceDate, setReferenceDate] = useState<Date>(new Date());
   
   // SEMPRE INICIA DESLOGADO (VISITANTE)
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+
+  const setActiveLabGroup = (group: LabGroupId) => {
+    setActiveLabGroupState(group);
+    if (group === 'ltgeo') {
+      setSelectedLab('ltgeo');
+    } else if (group === 'laser_sigeo') {
+      if (selectedLab === 'ltgeo') {
+        setSelectedLab('all');
+      }
+    }
+  };
+
+  const canUserManageLab = (labId: LabId): boolean => {
+    if (!currentUser) return false;
+    const isMaster = currentUser.id === 'usr-master' || currentUser.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+    if (isMaster) return true;
+    if (currentUser.role === 'coordenador') return true;
+    if (currentUser.role === 'tecnico') {
+      const allowed = currentUser.assignedLabs ?? ['laser', 'sigeo'];
+      return allowed.includes(labId);
+    }
+    return false;
+  };
 
   const [usersList, setUsersList] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USERS_LIST);
@@ -494,6 +524,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           passwordHash: MASTER_USER_CONFIG.passwordHash,
           passwordSalt: MASTER_USER_CONFIG.salt,
           emailVerified: true,
+          assignedLabs: ['laser', 'sigeo', 'ltgeo'],
           createdAt: new Date().toISOString()
         };
         setUsersList(prev => [masterUser!, ...prev]);
@@ -605,7 +636,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Cadastro de ${target?.name} recusado.`);
   };
 
-  const updateUserPermissions = (userId: string, newPermissions: Partial<UserPermissions>) => {
+  const updateUserPermissions = (userId: string, newPermissions: Partial<UserPermissions>, assignedLabs?: LabId[]) => {
     const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
     if (!isMaster) {
       showToast('Apenas o Administrador Master (Leonardo Cardoso) pode alterar permissões técnicas.');
@@ -618,6 +649,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (u.id === userId) {
         const merged: UserAccount = {
           ...u,
+          assignedLabs: assignedLabs !== undefined ? assignedLabs : u.assignedLabs,
           permissions: {
             canViewEmails: false,
             canApproveBookings: false,
@@ -630,6 +662,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         };
         targetUser = merged;
+        if (currentUser?.id === userId) {
+          setCurrentUser(merged);
+        }
         if (firebaseConfig.isConnected) {
           syncDocToFirestore('usuarios', merged, firebaseConfig);
         }
@@ -644,9 +679,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         targetUser.id,
         'usuario',
         `${targetUser.name} (${targetUser.role.toUpperCase()})`,
-        `Níveis de permissão atualizados pelo Administrador Master Leonardo Cardoso.`
+        `Níveis de permissão e laboratórios atribuídos atualizados pelo Administrador Master Leonardo Cardoso.`
       );
-      showToast(`Permissões de ${targetUser.name} atualizadas por Leonardo Cardoso!`);
+      showToast(`Permissões e laboratórios de ${targetUser.name} atualizados por Leonardo Cardoso!`);
     }
   };
 
@@ -889,6 +924,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = reservations.find(r => r.id === id);
     if (!target) return;
 
+    if (!canUserManageLab(target.labId)) {
+      showToast(`Você não possui permissão técnica para gerenciar o laboratório ${target.labId.toUpperCase()}.`);
+      return;
+    }
+
     const reviewer = currentUser;
     const nowIso = new Date().toISOString();
     const updatedRes: Reservation = {
@@ -939,6 +979,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const target = reservations.find(r => r.id === id);
     if (!target) return;
+
+    if (!canUserManageLab(target.labId)) {
+      showToast(`Você não possui permissão técnica para gerenciar o laboratório ${target.labId.toUpperCase()}.`);
+      return;
+    }
 
     const reviewer = currentUser;
     const nowIso = new Date().toISOString();
@@ -991,6 +1036,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targets = reservations.filter(r => r.recurrenceGroupId === groupId && r.status === 'pendente');
     if (targets.length === 0) {
       showToast('Nenhuma reserva pendente encontrada neste grupo recorrente.');
+      return;
+    }
+
+    if (!canUserManageLab(targets[0].labId)) {
+      showToast(`Você não possui permissão técnica para gerenciar o laboratório ${targets[0].labId.toUpperCase()}.`);
       return;
     }
 
@@ -1051,6 +1101,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targets = reservations.filter(r => r.recurrenceGroupId === groupId && r.status === 'pendente');
     if (targets.length === 0) {
       showToast('Nenhuma reserva pendente encontrada neste grupo recorrente.');
+      return;
+    }
+
+    if (!canUserManageLab(targets[0].labId)) {
+      showToast(`Você não possui permissão técnica para gerenciar o laboratório ${targets[0].labId.toUpperCase()}.`);
       return;
     }
 
@@ -1159,6 +1214,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = reservations.find(r => r.id === id);
     if (!target) return;
 
+    if (!canUserManageLab(target.labId)) {
+      showToast(`Você não possui permissão técnica para excluir horários do laboratório ${target.labId.toUpperCase()}.`);
+      return;
+    }
+
     const targets = (deleteWholeSeries && target.recurrenceGroupId)
       ? reservations.filter(r => r.recurrenceGroupId === target.recurrenceGroupId)
       : [target];
@@ -1207,6 +1267,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const target = reservations.find(r => r.id === id);
     if (!target) return { success: false, error: 'Reserva não encontrada.' };
+
+    if (!canUserManageLab(target.labId) || (updatedData.labId && !canUserManageLab(updatedData.labId))) {
+      showToast('Você não possui permissão técnica para gerenciar este laboratório.');
+      return { success: false, error: 'Permissão negada para este laboratório.' };
+    }
 
     const nowIso = new Date().toISOString();
 
@@ -1307,6 +1372,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    if (!canUserManageLab(classData.labId)) {
+      showToast(`Você não possui permissão técnica para cadastrar aulas no laboratório ${classData.labId.toUpperCase()}.`);
+      return;
+    }
+
     const newClass: FixedClass = {
       ...classData,
       id: `fc-${Date.now()}`
@@ -1337,6 +1407,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = fixedClasses.find(c => c.id === id);
     if (!target) return;
 
+    if (!canUserManageLab(target.labId) || (updatedData.labId && !canUserManageLab(updatedData.labId))) {
+      showToast('Você não possui permissão para editar aulas deste laboratório.');
+      return;
+    }
+
     const updated = { ...target, ...updatedData };
     setFixedClasses(prev => prev.map(c => c.id === id ? updated : c));
 
@@ -1362,6 +1437,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const target = fixedClasses.find(c => c.id === id);
+    if (!target) return;
+
+    if (!canUserManageLab(target.labId)) {
+      showToast(`Você não possui permissão técnica para remover aulas do laboratório ${target.labId.toUpperCase()}.`);
+      return;
+    }
     if (target) {
       logAudit(
         'aula_removida',
@@ -1424,6 +1505,14 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    const target = equipments.find(e => e.id === id);
+    if (!target) return;
+
+    if (!canUserManageLab(target.labId)) {
+      showToast(`Você não possui permissão técnica para gerenciar equipamentos do laboratório ${target.labId.toUpperCase()}.`);
+      return;
+    }
+
     setEquipments(prev => prev.map(eq => {
       if (eq.id === id) {
         const updated = { ...eq, status };
@@ -1445,6 +1534,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const target = equipments.find(e => e.id === equipmentId);
     if (!target) return;
+
+    if (!canUserManageLab(target.labId)) {
+      showToast(`Você não possui permissão técnica para gerenciar equipamentos do laboratório ${target.labId.toUpperCase()}.`);
+      return;
+    }
 
     const updated = {
       ...target,
@@ -1664,18 +1758,27 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const dayOfWeek = getDayOfWeekFromDateStr(dateStr);
     const events: ScheduleEvent[] = [];
 
+    const matchesLab = (itemLabId: LabId) => {
+      if (labFilter !== 'all') return itemLabId === labFilter;
+      if (activeLabGroup === 'ltgeo') return itemLabId === 'ltgeo';
+      if (activeLabGroup === 'laser_sigeo') return itemLabId === 'laser' || itemLabId === 'sigeo';
+      return true;
+    };
+
     fixedClasses
-      .filter(fc => (labFilter === 'all' || fc.labId === labFilter) && fc.dayOfWeek === dayOfWeek)
+      .filter(fc => matchesLab(fc.labId) && fc.dayOfWeek === dayOfWeek)
       .forEach(fc => {
         const isExternal = Boolean(fc.isExternal || fc.highlightColor);
-        const customColor = fc.customColor || (isExternal ? 'vermelho' : (fc.labId === 'laser' ? 'azul' : 'verde'));
+        const customColor = fc.customColor || (isExternal ? 'vermelho' : (fc.labId === 'laser' ? 'azul' : (fc.labId === 'ltgeo' ? 'laranja' : 'verde')));
         const highlightColor = (customColor === 'vermelho' || isExternal)
           ? 'bg-rose-100 text-rose-950 border-rose-300'
           : (customColor === 'azul'
             ? 'bg-blue-50 text-blue-950 border-blue-200'
-            : (customColor === 'verde'
-              ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-              : fc.highlightColor));
+            : (customColor === 'laranja'
+              ? 'bg-orange-50 text-orange-950 border-orange-200'
+              : (customColor === 'verde'
+                ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
+                : fc.highlightColor)));
 
         events.push({
           id: `event-${fc.id}`,
@@ -1696,17 +1799,19 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
     reservations
-      .filter(res => (labFilter === 'all' || res.labId === labFilter) && res.date === dateStr && res.status === 'aprovada')
+      .filter(res => matchesLab(res.labId) && res.date === dateStr && res.status === 'aprovada')
       .forEach(res => {
         const isExternal = Boolean(res.isExternal || res.highlightColor?.includes('rose') || res.customColor === 'vermelho');
-        const customColor = res.customColor || (isExternal ? 'vermelho' : (res.labId === 'laser' ? 'azul' : 'verde'));
+        const customColor = res.customColor || (isExternal ? 'vermelho' : (res.labId === 'laser' ? 'azul' : (res.labId === 'ltgeo' ? 'laranja' : 'verde')));
         const highlightColor = (customColor === 'vermelho' || isExternal)
           ? 'bg-rose-100 text-rose-950 border-rose-300'
           : (customColor === 'azul'
             ? 'bg-blue-50 text-blue-950 border-blue-200'
-            : (customColor === 'verde'
-              ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-              : undefined));
+            : (customColor === 'laranja'
+              ? 'bg-orange-50 text-orange-950 border-orange-200'
+              : (customColor === 'verde'
+                ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
+                : undefined)));
 
         events.push({
           id: `event-${res.id}`,
@@ -1739,6 +1844,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getPendingRequestsCount = () => {
+    if (currentUser?.role === 'tecnico') {
+      return reservations.filter(r => r.status === 'pendente' && canUserManageLab(r.labId)).length;
+    }
     return reservations.filter(r => r.status === 'pendente').length;
   };
 
@@ -1771,6 +1879,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <LabContext.Provider
       value={{
         labs,
+        activeLabGroup,
+        setActiveLabGroup,
+        canUserManageLab,
         selectedLab,
         setSelectedLab,
         referenceDate,

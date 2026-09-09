@@ -16,8 +16,8 @@ import { Equipment } from '../types';
 import { getEquipmentCategoryLabel, getEquipmentStatusBadge } from '../utils/dateHelpers';
 
 export const EquipmentManager: React.FC = () => {
-  const { equipments, updateEquipmentStatus, currentProfile, labs } = useLab();
-  const [selectedLabFilter, setSelectedLabFilter] = useState<'all' | 'laser' | 'sigeo'>('all');
+  const { equipments, updateEquipmentStatus, currentUser, labs, canUserManageLab } = useLab();
+  const [selectedLabFilter, setSelectedLabFilter] = useState<'all' | 'laser' | 'sigeo' | 'ltgeo'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredEquipments = equipments.filter(eq => {
@@ -31,7 +31,7 @@ export const EquipmentManager: React.FC = () => {
     return matchesLab && matchesSearch;
   });
 
-  const canEditStatus = currentProfile === 'coordenador' || currentProfile === 'tecnico';
+  const canEditStatus = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
 
   return (
     <div className="space-y-6">
@@ -42,13 +42,13 @@ export const EquipmentManager: React.FC = () => {
           <div>
             <h3 className="text-xl font-bold text-slate-900 tracking-tight">Inventário de Equipamentos & Recursos</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Consulte e gerencie a disponibilidade de instrumentos de alta precisão do Laser e Workstations do Sigeo
+              Consulte e gerencie a disponibilidade de instrumentos de alta precisão do LASER, estações e receptores GNSS do LTGEO e Workstations do SIGEO
             </p>
           </div>
 
           {canEditStatus && (
             <span className="text-xs px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200 self-start sm:self-auto">
-              ✓ Edição de status habilitada ({currentProfile})
+              ✓ Edição de status habilitada ({currentUser?.role || 'gestão'})
             </span>
           )}
         </div>
@@ -58,7 +58,7 @@ export const EquipmentManager: React.FC = () => {
           <div className="relative w-full">
             <input
               type="text"
-              placeholder="Buscar por nome do instrumento, código (ex: LS-01, GNSS) ou categoria..."
+              placeholder="Buscar por nome do instrumento, código (ex: LS-01, GNSS, LT-01) ou categoria..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
@@ -97,6 +97,16 @@ export const EquipmentManager: React.FC = () => {
             >
               SIGEO
             </button>
+            <button
+              onClick={() => setSelectedLabFilter('ltgeo')}
+              className={`px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                selectedLabFilter === 'ltgeo'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'bg-orange-50 text-orange-800 hover:bg-orange-100'
+              }`}
+            >
+              LTGEO
+            </button>
           </div>
         </div>
       </div>
@@ -116,8 +126,12 @@ export const EquipmentManager: React.FC = () => {
                 {/* Header do Equipamento */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider ${
-                      isLaser ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider border ${
+                      eq.labId === 'laser' 
+                        ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                        : eq.labId === 'sigeo' 
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                        : 'bg-orange-100 text-orange-800 border-orange-200'
                     }`}>
                       {eq.labId.toUpperCase()}
                     </span>
@@ -149,24 +163,30 @@ export const EquipmentManager: React.FC = () => {
 
               {/* Ação de Modificar Status para Técnicos / Coordenação */}
               {canEditStatus ? (
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-                  <span className="text-[11px] font-semibold text-slate-400">Alterar Status:</span>
-                  <div className="flex items-center gap-1">
-                    {(['disponivel', 'em_uso', 'em_campo', 'manutencao'] as const).map(st => (
-                      <button
-                        key={st}
-                        onClick={() => updateEquipmentStatus(eq.id, st)}
-                        className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
-                          eq.status === st
-                            ? 'bg-slate-900 text-white shadow'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {st === 'disponivel' ? 'Livre' : st === 'em_uso' ? 'Em Uso' : st === 'em_campo' ? 'Campo' : 'Manutenção'}
-                      </button>
-                    ))}
+                canUserManageLab(eq.labId) ? (
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                    <span className="text-[11px] font-semibold text-slate-400">Alterar Status:</span>
+                    <div className="flex items-center gap-1">
+                      {(['disponivel', 'em_uso', 'em_campo', 'manutencao'] as const).map(st => (
+                        <button
+                          key={st}
+                          onClick={() => updateEquipmentStatus(eq.id, st)}
+                          className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                            eq.status === st
+                              ? 'bg-slate-900 text-white shadow'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {st === 'disponivel' ? 'Livre' : st === 'em_uso' ? 'Em Uso' : st === 'em_campo' ? 'Campo' : 'Manutenção'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-100 italic">
+                    Restrito ao técnico responsável pelo {eq.labId.toUpperCase()} ({labs[eq.labId]?.location})
+                  </div>
+                )
               ) : (
                 <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-100">
                   Localização: {labs[eq.labId].location}

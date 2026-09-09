@@ -66,7 +66,7 @@ export const BookingModal: React.FC = () => {
   const [agreedTerms, setAgreedTerms] = useState<boolean>(false);
   const [needsTechSupport, setNeedsTechSupport] = useState<boolean>(false);
   const [isExternal, setIsExternal] = useState<boolean>(false);
-  const [customColor, setCustomColor] = useState<'padrao' | 'azul' | 'verde' | 'vermelho'>('padrao');
+  const [customColor, setCustomColor] = useState<'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho'>('padrao');
 
   // Estados de Recorrência Semanal
   const [isRecurring, setIsRecurring] = useState<boolean>(false);
@@ -192,15 +192,17 @@ export const BookingModal: React.FC = () => {
 
     const effectiveColor = customColor !== 'padrao' 
       ? customColor 
-      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : 'verde'));
+      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde')));
 
     const highlightColor = (effectiveColor === 'vermelho' || isExternal)
       ? 'bg-rose-100 text-rose-950 border-rose-300'
       : (effectiveColor === 'azul'
         ? 'bg-blue-50 text-blue-950 border-blue-200'
-        : (effectiveColor === 'verde'
-          ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-          : undefined));
+        : (effectiveColor === 'laranja'
+          ? 'bg-orange-50 text-orange-950 border-orange-200'
+          : (effectiveColor === 'verde'
+            ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
+            : undefined)));
 
     const res = createReservation(
       {
@@ -344,39 +346,56 @@ export const BookingModal: React.FC = () => {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
                 1. Escolha o Laboratório:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div
                   onClick={() => setLabId('laser')}
-                  className={`p-3.5 rounded-xl border-2 transition cursor-pointer ${
+                  className={`p-3 rounded-xl border-2 transition cursor-pointer ${
                     labId === 'laser'
                       ? 'border-blue-600 bg-blue-50/60 shadow-xs'
                       : 'border-slate-200 hover:border-blue-300'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-blue-900">LABORATÓRIO LASER</span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
-                      Capacidade: {labs.laser.capacity}
+                    <span className="font-bold text-xs text-blue-900">LASER</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-blue-100 text-blue-800">
+                      {labs.laser?.capacity || 25} vagas
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Sensores, Laser Scanner 3D, GNSS e Topografia</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Sala 1B309 • Sensoriamento</p>
                 </div>
 
                 <div
                   onClick={() => setLabId('sigeo')}
-                  className={`p-3.5 rounded-xl border-2 transition cursor-pointer ${
+                  className={`p-3 rounded-xl border-2 transition cursor-pointer ${
                     labId === 'sigeo'
                       ? 'border-emerald-600 bg-emerald-50/60 shadow-xs'
                       : 'border-slate-200 hover:border-emerald-300'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-emerald-900">LABORATÓRIO SIGEO</span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                      Capacidade: {labs.sigeo.capacity}
+                    <span className="font-bold text-xs text-emerald-900">SIGEO</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                      {labs.sigeo?.capacity || 35} vagas
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">24 Workstations com QGIS, ArcGIS e Metashape</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Sala 1B307 • Workstations SIG</p>
+                </div>
+
+                <div
+                  onClick={() => setLabId('ltgeo')}
+                  className={`p-3 rounded-xl border-2 transition cursor-pointer ${
+                    labId === 'ltgeo'
+                      ? 'border-orange-600 bg-orange-50/60 shadow-xs'
+                      : 'border-slate-200 hover:border-orange-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-orange-950">LTGEO</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-orange-100 text-orange-900">
+                      {labs.ltgeo?.capacity || 30} vagas
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Sala 1B210 • Topografia & GNSS</p>
                 </div>
               </div>
             </div>
@@ -656,7 +675,7 @@ export const BookingModal: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setIsExternal(false);
-                      setCustomColor(labId === 'laser' ? 'azul' : 'verde');
+                      setCustomColor(labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde'));
                     }}
                     className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs border transition cursor-pointer flex items-center justify-center gap-1.5 ${
                       !isExternal
@@ -687,7 +706,7 @@ export const BookingModal: React.FC = () => {
                 <p className="text-[10px] text-slate-500 leading-tight">
                   {isExternal 
                     ? '🔴 Atividade marcada como EXTERNA: será destacada em Vermelho na grade de horários.'
-                    : `🔵 Atividade interna do curso: exibida na cor padrão do laboratório (${labId === 'laser' ? 'Azul para LASER' : 'Verde para SIGEO'}).`
+                    : `🔵 Atividade interna do curso: exibida na cor padrão do laboratório (${labId === 'laser' ? 'Azul para LASER' : (labId === 'ltgeo' ? 'Laranja para LTGEO' : 'Verde para SIGEO')}).`
                   }
                 </p>
 
@@ -697,7 +716,7 @@ export const BookingModal: React.FC = () => {
                     <span className="text-[10px] font-bold text-slate-600 block">
                       Definir Cor na Grade (Opção do Gestor / Técnico):
                     </span>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -728,6 +747,22 @@ export const BookingModal: React.FC = () => {
                       >
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex-shrink-0" />
                         <span>Verde (SIGEO)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomColor('laranja');
+                          setIsExternal(false);
+                        }}
+                        className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          customColor === 'laranja'
+                            ? 'bg-orange-50 border-orange-500 text-orange-950 ring-2 ring-orange-500/20'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-orange-50/50'
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />
+                        <span>Laranja (LTGEO)</span>
                       </button>
 
                       <button

@@ -1,4 +1,5 @@
-export type LabId = 'laser' | 'sigeo';
+export type LabId = 'laser' | 'sigeo' | 'ltgeo';
+export type LabGroupId = 'portal' | 'laser_sigeo' | 'ltgeo';
 
 export interface LabInfo {
   id: LabId;
@@ -41,6 +42,7 @@ export interface UserPermissions {
   canManageEquipment?: boolean;
   canManageSoftware?: boolean;
   canViewAudit?: boolean;
+  assignedLabs?: LabId[]; // Laboratórios que o técnico tem permissão para gerenciar
 }
 
 export interface UserAccount {
@@ -58,6 +60,7 @@ export interface UserAccount {
   emailVerified?: boolean;
   verificationCode?: string;
   permissions?: UserPermissions;
+  assignedLabs?: LabId[]; // Lista de laboratórios específicos atribuídos a este técnico
   createdAt: string;
 }
 
@@ -100,7 +103,7 @@ export interface FixedClass {
   semester: string;  // Ex: "2026/1"
   highlightColor?: string; // Cor personalizada de destaque (ex: vermelho/laranja para cursos externos)
   isExternal?: boolean;    // Aula externa / Outro curso (ex: Agronomia, Florestal, FECIV)
-  customColor?: 'padrao' | 'azul' | 'verde' | 'vermelho'; // Azul = LASER, Verde = SIGEO, Vermelho = Externa
+  customColor?: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho'; // Azul = LASER, Verde = SIGEO, Laranja = LTGEO, Vermelho = Externa
   notes?: string;
   importedFromPdf?: boolean;
 }
@@ -129,7 +132,7 @@ export interface Reservation {
   rejectionReason?: string;
   adminNotes?: string;
   isExternal?: boolean;        // Solicitação de Aula/Atividade Externa (destacada em Vermelho na grade)
-  customColor?: 'padrao' | 'azul' | 'verde' | 'vermelho'; // Azul = LASER, Verde = SIGEO, Vermelho = Externa
+  customColor?: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho'; // Azul = LASER, Verde = SIGEO, Laranja = LTGEO, Vermelho = Externa
   highlightColor?: string;     // Classes CSS ou marcador de cor
   
   createdById?: string;
@@ -231,7 +234,7 @@ export interface ScheduleEvent {
   responsibleTeacher?: string; // Interno
   userTeacher?: string;        // Público
   isExternal?: boolean;
-  customColor?: 'padrao' | 'azul' | 'verde' | 'vermelho';
+  customColor?: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho';
   rawItem: FixedClass | Reservation;
 }
 
@@ -311,6 +314,7 @@ export interface FirebaseConfig {
 
 export type ViewMode = 'week' | 'day' | 'table';
 export type ActiveTab = 
+  | 'hub'
   | 'grade' 
   | 'solicitar' 
   | 'rastrear' 

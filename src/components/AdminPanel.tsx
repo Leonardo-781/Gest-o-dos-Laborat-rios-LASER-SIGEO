@@ -30,7 +30,8 @@ import {
   Crown,
   Mail,
   Key,
-  Repeat
+  Repeat,
+  Building2
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, FixedClass, FirebaseConfig, UserPermissions } from '../types';
@@ -58,6 +59,7 @@ export const AdminPanel: React.FC = () => {
     labs,
     equipments,
     currentUser,
+    canUserManageLab,
     checkAvailability,
     cloudConfig,
     setCloudConfig,
@@ -92,8 +94,8 @@ export const AdminPanel: React.FC = () => {
   const [isTestingCloud, setIsTestingCloud] = useState(false);
   const [cloudTestResult, setCloudTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  const pendingRequests = reservations.filter(r => r.status === 'pendente');
-  const processedRequests = reservations.filter(r => r.status !== 'pendente');
+  const pendingRequests = reservations.filter(r => r.status === 'pendente' && canUserManageLab(r.labId));
+  const processedRequests = reservations.filter(r => r.status !== 'pendente' && canUserManageLab(r.labId));
   const pendingUsers = usersList.filter(u => u.status === 'pendente');
 
   const handleConfirmReject = (e: React.FormEvent) => {
@@ -339,8 +341,12 @@ export const AdminPanel: React.FC = () => {
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                           {res.protocol}
                         </span>
-                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                          isLaser ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded border ${
+                          res.labId === 'laser' 
+                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            : res.labId === 'sigeo'
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                            : 'bg-orange-100 text-orange-800 border-orange-200'
                         }`}>
                           LAB {lab.name}
                         </span>
@@ -502,8 +508,12 @@ export const AdminPanel: React.FC = () => {
                       <td className="p-3 font-bold text-slate-900">{dayNames[fc.dayOfWeek - 1]}</td>
                       <td className="p-3 font-mono font-semibold">{fc.startTime} - {fc.endTime}</td>
                       <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                          fc.labId === 'laser' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
+                          fc.labId === 'laser' 
+                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            : fc.labId === 'sigeo' 
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                            : 'bg-orange-100 text-orange-800 border-orange-200'
                         }`}>
                           {fc.labId.toUpperCase()}
                         </span>
@@ -521,26 +531,34 @@ export const AdminPanel: React.FC = () => {
                         )}
                       </td>
                       <td className="p-3 text-right space-x-1 whitespace-nowrap">
-                        <button
-                          onClick={() => openClassModalForEdit(fc)}
-                          className="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg font-bold transition cursor-pointer inline-flex items-center gap-1 border border-blue-200"
-                          title="Editar informações da aula"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          <span>Editar</span>
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            if (confirm(`Remover "${fc.courseName}" da grade semestral?`)) {
-                              deleteFixedClass(fc.id);
-                            }
-                          }}
-                          className="p-1 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 transition cursor-pointer inline-block"
-                          title="Excluir disciplina"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canUserManageLab(fc.labId) ? (
+                          <>
+                            <button
+                              onClick={() => openClassModalForEdit(fc)}
+                              className="px-2.5 py-1 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg font-bold transition cursor-pointer inline-flex items-center gap-1 border border-blue-200"
+                              title="Editar informações da aula"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Editar</span>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remover "${fc.courseName}" da grade semestral?`)) {
+                                  deleteFixedClass(fc.id);
+                                }
+                              }}
+                              className="p-1 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 transition cursor-pointer inline-block"
+                              title="Excluir disciplina"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 font-medium px-2 py-1 bg-slate-100 rounded-lg">
+                            Somente leitura
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1046,6 +1064,119 @@ export const AdminPanel: React.FC = () => {
                         {u.department}
                       </div>
                     </div>
+
+                    {/* Atribuição de Laboratórios para Técnicos */}
+                    {u.role === 'tecnico' && (
+                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                            Laboratórios sob Atuação deste Técnico:
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            Permissão de aprovação, edição e equipamentos vinculada aos labs selecionados
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                          {/* LASER */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = u.assignedLabs || ['laser', 'sigeo'];
+                              const next: LabId[] = current.includes('laser') 
+                                ? current.filter(l => l !== 'laser') 
+                                : [...current, 'laser'];
+                              updateUserPermissions(u.id, perms, next);
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                              (u.assignedLabs || ['laser', 'sigeo']).includes('laser')
+                                ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-500/20 text-blue-950 font-bold'
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100 font-medium'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
+                              <div>
+                                <span className="text-xs block">LASER</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Sala 1B309</span>
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              (u.assignedLabs || ['laser', 'sigeo']).includes('laser') 
+                                ? 'bg-blue-200 text-blue-900' 
+                                : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {(u.assignedLabs || ['laser', 'sigeo']).includes('laser') ? 'Ativo ✓' : 'Inativo'}
+                            </span>
+                          </button>
+
+                          {/* SIGEO */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = u.assignedLabs || ['laser', 'sigeo'];
+                              const next: LabId[] = current.includes('sigeo') 
+                                ? current.filter(l => l !== 'sigeo') 
+                                : [...current, 'sigeo'];
+                              updateUserPermissions(u.id, perms, next);
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                              (u.assignedLabs || ['laser', 'sigeo']).includes('sigeo')
+                                ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-500/20 text-emerald-950 font-bold'
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100 font-medium'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0" />
+                              <div>
+                                <span className="text-xs block">SIGEO</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Sala 1B307</span>
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              (u.assignedLabs || ['laser', 'sigeo']).includes('sigeo') 
+                                ? 'bg-emerald-200 text-emerald-900' 
+                                : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {(u.assignedLabs || ['laser', 'sigeo']).includes('sigeo') ? 'Ativo ✓' : 'Inativo'}
+                            </span>
+                          </button>
+
+                          {/* LTGEO */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = u.assignedLabs || ['laser', 'sigeo'];
+                              const next: LabId[] = current.includes('ltgeo') 
+                                ? current.filter(l => l !== 'ltgeo') 
+                                : [...current, 'ltgeo'];
+                              updateUserPermissions(u.id, perms, next);
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                              (u.assignedLabs || ['laser', 'sigeo']).includes('ltgeo')
+                                ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-500/20 text-orange-950 font-bold'
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100 font-medium'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-orange-600 shrink-0" />
+                              <div>
+                                <span className="text-xs block">LTGEO</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Sala 1B210</span>
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              (u.assignedLabs || ['laser', 'sigeo']).includes('ltgeo') 
+                                ? 'bg-orange-200 text-orange-900' 
+                                : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {(u.assignedLabs || ['laser', 'sigeo']).includes('ltgeo') ? 'Ativo ✓' : 'Inativo'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Matriz de Permissões Toggles */}
                     <div className="space-y-2">

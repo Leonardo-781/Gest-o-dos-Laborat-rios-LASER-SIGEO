@@ -47,7 +47,7 @@ export const ReservationEditModal: React.FC = () => {
   const [responsibleTeacher, setResponsibleTeacher] = useState('');
   const [userTeacher, setUserTeacher] = useState('');
   const [isExternal, setIsExternal] = useState<boolean>(false);
-  const [customColor, setCustomColor] = useState<'padrao' | 'azul' | 'verde' | 'vermelho'>('padrao');
+  const [customColor, setCustomColor] = useState<'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho'>('padrao');
   const [updateWholeSeries, setUpdateWholeSeries] = useState(false);
   const [conflictStatus, setConflictStatus] = useState<{ available: boolean; conflictReason?: string }>({ available: true });
 
@@ -67,7 +67,7 @@ export const ReservationEditModal: React.FC = () => {
       
       const initialExternal = Boolean(editingReservation.isExternal || editingReservation.highlightColor?.includes('rose') || editingReservation.customColor === 'vermelho');
       setIsExternal(initialExternal);
-      setCustomColor(editingReservation.customColor || (initialExternal ? 'vermelho' : (editingReservation.labId === 'laser' ? 'azul' : 'verde')));
+      setCustomColor(editingReservation.customColor || (initialExternal ? 'vermelho' : (editingReservation.labId === 'laser' ? 'azul' : (editingReservation.labId === 'ltgeo' ? 'laranja' : 'verde'))));
       setUpdateWholeSeries(false);
     }
   }, [isReservationModalOpen, editingReservation]);
@@ -94,15 +94,17 @@ export const ReservationEditModal: React.FC = () => {
 
     const effectiveColor = customColor !== 'padrao'
       ? customColor
-      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : 'verde'));
+      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde')));
 
     const highlightColor = (effectiveColor === 'vermelho' || isExternal)
       ? 'bg-rose-100 text-rose-950 border-rose-300'
       : (effectiveColor === 'azul'
         ? 'bg-blue-50 text-blue-950 border-blue-200'
-        : (effectiveColor === 'verde'
-          ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-          : undefined));
+        : (effectiveColor === 'laranja'
+          ? 'bg-orange-50 text-orange-950 border-orange-200'
+          : (effectiveColor === 'verde'
+            ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
+            : undefined)));
 
     const res = editReservation(
       editingReservation.id,
@@ -223,7 +225,7 @@ export const ReservationEditModal: React.FC = () => {
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
               1. Laboratório:
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div
                 onClick={() => setLabId('laser')}
                 className={`p-3 rounded-xl border-2 transition cursor-pointer ${
@@ -233,7 +235,7 @@ export const ReservationEditModal: React.FC = () => {
                 }`}
               >
                 <span className="font-bold text-xs text-blue-900 block">LABORATÓRIO LASER</span>
-                <span className="text-[10px] text-slate-500">Capacidade: {labs.laser.capacity}</span>
+                <span className="text-[10px] text-slate-500">Sala 1B309 • {labs.laser?.capacity || 25} vagas</span>
               </div>
 
               <div
@@ -245,7 +247,19 @@ export const ReservationEditModal: React.FC = () => {
                 }`}
               >
                 <span className="font-bold text-xs text-emerald-900 block">LABORATÓRIO SIGEO</span>
-                <span className="text-[10px] text-slate-500">Capacidade: {labs.sigeo.capacity}</span>
+                <span className="text-[10px] text-slate-500">Sala 1B307 • {labs.sigeo?.capacity || 35} vagas</span>
+              </div>
+
+              <div
+                onClick={() => setLabId('ltgeo')}
+                className={`p-3 rounded-xl border-2 transition cursor-pointer ${
+                  labId === 'ltgeo'
+                    ? 'border-orange-600 bg-orange-50/60 shadow-xs'
+                    : 'border-slate-200 hover:border-orange-300'
+                }`}
+              >
+                <span className="font-bold text-xs text-orange-950 block">LABORATÓRIO LTGEO</span>
+                <span className="text-[10px] text-slate-500">Sala 1B210 • {labs.ltgeo?.capacity || 30} vagas</span>
               </div>
             </div>
           </div>
@@ -422,7 +436,7 @@ export const ReservationEditModal: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setIsExternal(false);
-                    setCustomColor(labId === 'laser' ? 'azul' : 'verde');
+                    setCustomColor(labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde'));
                   }}
                   className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs border transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     !isExternal
@@ -455,7 +469,7 @@ export const ReservationEditModal: React.FC = () => {
                 <span className="text-[10px] font-bold text-slate-600 block">
                   Escolher Cor na Grade:
                 </span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -486,6 +500,22 @@ export const ReservationEditModal: React.FC = () => {
                   >
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex-shrink-0" />
                     <span>Verde (SIGEO)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomColor('laranja');
+                      setIsExternal(false);
+                    }}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      customColor === 'laranja'
+                        ? 'bg-orange-50 border-orange-500 text-orange-950 ring-2 ring-orange-500/20 shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-orange-50/50'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />
+                    <span>Laranja (LTGEO)</span>
                   </button>
 
                   <button

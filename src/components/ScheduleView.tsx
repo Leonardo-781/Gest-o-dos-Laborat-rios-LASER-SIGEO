@@ -24,7 +24,11 @@ import {
 } from '../utils/dateHelpers';
 import { MiniMonthCalendar } from './MiniMonthCalendar';
 
-export const ScheduleView: React.FC = () => {
+interface ScheduleViewProps {
+  onBackToHub?: () => void;
+}
+
+export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
   const { 
     selectedLab, 
     setSelectedLab, 
@@ -35,7 +39,9 @@ export const ScheduleView: React.FC = () => {
     openBookingWithPreselection,
     openClassModalForNew,
     currentUser,
-    labs
+    labs,
+    activeLabGroup,
+    setActiveLabGroup
   } = useLab();
 
   const [viewMode, setViewMode] = useState<ViewMode>('week');
@@ -112,137 +118,248 @@ export const ScheduleView: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-      
-      {/* COLUNA LATERAL: MINI CALENDÁRIO + FILTROS + STATUS */}
-      <div className="lg:col-span-4 xl:col-span-3 space-y-4 no-print">
-        
-        {/* 🗓 MINI CALENDÁRIO MENSAL */}
-        <MiniMonthCalendar />
+    <div className="space-y-4">
+      {/* Barra de Navegação do Hub e Alternador de Complexo */}
+      <div className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => {
+              setActiveLabGroup('portal');
+              if (onBackToHub) onBackToHub();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition cursor-pointer"
+            title="Retornar para o Hub Inicial"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Voltar ao Hub</span>
+          </button>
 
-        {/* SELETOR DE LABORATÓRIO */}
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block px-1">
-            Visualizar Laboratório:
-          </span>
+          <span className="text-slate-300 hidden sm:inline">•</span>
 
-          <div className="space-y-1.5">
-            <button
-              onClick={() => setSelectedLab('all')}
-              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
-                selectedLab === 'all'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <span>Visão Geral (Ambos)</span>
-              <span className="text-[10px] opacity-75">Laser & Sigeo</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedLab('sigeo')}
-              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
-                selectedLab === 'sigeo'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-emerald-50/70 text-emerald-900 hover:bg-emerald-100/70'
-              }`}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>Laboratório SIGEO</span>
-              </div>
-              <span className="text-[10px] opacity-80 font-bold">24 Workstations</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedLab('laser')}
-              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
-                selectedLab === 'laser'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-blue-50/70 text-blue-900 hover:bg-blue-100/70'
-              }`}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span>Laboratório LASER</span>
-              </div>
-              <span className="text-[10px] opacity-80 font-bold">Sensores / Scanner</span>
-            </button>
-          </div>
-
-          {/* Botão Rápido de Cadastrar Aula se for Gestor */}
-          {isManager && (
-            <div className="pt-2 border-t border-slate-100">
-              <button
-                onClick={() => openClassModalForNew(selectedLab === 'laser' ? 'laser' : 'sigeo')}
-                className="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Adicionar Aula na Grade</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* INFORMAÇÕES DAS SALAS OFICIAIS */}
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2 text-xs text-slate-600">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-            Salas & Lotação Oficial:
-          </span>
-
-          <div className="p-2.5 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-0.5">
-            <div className="flex items-center justify-between font-bold text-emerald-950">
-              <span>SIGEO (Sala 1B307)</span>
-              <span className="text-[10px] text-emerald-700 font-mono font-bold">35 Vagas</span>
-            </div>
-            <p className="text-[11px] text-emerald-800/80 leading-tight">
-              Lab. de SIG e Geoprocessamento • 24 Workstations
-            </p>
-          </div>
-
-          <div className="p-2.5 bg-blue-50/50 rounded-xl border border-blue-100 space-y-0.5">
-            <div className="flex items-center justify-between font-bold text-blue-950">
-              <span>LASER (Sala 1B309)</span>
-              <span className="text-[10px] text-blue-700 font-mono font-bold">25 Vagas</span>
-            </div>
-            <p className="text-[11px] text-blue-800/80 leading-tight">
-              Lab. de Sensoriamento Remoto • Sensores & Scanner
-            </p>
-          </div>
-
-          <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-0.5">
-            <div className="flex items-center justify-between font-bold text-slate-800">
-              <span>Apoio Técnico (Sala 1B308)</span>
-              <span className="text-[10px] text-slate-500 font-mono font-bold">Plantão</span>
-            </div>
-            <p className="text-[11px] text-slate-500 leading-tight">
-              Sala dos Técnicos • Atendimento e retirada de instrumentos
-            </p>
+          <div className="text-xs text-slate-600 font-semibold hidden md:flex items-center gap-1.5">
+            <span>Visualizando Grade:</span>
+            {activeLabGroup === 'ltgeo' ? (
+              <span className="font-black text-orange-800 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
+                LTGEO • Sala 1B210
+              </span>
+            ) : (
+              <span className="font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                Complexo LASER & SIGEO (1B309 & 1B307)
+              </span>
+            )}
           </div>
         </div>
 
-        {/* LEGENDA DE CORES */}
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs text-xs space-y-2">
-          <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wider">
-            Legenda de Cores da Grade:
-          </span>
-          <div className="flex flex-wrap gap-2 text-[11px]">
-            <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 font-bold flex items-center gap-1.5 shadow-2xs">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0" />
-              Azul: LASER
-            </span>
-            <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold flex items-center gap-1.5 shadow-2xs">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex-shrink-0" />
-              Verde: SIGEO
-            </span>
-            <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-950 border border-rose-300 font-black flex items-center gap-1.5 shadow-2xs">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-600 flex-shrink-0" />
-              Vermelho: Aula / Solicitação Externa
-            </span>
-          </div>
-        </div>
+        {/* Alternador Rápido de Complexo de Laboratórios */}
+        <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl text-xs font-bold">
+          <button
+            onClick={() => {
+              setActiveLabGroup('laser_sigeo');
+              if (selectedLab === 'ltgeo') setSelectedLab('all');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              activeLabGroup === 'laser_sigeo'
+                ? 'bg-white text-blue-900 shadow-xs border border-slate-200/80 font-black'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+            <span>Complexo LASER & SIGEO</span>
+          </button>
 
+          <button
+            onClick={() => {
+              setActiveLabGroup('ltgeo');
+              setSelectedLab('ltgeo');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+              activeLabGroup === 'ltgeo'
+                ? 'bg-orange-600 text-white shadow-xs font-black'
+                : 'text-slate-600 hover:text-orange-700'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-orange-300"></span>
+            <span>LTGEO (Sala 1B210)</span>
+          </button>
+        </div>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        {/* COLUNA LATERAL: MINI CALENDÁRIO + FILTROS + STATUS */}
+        <div className="lg:col-span-4 xl:col-span-3 space-y-4 no-print">
+          
+          {/* 🗓 MINI CALENDÁRIO MENSAL */}
+          <MiniMonthCalendar />
+
+          {/* SELETOR DE LABORATÓRIO */}
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block px-1">
+              Visualizar Laboratório:
+            </span>
+
+            {activeLabGroup === 'ltgeo' ? (
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => setSelectedLab('ltgeo')}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl bg-orange-600 text-white shadow-xs cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-orange-300"></span>
+                    <span>LTGEO • Topografia e Geodésia</span>
+                  </div>
+                  <span className="text-[10px] opacity-90 font-bold">Sala 1B210</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => setSelectedLab('all')}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
+                    selectedLab === 'all'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>Visão Geral (Ambos)</span>
+                  <span className="text-[10px] opacity-75">Laser & Sigeo</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedLab('sigeo')}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
+                    selectedLab === 'sigeo'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-emerald-50/70 text-emerald-900 hover:bg-emerald-100/70'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Laboratório SIGEO</span>
+                  </div>
+                  <span className="text-[10px] opacity-80 font-bold">24 Workstations</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedLab('laser')}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
+                    selectedLab === 'laser'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-blue-50/70 text-blue-900 hover:bg-blue-100/70'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span>Laboratório LASER</span>
+                  </div>
+                  <span className="text-[10px] opacity-80 font-bold">Sensores / Scanner</span>
+                </button>
+              </div>
+            )}
+
+            {/* Botão Rápido de Cadastrar Aula se for Gestor */}
+            {isManager && (
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => {
+                    const targetLab: LabId = activeLabGroup === 'ltgeo' ? 'ltgeo' : (selectedLab === 'laser' ? 'laser' : 'sigeo');
+                    openClassModalForNew(targetLab);
+                  }}
+                  className={`w-full py-2 font-bold text-xs rounded-xl border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    activeLabGroup === 'ltgeo'
+                      ? 'bg-orange-50 hover:bg-orange-100 text-orange-800 border-orange-200'
+                      : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Adicionar Aula na Grade</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* INFORMAÇÕES DAS SALAS OFICIAIS */}
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2 text-xs text-slate-600">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Salas & Lotação Oficial:
+            </span>
+
+            {activeLabGroup === 'ltgeo' ? (
+              <div className="p-2.5 bg-orange-50/70 rounded-xl border border-orange-200 space-y-0.5">
+                <div className="flex items-center justify-between font-bold text-orange-950">
+                  <span>LTGEO (Sala 1B210)</span>
+                  <span className="text-[10px] text-orange-800 font-mono font-bold">30 Vagas</span>
+                </div>
+                <p className="text-[11px] text-orange-900/80 leading-tight">
+                  Lab. de Topografia e Geodésia • Estações Totais, GNSS RTK, Níveis Ópticos
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="p-2.5 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-0.5">
+                  <div className="flex items-center justify-between font-bold text-emerald-950">
+                    <span>SIGEO (Sala 1B307)</span>
+                    <span className="text-[10px] text-emerald-700 font-mono font-bold">35 Vagas</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800/80 leading-tight">
+                    Lab. de SIG e Geoprocessamento • 24 Workstations
+                  </p>
+                </div>
+
+                <div className="p-2.5 bg-blue-50/50 rounded-xl border border-blue-100 space-y-0.5">
+                  <div className="flex items-center justify-between font-bold text-blue-950">
+                    <span>LASER (Sala 1B309)</span>
+                    <span className="text-[10px] text-blue-700 font-mono font-bold">25 Vagas</span>
+                  </div>
+                  <p className="text-[11px] text-blue-800/80 leading-tight">
+                    Lab. de Sensoriamento Remoto • Sensores & Scanner
+                  </p>
+                </div>
+              </>
+            )}
+
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-0.5">
+              <div className="flex items-center justify-between font-bold text-slate-800">
+                <span>Apoio Técnico (Sala 1B308)</span>
+                <span className="text-[10px] text-slate-500 font-mono font-bold">Plantão</span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-tight">
+                Sala dos Técnicos • Atendimento e retirada de instrumentos
+              </p>
+            </div>
+          </div>
+
+          {/* LEGENDA DE CORES */}
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs text-xs space-y-2">
+            <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wider">
+              Legenda de Cores da Grade:
+            </span>
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              {activeLabGroup === 'ltgeo' ? (
+                <span className="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-950 border border-orange-200 font-bold flex items-center gap-1.5 shadow-2xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />
+                  Laranja: LTGEO (Sala 1B210)
+                </span>
+              ) : (
+                <>
+                  <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 font-bold flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0" />
+                    Azul: LASER
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 flex-shrink-0" />
+                    Verde: SIGEO
+                  </span>
+                </>
+              )}
+              <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-950 border border-rose-300 font-black flex items-center gap-1.5 shadow-2xs">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 flex-shrink-0" />
+                Vermelho: Aula / Solicitação Externa
+              </span>
+            </div>
+          </div>
+
+        </div>
 
       {/* COLUNA PRINCIPAL: GRADE OFICIAL DE HORÁRIOS */}
       <div className="lg:col-span-8 xl:col-span-9 space-y-3">
@@ -394,7 +511,9 @@ export const ScheduleView: React.FC = () => {
 
                         // Determina qual laboratório pré-selecionar ao clicar em área livre
                         let labToPreselect: LabId = 'laser';
-                        if (selectedLab !== 'all') {
+                        if (activeLabGroup === 'ltgeo' || selectedLab === 'ltgeo') {
+                          labToPreselect = 'ltgeo';
+                        } else if (selectedLab !== 'all') {
                           labToPreselect = selectedLab;
                         } else if (!isLaserOccupied && isSigeoOccupied) {
                           labToPreselect = 'laser';
@@ -425,6 +544,7 @@ export const ScheduleView: React.FC = () => {
                             {/* Renderizar cartões de eventos que iniciam neste horário */}
                             {startingEvents.map((ev) => {
                               const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
+                              const isOrange = ev.customColor === 'laranja' || (!isExternal && ev.labId === 'ltgeo');
                               const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
                               const isGreen = ev.customColor === 'verde' || (!isExternal && ev.labId === 'sigeo');
 
@@ -438,6 +558,8 @@ export const ScheduleView: React.FC = () => {
                                   className={`p-1.5 rounded-lg border text-left mb-1 transition-all duration-150 hover:shadow-xs cursor-pointer ${
                                     isExternal
                                       ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
+                                      : isOrange
+                                      ? 'bg-orange-50 border-orange-200 text-orange-950 hover:border-orange-300'
                                       : isBlue
                                       ? 'bg-blue-50 border-blue-200 text-blue-950 hover:border-blue-300'
                                       : 'bg-emerald-50 border-emerald-200 text-emerald-950 hover:border-emerald-300'
@@ -447,6 +569,8 @@ export const ScheduleView: React.FC = () => {
                                     <span className={`px-1 rounded ${
                                       isExternal 
                                         ? 'bg-rose-700 text-white' 
+                                        : isOrange
+                                        ? 'bg-orange-600 text-white'
                                         : isBlue 
                                         ? 'bg-blue-600 text-white' 
                                         : 'bg-emerald-600 text-white'
@@ -550,6 +674,7 @@ export const ScheduleView: React.FC = () => {
 
                 return dayEvents.map(ev => {
                   const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
+                  const isOrange = ev.customColor === 'laranja' || (!isExternal && ev.labId === 'ltgeo');
                   const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
                   const isGreen = ev.customColor === 'verde' || (!isExternal && ev.labId === 'sigeo');
 
@@ -560,6 +685,8 @@ export const ScheduleView: React.FC = () => {
                       className={`p-3.5 rounded-xl border transition hover:shadow-xs cursor-pointer flex items-center justify-between gap-4 ${
                         isExternal
                           ? 'bg-rose-50 border-rose-200'
+                          : isOrange
+                          ? 'bg-orange-50/60 border-orange-200'
                           : isBlue
                           ? 'bg-blue-50/50 border-blue-200'
                           : 'bg-emerald-50/50 border-emerald-200'
@@ -570,6 +697,8 @@ export const ScheduleView: React.FC = () => {
                           <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
                             isExternal 
                               ? 'bg-rose-700 text-white' 
+                              : isOrange
+                              ? 'bg-orange-600 text-white'
                               : isBlue 
                               ? 'bg-blue-600 text-white' 
                               : 'bg-emerald-600 text-white'
@@ -664,5 +793,6 @@ export const ScheduleView: React.FC = () => {
       </div>
 
     </div>
+  </div>
   );
 };

@@ -1,7 +1,7 @@
-import { LabInfo, Equipment, FixedClass, Reservation, UserAccount, AuditLog, MaintenanceRequest, SoftwareRequest } from '../types';
+import { LabId, LabInfo, Equipment, FixedClass, Reservation, UserAccount, AuditLog, MaintenanceRequest, SoftwareRequest } from '../types';
 import { MASTER_USER_CONFIG, DEFAULT_TEST_PASSWORD_HASH, DEFAULT_INSTITUTIONAL_SALT } from '../services/authSecurity';
 
-export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
+export const LABS_INFO: Record<LabId, LabInfo> = {
   laser: {
     id: 'laser',
     name: 'LASER',
@@ -59,6 +59,35 @@ export const LABS_INFO: Record<'laser' | 'sigeo', LabInfo> = {
       'Óculos e Monitores 3D para Estereoscopia',
       'Servidor Local de Dados Geoespaciais (NAS)'
     ]
+  },
+  ltgeo: {
+    id: 'ltgeo',
+    name: 'LTGEO',
+    fullName: 'Laboratório de Topografia e Geodésia (LTGEO)',
+    description: 'Laboratório especializado em instrumentação topográfica, geodésica e de campo. Acervo completo de estações totais, níveis ópticos e digitais, teodolitos eletrônicos, receptores GNSS geodésicos e acessórios para práticas de campo e levantamentos cadastrais.',
+    location: 'Sala 1B210',
+    capacity: 30,
+    workstationsCount: 4,
+    responsibleTeacher: 'Coordenação dos Laboratórios',
+    responsibleEmail: 'ltgeo.agrimensura@ufu.br',
+    accentColor: '#ea580c',
+    badgeBg: 'bg-orange-50',
+    badgeBorder: 'border-orange-200',
+    badgeText: 'text-orange-700',
+    rules: [
+      'A retirada de instrumentos para aulas práticas exige assinatura obrigatória do termo de cautela pelo docente ou discente responsável.',
+      'Conferir o estado das baterias, cabos, prismas e travas antes de sair para o campo.',
+      'Ao retornar de atividade em campo, limpar os equipamentos e acondicionar nas maletas originais.',
+      'Comunicar imediatamente à equipe técnica qualquer impacto, queda ou descalibração observada.',
+      'Atendimento e suporte técnico na Sala 1B210 com os técnicos do LTGEO.'
+    ],
+    equipmentSummary: [
+      'Estações Totais Eletrônicas (Leica / Topcon)',
+      'Níveis Ópticos Automáticos e Digitais',
+      'Teodolitos Eletrônicos de Precisão',
+      'Receptores GNSS Geodésicos RTK',
+      'Kits de Prismas, Miras de Alumínio e Ínvar'
+    ]
   }
 };
 
@@ -77,6 +106,7 @@ export const INITIAL_USERS: UserAccount[] = [
     passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
     passwordHash: MASTER_USER_CONFIG.passwordHash,
     emailVerified: true,
+    assignedLabs: ['laser', 'sigeo', 'ltgeo'],
     permissions: {
       canViewEmails: true,
       canApproveBookings: true,
@@ -84,6 +114,7 @@ export const INITIAL_USERS: UserAccount[] = [
       canManageEquipment: true,
       canManageSoftware: true,
       canViewAudit: true,
+      assignedLabs: ['laser', 'sigeo', 'ltgeo'],
     },
     createdAt: '2026-01-01T08:00:00Z'
   }
@@ -195,6 +226,67 @@ export const INITIAL_EQUIPMENTS: Equipment[] = [
     status: 'disponivel',
     description: 'Estações para fotointerpretação e restituição fotogramétrica 3D com óculos 3D passivos/ativos.',
     specs: 'Monitores 144Hz + Óculos 3D Vision'
+  },
+  // Equipamentos LTGEO (Sala 1B210)
+  {
+    id: 'eq-ltgeo-01',
+    labId: 'ltgeo',
+    name: 'Estação Total Topcon GM-52 (Precisão 2")',
+    code: 'ET-GEO-01',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Estação total de alta precisão angular para levantamentos topográficos, poligonais e irradiações.',
+    specs: 'Alcance 4000m com prisma / 500m sem prisma / Compensador de eixo duplo'
+  },
+  {
+    id: 'eq-ltgeo-02',
+    labId: 'ltgeo',
+    name: 'Estação Total Leica FlexLine TS03 (Precisão 2")',
+    code: 'ET-GEO-02',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Estação total com software de bordo FlexField para agrimensura, implantação e controle de obras.',
+    specs: 'Leitura com prisma / USB / Baterias Li-Ion de longa duração'
+  },
+  {
+    id: 'eq-ltgeo-03',
+    labId: 'ltgeo',
+    name: 'Nível Óptico Automático Leica NA324',
+    code: 'NIV-GEO-01',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Nível de alta robustez com aumento de 24x e compensador magnético para nivelamento geométrico.',
+    specs: 'Desvio padrão por km duplo: 2.0 mm / Proteção IP54'
+  },
+  {
+    id: 'eq-ltgeo-04',
+    labId: 'ltgeo',
+    name: 'Teodolito Eletrônico Digital Topcon DT-209',
+    code: 'TEO-GEO-01',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Teodolito digital para medição de ângulos horizontais e verticais em aulas práticas de campo.',
+    specs: 'Precisão angular 9" / Display LCD duplo / Bateria até 140h'
+  },
+  {
+    id: 'eq-ltgeo-05',
+    labId: 'ltgeo',
+    name: 'Par de Receptores GNSS RTK Geodésico CHCNAV i73 (Base & Rover)',
+    code: 'GNSS-GEO-01',
+    category: 'gnss',
+    status: 'disponivel',
+    description: 'Receptores GNSS multiconstelação com rádio UHF interno e tecnologia IMU anti-inclinação para georreferenciamento de imóveis rurais.',
+    specs: '1408 canais / Rastreamento GPS, GLONASS, Galileo, BeiDou / Precisão RTK horizontal 8mm'
+  },
+  {
+    id: 'eq-ltgeo-06',
+    labId: 'ltgeo',
+    name: 'Kit de Acessórios Topográficos (Tripés, Balizas, Prismas e Miras de Alumínio)',
+    code: 'ACES-GEO-01',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Conjunto completo de apoio de campo com tripés de alumínio/madeira, prismas com suporte e miras de 4 metros.',
+    specs: 'Tripés pesados com travas duplas / Miras milimetradas'
   }
 ];
 
