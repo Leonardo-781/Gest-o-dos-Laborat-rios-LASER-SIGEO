@@ -21,6 +21,33 @@ export function checkTimeOverlap(startA: string, endA: string, startB: string, e
   return Math.max(aStart, bStart) < Math.min(aEnd, bEnd);
 }
 
+export function formatDateToYYYYMMDD(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getDayOfWeekFromDateStr(dateStr: string): number {
+  if (!dateStr) return 1;
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
+    return 1;
+  }
+  const [year, month, day] = parts;
+  const d = new Date(year, month - 1, day);
+  return d.getDay();
+}
+
+export function addWeeksToDateStr(dateStr: string, weeks: number): string {
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length < 3) return dateStr;
+  const [year, month, day] = parts;
+  const target = new Date(year, month - 1, day);
+  target.setDate(target.getDate() + weeks * 7);
+  return formatDateToYYYYMMDD(target);
+}
+
 export function formatDateBR(dateStr: string): string {
   if (!dateStr) return '';
   const [year, month, day] = dateStr.split('-');
@@ -49,11 +76,12 @@ export function getWeekDays(referenceDate: Date = new Date()) {
 
   const days = [];
   const dayNames = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const todayStr = formatDateToYYYYMMDD(new Date());
 
   for (let i = 0; i < 6; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = formatDateToYYYYMMDD(d);
     
     days.push({
       dayOfWeek: i + 1, // 1 to 6
@@ -61,7 +89,7 @@ export function getWeekDays(referenceDate: Date = new Date()) {
       dateStr,
       dateObj: d,
       formattedShort: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
-      isToday: new Date().toISOString().split('T')[0] === dateStr
+      isToday: todayStr === dateStr
     });
   }
 
@@ -89,8 +117,8 @@ export function getMonthMatrix(year: number, month: number, selectedDate: Date):
   // Start from Sunday of the first week of the month view
   const startDate = new Date(year, month, 1 - startDayOfWeek);
   
-  const todayStr = new Date().toISOString().split('T')[0];
-  const selectedStr = selectedDate.toISOString().split('T')[0];
+  const todayStr = formatDateToYYYYMMDD(new Date());
+  const selectedStr = formatDateToYYYYMMDD(selectedDate);
   
   // Get active week range
   const currentWeekInfo = getWeekDays(selectedDate);
@@ -103,7 +131,7 @@ export function getMonthMatrix(year: number, month: number, selectedDate: Date):
   for (let row = 0; row < 6; row++) {
     const week: MonthDayCell[] = [];
     for (let col = 0; col < 7; col++) {
-      const dStr = currentDay.toISOString().split('T')[0];
+      const dStr = formatDateToYYYYMMDD(currentDay);
       const isCurrentMonth = currentDay.getMonth() === month;
       const isToday = dStr === todayStr;
       const isSelected = dStr === selectedStr;

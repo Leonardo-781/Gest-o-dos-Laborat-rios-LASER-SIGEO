@@ -33,7 +33,11 @@ import {
 import { 
   checkTimeOverlap, 
   generateProtocol, 
-  formatDateBR 
+  formatDateBR,
+  formatDateToYYYYMMDD,
+  getDayOfWeekFromDateStr,
+  addWeeksToDateStr,
+  timeToMinutes
 } from '../utils/dateHelpers';
 import { getSavedCloudConfig, saveCloudConfig } from '../services/supabaseClient';
 import { 
@@ -126,8 +130,9 @@ interface LabContextType {
     labId?: LabId;
     date?: string;
     startTime?: string;
+    endTime?: string;
   };
-  openBookingWithPreselection: (labId?: LabId, date?: string, startTime?: string) => void;
+  openBookingWithPreselection: (labId?: LabId, date?: string, startTime?: string, endTime?: string) => void;
 
   // Ações de Reserva (Abertas a todos para solicitar; aprovação restrita)
   checkAvailability: (
@@ -310,7 +315,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsReservationModalOpen(true);
   };
 
-  const [bookingPreselection, setBookingPreselection] = useState<{ labId?: LabId; date?: string; startTime?: string }>({});
+  const [bookingPreselection, setBookingPreselection] = useState<{ labId?: LabId; date?: string; startTime?: string; endTime?: string }>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -684,8 +689,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const openBookingWithPreselection = (labId?: LabId, date?: string, startTime?: string) => {
-    setBookingPreselection({ labId, date, startTime });
+  const openBookingWithPreselection = (labId?: LabId, date?: string, startTime?: string, endTime?: string) => {
+    setBookingPreselection({ labId, date, startTime, endTime });
     setIsBookingOpen(true);
   };
 
@@ -724,8 +729,21 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     endTime: string, 
     excludeReservationId?: string
   ): CheckAvailabilityResult => {
-    const targetDate = new Date(date + 'T00:00:00');
-    const dayOfWeek = targetDate.getDay();
+    if (!startTime || !endTime) {
+      return {
+        available: false,
+        conflictReason: 'Informe o horário de início e término.'
+      };
+    }
+
+    if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
+      return {
+        available: false,
+        conflictReason: 'O horário de término deve ser posterior ao horário de início.'
+      };
+    }
+
+    const dayOfWeek = getDayOfWeekFromDateStr(date);
 
     if (dayOfWeek === 0) {
       return {
@@ -783,13 +801,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isRecurring = Boolean(recurrenceOptions?.isRecurring && recurrenceOptions.weeksCount > 1);
     const weeksCount = isRecurring ? Math.min(24, Math.max(2, recurrenceOptions!.weeksCount)) : 1;
 
-    // Calcula todas as datas da série
-    const initialDate = new Date(data.date + 'T00:00:00');
+    // Calcula todas as datas da série de forma segura sem desvios de fuso horário
     const dates: string[] = [];
     for (let w = 0; w < weeksCount; w++) {
-      const nextDate = new Date(initialDate.getTime() + w * 7 * 24 * 60 * 60 * 1000);
-      const dateStr = nextDate.toISOString().split('T')[0];
-      dates.push(dateStr);
+      dates.push(addWeeksToDateStr(data.date, w));
     }
 
     // Validação de disponibilidade para cada semana da série
@@ -1646,8 +1661,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getEventsForDate = (dateStr: string, labFilter: 'all' | LabId = selectedLab): ScheduleEvent[] => {
-    const targetDate = new Date(dateStr + 'T00:00:00');
-    const dayOfWeek = targetDate.getDay();
+    const dayOfWeek = getDayOfWeekFromDateStr(dateStr);
     const events: ScheduleEvent[] = [];
 
     fixedClasses

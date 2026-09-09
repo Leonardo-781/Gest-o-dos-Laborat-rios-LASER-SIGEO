@@ -23,7 +23,13 @@ import {
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { LabId, PurposeType, UserRole } from '../types';
-import { formatDateBR } from '../utils/dateHelpers';
+import { 
+  formatDateBR, 
+  formatDateToYYYYMMDD, 
+  addWeeksToDateStr, 
+  timeToMinutes, 
+  minutesToTime 
+} from '../utils/dateHelpers';
 import { validateEmailStrict } from '../services/authSecurity';
 
 export const BookingModal: React.FC = () => {
@@ -90,13 +96,20 @@ export const BookingModal: React.FC = () => {
       if (bookingPreselection.date) setDate(bookingPreselection.date);
       if (bookingPreselection.startTime) {
         setStartTime(bookingPreselection.startTime);
-        const [h, m] = bookingPreselection.startTime.split(':').map(Number);
-        const endH = Math.min(22, h + 3);
-        setEndTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+        if (bookingPreselection.endTime) {
+          setEndTime(bookingPreselection.endTime);
+        } else {
+          // Em vez de somar 3 horas cegamente (+180min), define término padrão seguro de 50 minutos (1 aula oficial)
+          const startMin = timeToMinutes(bookingPreselection.startTime);
+          const endMin = Math.min(22 * 60, startMin + 50);
+          setEndTime(minutesToTime(endMin));
+        }
       } else {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        setDate(tomorrow.toISOString().split('T')[0]);
+        setDate(formatDateToYYYYMMDD(tomorrow));
+        setStartTime('08:50');
+        setEndTime('09:40');
       }
       setGeneratedProtocol(null);
       setTotalCreatedCount(1);
@@ -112,13 +125,11 @@ export const BookingModal: React.FC = () => {
       setConflictStatus(result);
 
       if (isRecurring && recurrenceWeeks > 1) {
-        const initialDate = new Date(date + 'T00:00:00');
         const calculatedDates: string[] = [];
         let conflictFound: string | null = null;
 
         for (let w = 0; w < recurrenceWeeks; w++) {
-          const nextDate = new Date(initialDate.getTime() + w * 7 * 24 * 60 * 60 * 1000);
-          const dStr = nextDate.toISOString().split('T')[0];
+          const dStr = addWeeksToDateStr(date, w);
           calculatedDates.push(dStr);
 
           if (!conflictFound && w > 0) {
