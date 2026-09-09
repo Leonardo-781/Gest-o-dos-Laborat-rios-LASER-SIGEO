@@ -18,11 +18,10 @@ import { MaintenanceRequestView } from './components/MaintenanceRequestView';
 import { SoftwareRequestView } from './components/SoftwareRequestView';
 import { MaintenanceManagementView } from './components/MaintenanceManagementView';
 import { EmailNotificationsModal } from './components/EmailNotificationsModal';
-import { LabPortalHub } from './components/LabPortalHub';
 import { ActiveTab } from './types';
 
 const AppContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('hub');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('grade');
 
   return (
     <div className="min-h-screen bg-slate-100/70 flex flex-col selection:bg-blue-600 selection:text-white">
@@ -31,15 +30,9 @@ const AppContent: React.FC = () => {
 
       {/* Conteúdo Central */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'hub' && (
-          <div className="space-y-4">
-            <LabPortalHub onSelectGroup={(_group) => setActiveTab('grade')} />
-          </div>
-        )}
-
         {activeTab === 'grade' && (
           <div className="space-y-4">
-            <ScheduleView onBackToHub={() => setActiveTab('hub')} />
+            <ScheduleView />
           </div>
         )}
 

@@ -165,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           {/* Logo */}
           <div 
             className="flex items-center gap-2.5 cursor-pointer flex-shrink-0" 
-            onClick={() => setActiveTab('hub')}
+            onClick={() => setActiveTab('grade')}
           >
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs tracking-wider">
               SI
@@ -174,7 +174,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-sm text-slate-900 tracking-tight">SILAB</span>
                 <span className="text-slate-300 text-xs">•</span>
-                <span className="text-xs text-slate-600 font-semibold hidden md:inline">Hub dos Labs</span>
+                <span className="text-xs text-slate-600 font-semibold hidden md:inline">Gestão dos Labs</span>
                 <span className="px-1.5 py-0.2 bg-blue-50 text-blue-800 font-bold text-[10px] rounded border border-blue-200">LASER</span>
                 <span className="text-slate-300 text-xs">&</span>
                 <span className="px-1.5 py-0.2 bg-emerald-50 text-emerald-800 font-bold text-[10px] rounded border border-emerald-200">SIGEO</span>
@@ -188,17 +188,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             <nav className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 text-xs font-semibold">
               
-              {/* 0. Hub de Laboratórios */}
-              <button
-                onClick={() => setActiveTab('hub')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
-                  activeTab === 'hub' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5 text-blue-600" />
-                <span>Hub Labs</span>
-              </button>
-
               {/* 1. Grade de Horários (Pública) */}
               <button
                 onClick={() => setActiveTab('grade')}

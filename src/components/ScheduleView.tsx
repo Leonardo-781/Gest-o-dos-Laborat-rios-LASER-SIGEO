@@ -12,7 +12,9 @@ import {
   Edit3,
   Layers,
   Sparkles,
-  Repeat
+  Repeat,
+  MapPin,
+  BookOpen
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { ViewMode, ScheduleEvent, FixedClass, LabId } from '../types';
@@ -41,7 +43,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
     currentUser,
     labs,
     activeLabGroup,
-    setActiveLabGroup
+    setActiveLabGroup,
+    setIsBookingOpen,
+    setIsRulesOpen
   } = useLab();
 
   const [viewMode, setViewMode] = useState<ViewMode>('week');
@@ -119,69 +123,108 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
 
   return (
     <div className="space-y-4">
-      {/* Barra de Navegação do Hub e Alternador de Complexo */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
-        <div className="flex items-center gap-2.5">
+      {/* SELETOR PRINCIPAL DE LABORATÓRIOS (SEGMENTED CONTROL DE ALTA FIDELIDADE) */}
+      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 no-print">
+        
+        {/* Segmented Switcher */}
+        <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 gap-1.5 self-start md:self-auto">
+          
+          {/* Aba 1: Complexo LASER & SIGEO */}
           <button
-            onClick={() => {
-              setActiveLabGroup('portal');
-              if (onBackToHub) onBackToHub();
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition cursor-pointer"
-            title="Retornar para o Hub Inicial"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Voltar ao Hub</span>
-          </button>
-
-          <span className="text-slate-300 hidden sm:inline">•</span>
-
-          <div className="text-xs text-slate-600 font-semibold hidden md:flex items-center gap-1.5">
-            <span>Visualizando Grade:</span>
-            {activeLabGroup === 'ltgeo' ? (
-              <span className="font-black text-orange-800 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
-                LTGEO • Sala 1B210
-              </span>
-            ) : (
-              <span className="font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-                Complexo LASER & SIGEO (1B309 & 1B307)
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Alternador Rápido de Complexo de Laboratórios */}
-        <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl text-xs font-bold">
-          <button
+            type="button"
             onClick={() => {
               setActiveLabGroup('laser_sigeo');
               if (selectedLab === 'ltgeo') setSelectedLab('all');
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+            className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeLabGroup === 'laser_sigeo'
-                ? 'bg-white text-blue-900 shadow-xs border border-slate-200/80 font-black'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-slate-900/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-            <span>Complexo LASER & SIGEO</span>
+            <div className="flex items-center -space-x-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+            </div>
+            <div className="text-left">
+              <div className="leading-tight font-extrabold flex items-center gap-1.5">
+                <span>LASER & SIGEO</span>
+                {activeLabGroup === 'laser_sigeo' && (
+                  <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                    Ativo
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">Salas 1B309 & 1B307</div>
+            </div>
           </button>
 
+          {/* Aba 2: LTGEO */}
           <button
+            type="button"
             onClick={() => {
               setActiveLabGroup('ltgeo');
               setSelectedLab('ltgeo');
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+            className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeLabGroup === 'ltgeo'
-                ? 'bg-orange-600 text-white shadow-xs font-black'
-                : 'text-slate-600 hover:text-orange-700'
+                ? 'bg-white text-orange-950 shadow-sm border border-orange-200/90 ring-1 ring-orange-500/10'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-orange-300"></span>
-            <span>LTGEO (Sala 1B210)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-2 ring-white" />
+            <div className="text-left">
+              <div className="leading-tight font-extrabold flex items-center gap-1.5">
+                <span>LTGEO</span>
+                {activeLabGroup === 'ltgeo' && (
+                  <span className="text-[10px] font-black uppercase text-orange-700 bg-orange-50 px-1.5 py-0.2 rounded border border-orange-200">
+                    Ativo
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">Sala 1B210 (Topografia)</div>
+            </div>
           </button>
+
         </div>
+
+        {/* Lado Direito: Micro-Metadados da Sala Ativa + Ação Rápida */}
+        <div className="flex items-center gap-2.5 self-end md:self-auto flex-wrap">
+          
+          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+            <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            {activeLabGroup === 'ltgeo' ? (
+              <span><strong>Sala 1B210</strong> • 30 vagas • Estações Totais & Receptores GNSS</span>
+            ) : (
+              <span><strong>Salas 1B309 & 1B307</strong> • 70 postos • Estações SIG & Laser</span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsRulesOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+            title="Consultar normas e regras de uso dos laboratórios"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Regras</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsBookingOpen(true)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer ${
+              activeLabGroup === 'ltgeo' 
+                ? 'bg-orange-600 hover:bg-orange-700' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Fazer Reserva</span>
+          </button>
+
+        </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
