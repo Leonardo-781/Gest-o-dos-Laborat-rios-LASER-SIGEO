@@ -65,9 +65,12 @@ export const ReservationEditModal: React.FC = () => {
       setResponsibleTeacher(editingReservation.responsibleTeacher || editingReservation.supervisorName || '');
       setUserTeacher(editingReservation.userTeacher || '');
       
-      const initialExternal = Boolean(editingReservation.isExternal || editingReservation.highlightColor?.includes('rose') || editingReservation.customColor === 'vermelho');
+      const initialExternal = editingReservation.isExternal !== undefined
+        ? Boolean(editingReservation.isExternal)
+        : Boolean(editingReservation.highlightColor?.includes('rose') || editingReservation.customColor === 'vermelho');
       setIsExternal(initialExternal);
-      setCustomColor(editingReservation.customColor || (initialExternal ? 'vermelho' : (editingReservation.labId === 'laser' ? 'azul' : (editingReservation.labId === 'ltgeo' ? 'laranja' : 'verde'))));
+      const defaultLabColor = editingReservation.labId === 'laser' ? 'azul' : (editingReservation.labId === 'ltgeo' ? 'laranja' : 'verde');
+      setCustomColor(initialExternal ? 'vermelho' : (editingReservation.customColor && editingReservation.customColor !== 'vermelho' ? editingReservation.customColor : defaultLabColor));
       setUpdateWholeSeries(false);
     }
   }, [isReservationModalOpen, editingReservation]);
@@ -92,19 +95,18 @@ export const ReservationEditModal: React.FC = () => {
       return;
     }
 
-    const effectiveColor = customColor !== 'padrao'
-      ? customColor
-      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde')));
+    const defaultLabColor: 'azul' | 'verde' | 'laranja' = labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde');
+    const effectiveColor: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho' = isExternal 
+      ? 'vermelho' 
+      : (customColor !== 'padrao' && customColor !== 'vermelho' ? customColor : defaultLabColor);
 
-    const highlightColor = (effectiveColor === 'vermelho' || isExternal)
+    const highlightColor = isExternal
       ? 'bg-rose-100 text-rose-950 border-rose-300'
       : (effectiveColor === 'azul'
         ? 'bg-blue-50 text-blue-950 border-blue-200'
         : (effectiveColor === 'laranja'
           ? 'bg-orange-50 text-orange-950 border-orange-200'
-          : (effectiveColor === 'verde'
-            ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-            : undefined)));
+          : 'bg-emerald-50 text-emerald-950 border-emerald-200'));
 
     const res = editReservation(
       editingReservation.id,

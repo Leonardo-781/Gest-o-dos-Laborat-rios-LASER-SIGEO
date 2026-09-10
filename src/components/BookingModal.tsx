@@ -190,19 +190,18 @@ export const BookingModal: React.FC = () => {
       ? `[SOLICITAÇÃO DE APOIO TÉCNICO PRESENCIAL (SALA 1B308) INCLUSA]\n${description}`
       : description;
 
-    const effectiveColor = customColor !== 'padrao' 
-      ? customColor 
-      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde')));
+    const defaultLabColor: 'azul' | 'verde' | 'laranja' = labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde');
+    const effectiveColor: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho' = isExternal 
+      ? 'vermelho' 
+      : (customColor !== 'padrao' && customColor !== 'vermelho' ? customColor : defaultLabColor);
 
-    const highlightColor = (effectiveColor === 'vermelho' || isExternal)
+    const highlightColor = isExternal
       ? 'bg-rose-100 text-rose-950 border-rose-300'
       : (effectiveColor === 'azul'
         ? 'bg-blue-50 text-blue-950 border-blue-200'
         : (effectiveColor === 'laranja'
           ? 'bg-orange-50 text-orange-950 border-orange-200'
-          : (effectiveColor === 'verde'
-            ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-            : undefined)));
+          : 'bg-emerald-50 text-emerald-950 border-emerald-200'));
 
     const res = createReservation(
       {

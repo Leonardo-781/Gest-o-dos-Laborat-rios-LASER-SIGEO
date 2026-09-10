@@ -51,8 +51,11 @@ export const EventDetailModal: React.FC = () => {
     : [];
 
   const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
-  const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
-  const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
+  const isExternal = ev.isExternal !== undefined
+    ? Boolean(ev.isExternal)
+    : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
+  const isOrange = !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
+  const isBlue = !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
@@ -62,6 +65,8 @@ export const EventDetailModal: React.FC = () => {
         <div className={`p-6 text-white relative ${
           isExternal 
             ? 'bg-gradient-to-r from-rose-700 to-rose-950'
+            : isOrange
+            ? 'bg-gradient-to-r from-orange-600 to-orange-800'
             : isBlue 
             ? 'bg-gradient-to-r from-blue-700 to-blue-900' 
             : 'bg-gradient-to-r from-emerald-700 to-emerald-900'

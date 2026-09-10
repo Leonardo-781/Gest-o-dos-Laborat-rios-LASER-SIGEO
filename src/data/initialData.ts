@@ -381,6 +381,8 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     courseName: 'Florestal (Engenharia Florestal)',
     professor: '',
     semester: '2026/1',
+    isExternal: true,
+    customColor: 'vermelho',
     highlightColor: 'bg-rose-100 text-rose-950 border-rose-300',
     notes: 'Turma de Engenharia Florestal (3 tempos pela manhã)'
   },
@@ -446,6 +448,8 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
     courseName: 'Agronomia (Topografia p/ Agronomia)',
     professor: '',
     semester: '2026/1',
+    isExternal: true,
+    customColor: 'vermelho',
     highlightColor: 'bg-rose-100 text-rose-950 border-rose-300',
     notes: 'Turma de Agronomia (3 tempos à tarde)'
   },

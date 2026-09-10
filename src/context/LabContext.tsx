@@ -1768,17 +1768,22 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fixedClasses
       .filter(fc => matchesLab(fc.labId) && fc.dayOfWeek === dayOfWeek)
       .forEach(fc => {
-        const isExternal = Boolean(fc.isExternal || fc.highlightColor);
-        const customColor = fc.customColor || (isExternal ? 'vermelho' : (fc.labId === 'laser' ? 'azul' : (fc.labId === 'ltgeo' ? 'laranja' : 'verde')));
-        const highlightColor = (customColor === 'vermelho' || isExternal)
+        const isExternal = fc.isExternal !== undefined
+          ? Boolean(fc.isExternal)
+          : Boolean(fc.customColor === 'vermelho' || fc.highlightColor?.includes('rose'));
+        
+        const defaultLabColor = fc.labId === 'laser' ? 'azul' : (fc.labId === 'ltgeo' ? 'laranja' : 'verde');
+        const customColor = isExternal
+          ? 'vermelho'
+          : (fc.customColor && fc.customColor !== 'vermelho' ? fc.customColor : defaultLabColor);
+
+        const highlightColor = isExternal
           ? 'bg-rose-100 text-rose-950 border-rose-300'
           : (customColor === 'azul'
             ? 'bg-blue-50 text-blue-950 border-blue-200'
             : (customColor === 'laranja'
               ? 'bg-orange-50 text-orange-950 border-orange-200'
-              : (customColor === 'verde'
-                ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-                : fc.highlightColor)));
+              : 'bg-emerald-50 text-emerald-950 border-emerald-200'));
 
         events.push({
           id: `event-${fc.id}`,
@@ -1801,17 +1806,22 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     reservations
       .filter(res => matchesLab(res.labId) && res.date === dateStr && res.status === 'aprovada')
       .forEach(res => {
-        const isExternal = Boolean(res.isExternal || res.highlightColor?.includes('rose') || res.customColor === 'vermelho');
-        const customColor = res.customColor || (isExternal ? 'vermelho' : (res.labId === 'laser' ? 'azul' : (res.labId === 'ltgeo' ? 'laranja' : 'verde')));
-        const highlightColor = (customColor === 'vermelho' || isExternal)
+        const isExternal = res.isExternal !== undefined
+          ? Boolean(res.isExternal)
+          : Boolean(res.customColor === 'vermelho' || res.highlightColor?.includes('rose'));
+        
+        const defaultLabColor = res.labId === 'laser' ? 'azul' : (res.labId === 'ltgeo' ? 'laranja' : 'verde');
+        const customColor = isExternal
+          ? 'vermelho'
+          : (res.customColor && res.customColor !== 'vermelho' ? res.customColor : defaultLabColor);
+
+        const highlightColor = isExternal
           ? 'bg-rose-100 text-rose-950 border-rose-300'
           : (customColor === 'azul'
             ? 'bg-blue-50 text-blue-950 border-blue-200'
             : (customColor === 'laranja'
               ? 'bg-orange-50 text-orange-950 border-orange-200'
-              : (customColor === 'verde'
-                ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-                : undefined)));
+              : 'bg-emerald-50 text-emerald-950 border-emerald-200'));
 
         events.push({
           id: `event-${res.id}`,

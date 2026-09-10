@@ -522,12 +522,12 @@ export const AdminPanel: React.FC = () => {
                       <td className="p-3 font-bold text-slate-900">{fc.courseName}</td>
                       <td className="p-3 text-slate-500">{fc.professor || '—'}</td>
                       <td className="p-3">
-                        {fc.highlightColor ? (
+                        {(fc.isExternal || fc.customColor === 'vermelho' || fc.highlightColor?.includes('rose')) ? (
                           <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px]">
                             Ext (Vermelho)
                           </span>
                         ) : (
-                          <span className="text-slate-400 text-[10px]">Padrão</span>
+                          <span className="text-slate-400 text-[10px]">Interna ({fc.customColor || 'Padrão'})</span>
                         )}
                       </td>
                       <td className="p-3 text-right space-x-1 whitespace-nowrap">

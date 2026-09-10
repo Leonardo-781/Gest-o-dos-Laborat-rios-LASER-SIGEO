@@ -586,10 +586,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                           >
                             {/* Renderizar cartões de eventos que iniciam neste horário */}
                             {startingEvents.map((ev) => {
-                              const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
-                              const isOrange = ev.customColor === 'laranja' || (!isExternal && ev.labId === 'ltgeo');
-                              const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
-                              const isGreen = ev.customColor === 'verde' || (!isExternal && ev.labId === 'sigeo');
+                              const isExternal = ev.isExternal !== undefined
+                                ? Boolean(ev.isExternal)
+                                : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
+                              const isOrange = !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
+                              const isBlue = !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
+                              const isGreen = !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
 
                               return (
                                 <div
@@ -716,10 +718,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                 }
 
                 return dayEvents.map(ev => {
-                  const isExternal = Boolean(ev.isExternal || ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
-                  const isOrange = ev.customColor === 'laranja' || (!isExternal && ev.labId === 'ltgeo');
-                  const isBlue = ev.customColor === 'azul' || (!isExternal && ev.labId === 'laser');
-                  const isGreen = ev.customColor === 'verde' || (!isExternal && ev.labId === 'sigeo');
+                  const isExternal = ev.isExternal !== undefined
+                    ? Boolean(ev.isExternal)
+                    : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
+                  const isOrange = !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
+                  const isBlue = !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
+                  const isGreen = !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
 
                   return (
                     <div

@@ -54,10 +54,13 @@ export const ClassEditModal: React.FC = () => {
       setProfessor(editingClass.professor);
       setSemester(editingClass.semester || '2026/1');
       
-      const ext = Boolean(editingClass.isExternal || editingClass.highlightColor);
+      const ext = editingClass.isExternal !== undefined
+        ? Boolean(editingClass.isExternal)
+        : Boolean(editingClass.highlightColor?.includes('rose') || editingClass.customColor === 'vermelho');
       setIsHighlighted(ext);
       setIsExternal(ext);
-      setCustomColor(editingClass.customColor || (ext ? 'vermelho' : (editingClass.labId === 'laser' ? 'azul' : (editingClass.labId === 'ltgeo' ? 'laranja' : 'verde'))));
+      const defaultLabColor = editingClass.labId === 'laser' ? 'azul' : (editingClass.labId === 'ltgeo' ? 'laranja' : 'verde');
+      setCustomColor(ext ? 'vermelho' : (editingClass.customColor && editingClass.customColor !== 'vermelho' ? editingClass.customColor : defaultLabColor));
       setNotes(editingClass.notes || '');
     } else if (isClassModalOpen && !editingClass) {
       setIsExternal(false);
@@ -75,19 +78,18 @@ export const ClassEditModal: React.FC = () => {
       return;
     }
 
-    const effectiveColor = customColor !== 'padrao'
-      ? customColor
-      : (isExternal ? 'vermelho' : (labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde')));
+    const defaultLabColor: 'azul' | 'verde' | 'laranja' = labId === 'laser' ? 'azul' : (labId === 'ltgeo' ? 'laranja' : 'verde');
+    const effectiveColor: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho' = isExternal 
+      ? 'vermelho' 
+      : (customColor !== 'padrao' && customColor !== 'vermelho' ? customColor : defaultLabColor);
 
-    const highlightColor = (effectiveColor === 'vermelho' || isExternal)
+    const highlightColor = isExternal
       ? 'bg-rose-100 text-rose-950 border-rose-300'
       : (effectiveColor === 'azul'
         ? 'bg-blue-50 text-blue-950 border-blue-200'
         : (effectiveColor === 'laranja'
           ? 'bg-orange-50 text-orange-950 border-orange-200'
-          : (effectiveColor === 'verde'
-            ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-            : undefined)));
+          : 'bg-emerald-50 text-emerald-950 border-emerald-200'));
 
     const payload = {
       labId,
