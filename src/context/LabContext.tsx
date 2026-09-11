@@ -98,7 +98,7 @@ interface LabContextType {
   login: (email: string, password?: string, directUser?: UserAccount) => Promise<boolean>;
   logout: () => void;
   registerUser: (user: UserAccount) => void;
-  approveUserAccount: (userId: string) => void;
+  approveUserAccount: (userId: string, approvedLabs?: LabId[]) => void;
   rejectUserAccount: (userId: string) => void;
   updateUserPermissions: (userId: string, newPermissions: Partial<UserPermissions>, assignedLabs?: LabId[]) => void;
 
@@ -591,7 +591,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Cadastro recebido! A conta de ${user.name} aguarda confirmação dos gestores.`);
   };
 
-  const approveUserAccount = (userId: string) => {
+  const approveUserAccount = (userId: string, approvedLabs?: LabId[]) => {
     if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
       showToast('Apenas coordenadores e técnicos podem aprovar contas.');
       return;
@@ -600,19 +600,33 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = usersList.find(u => u.id === userId);
     if (!target) return;
 
-    const updatedUser = { ...target, status: 'ativo' as const };
+    const finalLabs = approvedLabs || target.requestedLabs || target.assignedLabs || (target.role === 'tecnico' ? ['laser', 'sigeo'] : undefined);
+
+    const updatedUser: UserAccount = {
+      ...target,
+      status: 'ativo' as const,
+      ...(finalLabs ? { assignedLabs: finalLabs } : {}),
+      permissions: {
+        ...target.permissions,
+        ...(finalLabs ? { assignedLabs: finalLabs } : {})
+      }
+    };
     setUsersList(prev => prev.map(u => u.id === userId ? updatedUser : u));
 
     if (firebaseConfig.isConnected) {
       syncDocToFirestore('usuarios', updatedUser, firebaseConfig);
     }
     
+    const labsDetail = finalLabs && finalLabs.length > 0
+      ? ` com jurisdição autorizada nos laboratórios: ${finalLabs.map(l => l.toUpperCase()).join(', ')}`
+      : '';
+
     logAudit(
       'usuario_aprovado',
       target.id,
       'usuario',
       `Conta: ${target.name} (${target.email})`,
-      `Cadastro de usuário APROVADO pelo gestor ${currentUser.name}. Perfil liberado: ${target.role}.`
+      `Cadastro de usuário APROVADO pelo gestor ${currentUser.name}. Perfil liberado: ${target.role}${labsDetail}.`
     );
 
     showToast(`Conta de ${target?.name} aprovada com sucesso!`);

@@ -34,7 +34,7 @@ import {
   Building2
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { LabId, FixedClass, FirebaseConfig, UserPermissions } from '../types';
+import { LabId, FixedClass, FirebaseConfig, UserPermissions, UserAccount } from '../types';
 import { formatDateBR, formatDateTimeBR, getPurposeBadge } from '../utils/dateHelpers';
 import { testSupabaseConnection } from '../services/supabaseClient';
 import { testFirebaseConnection } from '../services/firebaseClient';
@@ -97,6 +97,36 @@ export const AdminPanel: React.FC = () => {
   const pendingRequests = reservations.filter(r => r.status === 'pendente' && canUserManageLab(r.labId));
   const processedRequests = reservations.filter(r => r.status !== 'pendente' && canUserManageLab(r.labId));
   const pendingUsers = usersList.filter(u => u.status === 'pendente');
+
+  const [pendingLabsMap, setPendingLabsMap] = useState<Record<string, LabId[]>>({});
+
+  const getSelectedLabsForPending = (u: UserAccount): LabId[] => {
+    if (pendingLabsMap[u.id]) {
+      return pendingLabsMap[u.id];
+    }
+    if (u.requestedLabs && u.requestedLabs.length > 0) {
+      return u.requestedLabs;
+    }
+    if (u.assignedLabs && u.assignedLabs.length > 0) {
+      return u.assignedLabs;
+    }
+    return ['laser', 'sigeo'];
+  };
+
+  const togglePendingLab = (userId: string, labId: LabId, currentLabs: LabId[]) => {
+    const hasLab = currentLabs.includes(labId);
+    let nextLabs: LabId[];
+    if (hasLab) {
+      if (currentLabs.length === 1) {
+        showToast('O técnico precisa ter autorização em pelo menos um laboratório.');
+        return;
+      }
+      nextLabs = currentLabs.filter(l => l !== labId);
+    } else {
+      nextLabs = [...currentLabs, labId];
+    }
+    setPendingLabsMap(prev => ({ ...prev, [userId]: nextLabs }));
+  };
 
   const handleConfirmReject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -591,29 +621,118 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               <div className="divide-y divide-amber-200/60 bg-white rounded-xl border border-amber-200 overflow-hidden">
-                {pendingUsers.map(u => (
-                  <div key={u.id} className="p-3.5 flex items-center justify-between gap-4 text-xs">
-                    <div>
-                      <div className="font-bold text-slate-900">{u.name}</div>
-                      <div className="text-[11px] text-slate-500">{u.email} • {u.documentId} ({u.role.toUpperCase()})</div>
-                    </div>
+                {pendingUsers.map(u => {
+                  const isTech = u.role === 'tecnico';
+                  const selectedLabs = isTech ? getSelectedLabsForPending(u) : [];
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => rejectUserAccount(u.id)}
-                        className="px-3 py-1 bg-rose-50 text-rose-700 rounded-lg font-bold hover:bg-rose-100 transition cursor-pointer border border-rose-200 flex items-center gap-1"
-                      >
-                        <UserX className="w-3.5 h-3.5" /> Recusar
-                      </button>
-                      <button
-                        onClick={() => approveUserAccount(u.id)}
-                        className="px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition cursor-pointer shadow-xs flex items-center gap-1"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" /> Confirmar Conta
-                      </button>
+                  return (
+                    <div key={u.id} className="p-4 space-y-3 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 text-sm">{u.name}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              u.role === 'coordenador' 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : u.role === 'tecnico'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {u.role === 'tecnico' ? 'Técnico de Laboratório' : u.role}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            {u.email} • Matrícula/SIAPE: {u.documentId}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          <button
+                            type="button"
+                            onClick={() => rejectUserAccount(u.id)}
+                            className="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-xl font-bold hover:bg-rose-100 transition cursor-pointer border border-rose-200 flex items-center gap-1.5"
+                          >
+                            <UserX className="w-3.5 h-3.5" /> Recusar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => approveUserAccount(u.id, isTech ? selectedLabs : undefined)}
+                            className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition cursor-pointer shadow-xs flex items-center gap-1.5"
+                          >
+                            <UserCheck className="w-3.5 h-3.5" /> Confirmar Conta
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Controle de Jurisdição do Técnico pelo Master */}
+                      {isTech && (
+                        <div className="p-3 bg-amber-50/70 border border-amber-200/90 rounded-xl space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <span className="text-[11px] font-bold text-amber-950 flex items-center gap-1.5">
+                              <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                              <span>Jurisdição Solicitada / Concedida na Aprovação:</span>
+                            </span>
+                            <span className="text-[10px] text-amber-800 font-medium">
+                              {isMaster ? 'O Master pode ajustar os laboratórios antes de aprovar' : 'Ajuste reservado ao Master'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {(['laser', 'sigeo', 'ltgeo'] as LabId[]).map((labId) => {
+                              const isGranted = selectedLabs.includes(labId);
+                              const wasRequested = u.requestedLabs ? u.requestedLabs.includes(labId) : false;
+                              const labInfo = {
+                                laser: { name: 'LASER', room: '1B309', activeBg: 'bg-blue-600 border-blue-700 text-white' },
+                                sigeo: { name: 'SIGEO', room: '1B307', activeBg: 'bg-emerald-600 border-emerald-700 text-white' },
+                                ltgeo: { name: 'LTGEO', room: '1B210', activeBg: 'bg-orange-600 border-orange-700 text-white' },
+                              }[labId];
+
+                              return (
+                                <button
+                                  key={labId}
+                                  type="button"
+                                  disabled={!isMaster}
+                                  onClick={() => togglePendingLab(u.id, labId, selectedLabs)}
+                                  className={`p-2 rounded-lg border text-left transition flex items-center justify-between ${
+                                    isGranted
+                                      ? `${labInfo.activeBg} shadow-xs font-bold`
+                                      : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300 font-normal'
+                                  } ${!isMaster ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+                                  title={
+                                    isMaster
+                                      ? wasRequested
+                                        ? `Solicitado no cadastro pelo técnico. Clique para ${isGranted ? 'remover' : 'conceder'}.`
+                                        : `Não foi solicitado no cadastro. Clique para ${isGranted ? 'remover' : 'conceder'}.`
+                                      : 'Apenas o Master pode modificar laboratórios concedidos'
+                                  }
+                                >
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-bold">{labInfo.name}</span>
+                                      <span className="text-[10px] opacity-80 font-normal">({labInfo.room})</span>
+                                    </div>
+                                    <div className="text-[9px] mt-0.5">
+                                      {wasRequested ? '★ Solicitado no cadastro' : 'Não solicitado'}
+                                    </div>
+                                  </div>
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-black uppercase ${
+                                    isGranted ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'
+                                  }`}>
+                                    {isGranted ? 'Autorizado ✓' : 'Bloqueado ✕'}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <p className="text-[10px] text-amber-900/80 leading-relaxed">
+                            💡 <strong>Garantia de Jurisdição:</strong> Este técnico só poderá aprovar reservas, gerenciar instrumentos e editar horários nos laboratórios com status <strong>Autorizado ✓</strong>.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -634,6 +753,23 @@ export const AdminPanel: React.FC = () => {
                     <div>
                       <span className="font-bold text-slate-900 block">{u.name}</span>
                       <span className="text-[11px] text-slate-500 block">{u.email} • {u.documentId}</span>
+                      {u.role === 'tecnico' && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] text-slate-400 font-medium">Laboratórios:</span>
+                          {(u.assignedLabs && u.assignedLabs.length > 0 ? u.assignedLabs : ['laser', 'sigeo']).map(l => (
+                            <span 
+                              key={l} 
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                l === 'laser' ? 'bg-blue-100 text-blue-800' :
+                                l === 'sigeo' ? 'bg-emerald-100 text-emerald-800' :
+                                'bg-orange-100 text-orange-800'
+                              }`}
+                            >
+                              {l}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 

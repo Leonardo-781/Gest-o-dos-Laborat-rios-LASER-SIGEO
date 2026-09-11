@@ -61,6 +61,7 @@ export interface UserAccount {
   verificationCode?: string;
   permissions?: UserPermissions;
   assignedLabs?: LabId[]; // Lista de laboratórios específicos atribuídos a este técnico
+  requestedLabs?: LabId[]; // Laboratórios solicitados pelo usuário no momento do cadastro
   createdAt: string;
 }
 

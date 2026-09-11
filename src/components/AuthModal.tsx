@@ -10,10 +10,11 @@ import {
   Info, 
   Eye, 
   EyeOff, 
-  AlertCircle 
+  AlertCircle,
+  Building2
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { UserRole, UserAccount } from '../types';
+import { UserRole, UserAccount, LabId } from '../types';
 import { validateEmailStrict, hashPassword, generateSalt } from '../services/authSecurity';
 
 export const AuthModal: React.FC = () => {
@@ -40,12 +41,33 @@ export const AuthModal: React.FC = () => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regRole, setRegRole] = useState<UserRole>('aluno');
+  const [regRequestedLabs, setRegRequestedLabs] = useState<LabId[]>(['laser', 'sigeo']);
   const [regDoc, setRegDoc] = useState('');
   const [regDept, setRegDept] = useState('Depto. de Engenharia de Agrimensura - UFU');
   const [regEmailError, setRegEmailError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const LAB_OPTIONS: { id: LabId; name: string; room: string; badgeColor: string }[] = [
+    { id: 'laser', name: 'LASER', room: 'Sala 1B309', badgeColor: 'bg-blue-600' },
+    { id: 'sigeo', name: 'SIGEO', room: 'Sala 1B307', badgeColor: 'bg-emerald-600' },
+    { id: 'ltgeo', name: 'LTGEO', room: 'Sala 1B210', badgeColor: 'bg-orange-600' },
+  ];
+
   if (!isAuthModalOpen) return null;
+
+  const toggleRequestedLab = (lab: LabId) => {
+    setRegRequestedLabs(prev => {
+      if (prev.includes(lab)) {
+        if (prev.length === 1) {
+          showToast('Selecione pelo menos um laboratório para sua solicitação de perfil técnico.');
+          return prev;
+        }
+        return prev.filter(l => l !== lab);
+      } else {
+        return [...prev, lab];
+      }
+    });
+  };
 
   const handleLoginEmailChange = (val: string) => {
     setLoginEmail(val);
@@ -93,6 +115,11 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
+    if (regRole === 'tecnico' && regRequestedLabs.length === 0) {
+      showToast('Selecione ao menos um laboratório para sua atuação técnica.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const salt = generateSalt();
@@ -110,13 +137,16 @@ export const AuthModal: React.FC = () => {
         passwordSalt: salt,
         passwordHash: hash,
         emailVerified: true,
+        requestedLabs: regRole === 'tecnico' ? regRequestedLabs : undefined,
+        assignedLabs: regRole === 'tecnico' ? regRequestedLabs : undefined,
         permissions: {
           canViewEmails: false,
           canApproveBookings: false,
           canManageTechnicians: false,
           canManageEquipment: false,
           canManageSoftware: false,
-          canViewAudit: false
+          canViewAudit: false,
+          assignedLabs: regRole === 'tecnico' ? regRequestedLabs : undefined
         },
         createdAt: new Date().toISOString()
       };
@@ -131,7 +161,7 @@ export const AuthModal: React.FC = () => {
     switch (role) {
       case 'aluno': return 'Visualiza horários e solicita laboratório / apoio técnico';
       case 'professor': return 'Visualiza horários e solicita laboratório / apoio para aulas e projetos';
-      case 'tecnico': return 'Analisa solicitações, aprova/recusa e gerencia instrumentos na Sala 1B308';
+      case 'tecnico': return 'Gerencia reservas, equipamentos e horários nos laboratórios autorizados';
       case 'coordenador': return 'Gestão total da grade semestral, leitor de PDF e auditoria';
       default: return 'Visualização pública';
     }
@@ -321,15 +351,65 @@ export const AuthModal: React.FC = () => {
                       <select
                         value={regRole}
                         onChange={(e) => setRegRole(e.target.value as UserRole)}
-                        className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2 focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
                       >
                         <option value="aluno">Aluno (Graduação/Pós)</option>
                         <option value="professor">Professor / Docente</option>
-                        <option value="tecnico">Técnico de Laboratório (Sala 1B308)</option>
+                        <option value="tecnico">Técnico de Laboratório (Específico)</option>
                         <option value="coordenador">Coordenador de Laboratório</option>
                       </select>
                     </div>
                   </div>
+
+                  {/* Seletor de Jurisdição/Laboratórios quando perfil for Técnico */}
+                  {regRole === 'tecnico' && (
+                    <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-amber-950 flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                          <span>Laboratórios Solicitados para Atuação:</span>
+                        </label>
+                        <span className="text-[10px] bg-amber-200/80 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                          {regRequestedLabs.length} selecionado{regRequestedLabs.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-amber-800 leading-tight">
+                        Marque os laboratórios onde você desempenha atividades. O Administrador Master (Leonardo Cardoso) validará sua jurisdição ao confirmar o cargo.
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                        {LAB_OPTIONS.map(lab => {
+                          const isSelected = regRequestedLabs.includes(lab.id);
+                          return (
+                            <button
+                              key={lab.id}
+                              type="button"
+                              onClick={() => toggleRequestedLab(lab.id)}
+                              className={`p-2 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                                isSelected
+                                  ? 'bg-white border-amber-500 shadow-xs ring-1 ring-amber-400'
+                                  : 'bg-white/60 border-amber-200/70 text-slate-400 hover:bg-white'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className={`text-xs font-black ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
+                                  {lab.name}
+                                </span>
+                                <span className={`w-2 h-2 rounded-full ${lab.badgeColor}`} />
+                              </div>
+                              <span className="text-[9px] text-slate-500 font-medium mt-0.5">
+                                {lab.room}
+                              </span>
+                              <span className={`text-[9px] font-bold mt-1 inline-block ${
+                                isSelected ? 'text-amber-700' : 'text-slate-400'
+                              }`}>
+                                {isSelected ? 'Solicitado ✓' : 'Não atua'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {regEmailError && (
                     <p className="text-[10px] font-semibold text-rose-600 flex items-start gap-1">
