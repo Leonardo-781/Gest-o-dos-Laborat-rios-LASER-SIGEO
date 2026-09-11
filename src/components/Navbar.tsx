@@ -7,14 +7,13 @@ import {
   Cpu, 
   BarChart2, 
   BookOpen, 
-  RotateCcw,
-  FileUp,
-  FileSpreadsheet,
-  LogIn,
-  Wrench,
-  Laptop,
-  Mail,
-  Crown,
+  FileUp, 
+  FileSpreadsheet, 
+  LogIn, 
+  Wrench, 
+  Laptop, 
+  Mail, 
+  Crown, 
   LayoutGrid
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
@@ -36,7 +35,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     setIsBookingOpen, 
     setIsRulesOpen,
     firebaseConfig,
-    resetToDemoData,
     emails,
     unreadEmailsCount,
     setIsEmailModalOpen
@@ -156,16 +154,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 <span>Entrar (Login)</span>
               </button>
             )}
-
-            <button
-              onClick={() => {
-                if (confirm('Deseja restaurar as aulas para a grade oficial padrão das fotos?')) resetToDemoData();
-              }}
-              className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
-              title="Restaurar grade padrão"
-            >
-              <RotateCcw className="w-3 h-3" />
-            </button>
           </div>
         </div>
       </div>
