@@ -442,7 +442,7 @@ export const AdminPanel: React.FC = () => {
                         </span>
                         {allocatedEquipments.map(eq => (
                           <span key={eq.id} className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded text-[10px] font-semibold border border-blue-200">
-                            {eq.name} ({eq.code})
+                            {eq.name} ({eq.patrimonio ? `Pat. ${eq.patrimonio}` : eq.code})
                           </span>
                         ))}
                       </div>

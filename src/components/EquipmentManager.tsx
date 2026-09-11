@@ -22,11 +22,14 @@ export const EquipmentManager: React.FC = () => {
 
   const filteredEquipments = equipments.filter(eq => {
     const matchesLab = selectedLabFilter === 'all' || eq.labId === selectedLabFilter;
+    const term = searchTerm.toLowerCase().trim();
     const matchesSearch = 
-      !searchTerm ||
-      eq.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      eq.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      eq.category.toLowerCase().includes(searchTerm.toLowerCase());
+      !term ||
+      eq.name.toLowerCase().includes(term) ||
+      eq.code.toLowerCase().includes(term) ||
+      (eq.patrimonio && eq.patrimonio.toLowerCase().includes(term)) ||
+      eq.category.toLowerCase().includes(term) ||
+      (eq.description && eq.description.toLowerCase().includes(term));
 
     return matchesLab && matchesSearch;
   });
@@ -58,7 +61,7 @@ export const EquipmentManager: React.FC = () => {
           <div className="relative w-full">
             <input
               type="text"
-              placeholder="Buscar por nome do instrumento, código (ex: LS-01, GNSS, LT-01) ou categoria..."
+              placeholder="Buscar por nome, patrimônio (ex: 081804, 703274, 095174), código ou tipo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
@@ -125,7 +128,7 @@ export const EquipmentManager: React.FC = () => {
               <div>
                 {/* Header do Equipamento */}
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider border ${
                       eq.labId === 'laser' 
                         ? 'bg-blue-100 text-blue-800 border-blue-200' 
@@ -138,6 +141,12 @@ export const EquipmentManager: React.FC = () => {
                     <span className="font-mono text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                       {eq.code}
                     </span>
+                    {eq.patrimonio && (
+                      <span className="font-mono text-[11px] font-black text-amber-900 bg-amber-50 border border-amber-300/80 px-2 py-0.5 rounded-md shadow-2xs flex items-center gap-1">
+                        <span className="text-[9px] uppercase tracking-wider text-amber-700 font-bold">Pat.</span>
+                        {eq.patrimonio}
+                      </span>
+                    )}
                   </div>
 
                   <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${statusBadge.bg}`}>

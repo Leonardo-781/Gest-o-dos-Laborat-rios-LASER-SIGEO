@@ -831,8 +831,15 @@ export const BookingModal: React.FC = () => {
                       className="mt-0.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                     <div className="leading-tight">
-                      <div>{eq.name}</div>
-                      <span className="text-[10px] text-slate-400 font-mono">{eq.code}</span>
+                      <div className="font-semibold">{eq.name}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] text-slate-500 font-mono">{eq.code}</span>
+                        {eq.patrimonio && (
+                          <span className="text-[9px] font-black text-amber-900 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-mono">
+                            Pat. {eq.patrimonio}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </label>
                 ))}

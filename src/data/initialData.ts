@@ -323,66 +323,348 @@ export const INITIAL_EQUIPMENTS: Equipment[] = [
     description: 'Estações para fotointerpretação e restituição fotogramétrica 3D com óculos 3D passivos/ativos.',
     specs: 'Monitores 144Hz + Óculos 3D Vision'
   },
-  // Equipamentos LTGEO (Sala 1B210)
+  // ============================================================================
+  // EQUIPAMENTOS OFICIAIS DO LTGEO (Sala 1B210)
+  // Transcritos fielmente das Planilhas 01 e 02 de controle patrimonial da UFU
+  // ============================================================================
+
+  // --- TEODOLITOS ÓPTICOS (Planilha 01) ---
   {
-    id: 'eq-ltgeo-01',
+    id: 'eq-ltgeo-teo-081804',
     labId: 'ltgeo',
-    name: 'Estação Total Topcon GM-52 (Precisão 2")',
-    code: 'ET-GEO-01',
+    name: 'Teodolito Óptico',
+    code: 'TEO-081804',
+    patrimonio: '081804',
     category: 'topografia',
     status: 'disponivel',
-    description: 'Estação total de alta precisão angular para levantamentos topográficos, poligonais e irradiações.',
-    specs: 'Alcance 4000m com prisma / 500m sem prisma / Compensador de eixo duplo'
+    description: 'Teodolito óptico de precisão para medição angular horizontal e vertical em aulas práticas e levantamentos.',
+    specs: 'Leitura angular direta / Círculo graduado / Luneta com aumento de 30x'
   },
   {
-    id: 'eq-ltgeo-02',
+    id: 'eq-ltgeo-teo-081805',
     labId: 'ltgeo',
-    name: 'Estação Total Leica FlexLine TS03 (Precisão 2")',
-    code: 'ET-GEO-02',
+    name: 'Teodolito Óptico',
+    code: 'TEO-081805',
+    patrimonio: '081805',
     category: 'topografia',
     status: 'disponivel',
-    description: 'Estação total com software de bordo FlexField para agrimensura, implantação e controle de obras.',
-    specs: 'Leitura com prisma / USB / Baterias Li-Ion de longa duração'
+    description: 'Teodolito óptico para levantamentos topográficos, caminhamento e determinação de azimutes.',
+    specs: 'Leitura angular direta / Nível tubular / Luneta com aumento de 30x'
   },
   {
-    id: 'eq-ltgeo-03',
+    id: 'eq-ltgeo-teo-081806',
     labId: 'ltgeo',
-    name: 'Nível Óptico Automático Leica NA324',
-    code: 'NIV-GEO-01',
+    name: 'Teodolito Óptico',
+    code: 'TEO-081806',
+    patrimonio: '081806',
     category: 'topografia',
     status: 'disponivel',
-    description: 'Nível de alta robustez com aumento de 24x e compensador magnético para nivelamento geométrico.',
-    specs: 'Desvio padrão por km duplo: 2.0 mm / Proteção IP54'
+    description: 'Teodolito óptico-mecânico para treinamento prático de campo em agrimensura e engenharia.',
+    specs: 'Micrômetro óptico / Trava de movimentos horizontal e vertical'
   },
   {
-    id: 'eq-ltgeo-04',
+    id: 'eq-ltgeo-teo-081807',
     labId: 'ltgeo',
-    name: 'Teodolito Eletrônico Digital Topcon DT-209',
-    code: 'TEO-GEO-01',
+    name: 'Teodolito Óptico',
+    code: 'TEO-081807',
+    patrimonio: '081807',
     category: 'topografia',
     status: 'disponivel',
-    description: 'Teodolito digital para medição de ângulos horizontais e verticais em aulas práticas de campo.',
-    specs: 'Precisão angular 9" / Display LCD duplo / Bateria até 140h'
+    description: 'Teodolito óptico para medições de ângulos zenitais e azimutais em práticas acadêmicas.',
+    specs: 'Aumento da luneta 30x / Prumo óptico integrado'
   },
   {
-    id: 'eq-ltgeo-05',
+    id: 'eq-ltgeo-teo-081808',
     labId: 'ltgeo',
-    name: 'Par de Receptores GNSS RTK Geodésico CHCNAV i73 (Base & Rover)',
-    code: 'GNSS-GEO-01',
+    name: 'Teodolito Óptico',
+    code: 'TEO-081808',
+    patrimonio: '081808',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Teodolito óptico de precisão para poligonais e triangulações topográficas de campo.',
+    specs: 'Resolução angular com nônio / Foco fino e rápido'
+  },
+  {
+    id: 'eq-ltgeo-teo-081810',
+    labId: 'ltgeo',
+    name: 'Teodolito Óptico',
+    code: 'TEO-081810',
+    patrimonio: '081810',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Teodolito óptico para atividades práticas de topografia clássica e agrimensura.',
+    specs: 'Círculo horizontal graduado / Sensibilidade de bolha de alta precisão'
+  },
+  {
+    id: 'eq-ltgeo-teo-081811',
+    labId: 'ltgeo',
+    name: 'Teodolito Óptico',
+    code: 'TEO-081811',
+    patrimonio: '081811',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Teodolito óptico para aulas de campo e levantamentos planimétricos e altimétricos.',
+    specs: 'Óptica tratada antirreflexo / Sistema de pontaria de precisão'
+  },
+  {
+    id: 'eq-ltgeo-teo-081812',
+    labId: 'ltgeo',
+    name: 'Teodolito Óptico',
+    code: 'TEO-081812',
+    patrimonio: '081812',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Teodolito óptico para medições de direções e ângulos em levantamentos topográficos.',
+    specs: 'Base nivelante com parafusos calantes / Prumo óptico'
+  },
+
+  // --- NÍVEIS ÓPTICOS / AUTOMÁTICOS (Planilha 01) ---
+  {
+    id: 'eq-ltgeo-niv-095174',
+    labId: 'ltgeo',
+    name: 'Nível Óptico Automático',
+    code: 'NIV-095174',
+    patrimonio: '095174',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Nível óptico automático com compensador amortecido para transporte altimétrico e nivelamento geométrico.',
+    specs: 'Compensador automático / Ampliação 24x / Desvio padrão 1.5mm/km duplo'
+  },
+  {
+    id: 'eq-ltgeo-niv-095175',
+    labId: 'ltgeo',
+    name: 'Nível Óptico Automático',
+    code: 'NIV-095175',
+    patrimonio: '095175',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Nível topográfico automático para determinação de desníveis, perfis longitudinais e seções transversais.',
+    specs: 'Ampliação 24x / Precisão milimétrica com mira graduada / Proteção IP54'
+  },
+  {
+    id: 'eq-ltgeo-niv-095176',
+    labId: 'ltgeo',
+    name: 'Nível Óptico Automático',
+    code: 'NIV-095176',
+    patrimonio: '095176',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Nível de luneta automático para aulas práticas de nivelamento geométrico simples e composto.',
+    specs: 'Compensador magnético / Círculo horizontal 360°'
+  },
+  {
+    id: 'eq-ltgeo-niv-095177',
+    labId: 'ltgeo',
+    name: 'Nível Óptico Automático',
+    code: 'NIV-095177',
+    patrimonio: '095177',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Nível óptico automático para nivelamento de eixos viários, terraplenagem e implantação de cotas.',
+    specs: 'Aumento óptico 24x / Diâmetro da objetiva 36mm / Retículo com fios estadimétricos'
+  },
+  {
+    id: 'eq-ltgeo-niv-095178',
+    labId: 'ltgeo',
+    name: 'Nível Óptico Automático',
+    code: 'NIV-095178',
+    patrimonio: '095178',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Nível topográfico automático com compensador estável para práticas de nivelamento de referência (RN).',
+    specs: 'Erro quilométrico de nivelamento duplo < 2.0mm / Visada mínima 0.3m'
+  },
+  {
+    id: 'eq-ltgeo-niv-095179',
+    labId: 'ltgeo',
+    name: 'Nível Óptico Automático',
+    code: 'NIV-095179',
+    patrimonio: '095179',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Nível óptico automático para controle altimétrico em levantamentos cadastrais e de engenharia.',
+    specs: 'Precisão milimétrica / Prisma com espelho para leitura da bolha esférica'
+  },
+  {
+    id: 'eq-ltgeo-niv-095180',
+    labId: 'ltgeo',
+    name: 'Nível Óptico Automático',
+    code: 'NIV-095180',
+    patrimonio: '095180',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Nível de precisão automático com compensador pendular para medição de desníveis com miras de alumínio.',
+    specs: 'Ampliação 24x / Parafuso de chamada horizontal infinito / Rosca 5/8" padrão'
+  },
+
+  // --- TEODOLITO / ESTAÇÃO TOTAL (Planilha 02) ---
+  {
+    id: 'eq-ltgeo-teo-et-081813',
+    labId: 'ltgeo',
+    name: 'Teodolito / Estação Total',
+    code: 'ET-081813',
+    patrimonio: '081813',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Equipamento de medição angular digital e distanciômetro eletrônico para práticas de campo.',
+    specs: 'Display digital / Medição com prisma / Eixo duplo'
+  },
+
+  // --- ESTAÇÕES TOTAIS ELETRÔNICAS (Planilha 02) ---
+  {
+    id: 'eq-ltgeo-et-081814',
+    labId: 'ltgeo',
+    name: 'Estação Total Eletrônica',
+    code: 'ET-081814',
+    patrimonio: '081814',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Estação total de precisão para levantamento de poligonais fechadas e abertas, irradiação e cadastro.',
+    specs: 'Alcance 3.000m com prisma / Precisão angular 2" / Display gráfico duplo'
+  },
+  {
+    id: 'eq-ltgeo-et-081815',
+    labId: 'ltgeo',
+    name: 'Estação Total Eletrônica',
+    code: 'ET-081815',
+    patrimonio: '081815',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Estação total para práticas de campo, cálculo de coordenadas, estaqueamento e medição de distâncias.',
+    specs: 'EDM de alta precisão / Memória interna / Compensador biaxial'
+  },
+  {
+    id: 'eq-ltgeo-et-081816',
+    labId: 'ltgeo',
+    name: 'Estação Total Eletrônica',
+    code: 'ET-081816',
+    patrimonio: '081816',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Estação total com programas integrados para levantamento topográfico, locação e cálculo de área.',
+    specs: 'Precisão angular 2" / Alcance até 3500m com prisma / Interface serial/USB'
+  },
+  {
+    id: 'eq-ltgeo-et-081817',
+    labId: 'ltgeo',
+    name: 'Estação Total Eletrônica',
+    code: 'ET-081817',
+    patrimonio: '081817',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Estação total para trabalhos de campo e aulas práticas de topografia e geodésia.',
+    specs: 'Medição rápida de distâncias / Teclado alfanumérico / Prumo óptico'
+  },
+  {
+    id: 'eq-ltgeo-et-704532',
+    labId: 'ltgeo',
+    name: 'Estação Total Robótica / Motorizada',
+    code: 'ET-704532',
+    patrimonio: '704532',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Estação total motorizada com rastreamento automático de prisma (robótica) para levantamentos de alta produtividade.',
+    specs: 'Servomotores de alta velocidade / Autotargeting / Comunicação sem fio de longo alcance'
+  },
+  {
+    id: 'eq-ltgeo-et-734169',
+    labId: 'ltgeo',
+    name: 'Estação Total Leica (Estação LEICA)',
+    code: 'ET-734169',
+    patrimonio: '734169',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Estação total Leica de precisão suíça com leitura a laser com e sem prisma e software Leica FlexField.',
+    specs: 'Óptica Leica / Medição sem prisma até 500m / Display de alta resolução'
+  },
+
+  // --- RECEPTORES GNSS GEODÉSICOS (Planilha 02) ---
+  {
+    id: 'eq-ltgeo-gnss-084408',
+    labId: 'ltgeo',
+    name: 'Receptor GNSS Geodésico Promark 500',
+    code: 'GNSS-084408',
+    patrimonio: '084408',
     category: 'gnss',
     status: 'disponivel',
-    description: 'Receptores GNSS multiconstelação com rádio UHF interno e tecnologia IMU anti-inclinação para georreferenciamento de imóveis rurais.',
-    specs: '1408 canais / Rastreamento GPS, GLONASS, Galileo, BeiDou / Precisão RTK horizontal 8mm'
+    description: 'Receptor geodésico multi-frequência (GPS/GLONASS) para levantamentos estáticos pós-processados e RTK.',
+    specs: 'Rastreamento L1/L2/L5 GPS + GLONASS / Operação Base e Rover / Precisão milimétrica'
   },
   {
-    id: 'eq-ltgeo-06',
+    id: 'eq-ltgeo-gnss-084410',
     labId: 'ltgeo',
-    name: 'Kit de Acessórios Topográficos (Tripés, Balizas, Prismas e Miras de Alumínio)',
-    code: 'ACES-GEO-01',
+    name: 'Receptor GNSS Geodésico Promark 500',
+    code: 'GNSS-084410',
+    patrimonio: '084410',
+    category: 'gnss',
+    status: 'disponivel',
+    description: 'Receptor GNSS geodésico multi-frequência para implantação de marcos, georreferenciamento e redes geodésicas.',
+    specs: 'Multi-frequência / Rádio UHF / Precisão estática pós-processada milimétrica'
+  },
+  {
+    id: 'eq-ltgeo-gnss-099995',
+    labId: 'ltgeo',
+    name: 'Receptor GNSS Promark 200',
+    code: 'GNSS-099995',
+    patrimonio: '099995',
+    category: 'gnss',
+    status: 'disponivel',
+    description: 'Receptor e coletor de dados GNSS de dupla frequência compacto com tecnologia Blade para RTK e pós-processamento.',
+    specs: 'GPS L1/L2, GLONASS / Coletor integrado / Software de campo em tempo real'
+  },
+  {
+    id: 'eq-ltgeo-gnss-099996',
+    labId: 'ltgeo',
+    name: 'Receptor GNSS Promark 100',
+    code: 'GNSS-099996',
+    patrimonio: '099996',
+    category: 'gnss',
+    status: 'disponivel',
+    description: 'Receptor GNSS submétrico e pós-processado para cadastro, mapeamento e suporte a aulas de GNSS.',
+    specs: 'Rastreamento L1 GPS/GLONASS / Coletor portátil integrado'
+  },
+  {
+    id: 'eq-ltgeo-gnss-703274',
+    labId: 'ltgeo',
+    name: 'Receptor GNSS Geodésico Topcon HiPer (Topcon Hyper)',
+    code: 'GNSS-703274',
+    patrimonio: '703274',
+    category: 'gnss',
+    status: 'disponivel',
+    description: 'Receptor geodésico integrado Topcon HiPer com antena, receptor e rádio UHF integrados para medições RTK e estático.',
+    specs: 'Tecnologia Paradigm multi-frequência / Rádio UHF interno / Precisão estática 3mm + 0.5ppm'
+  },
+
+  // --- ACESSÓRIOS DE APOIO DE CAMPO (Planilha 02) ---
+  {
+    id: 'eq-ltgeo-acess-01',
+    labId: 'ltgeo',
+    name: 'Kit Mini-Prisma com Bastão Graduado + Trena (Kit 01)',
+    code: 'ACESS-MINI-01',
     category: 'topografia',
     status: 'disponivel',
-    description: 'Conjunto completo de apoio de campo com tripés de alumínio/madeira, prismas com suporte e miras de 4 metros.',
-    specs: 'Tripés pesados com travas duplas / Miras milimetradas'
+    description: 'Kit de mini-prisma com bastão em seções rosqueáveis e trena de precisão para pontaria em vértices de divisa e cantos.',
+    specs: 'Mini-prisma 25mm com bolha esférica / Bastão de 4 seções / Trena de precisão'
+  },
+  {
+    id: 'eq-ltgeo-acess-02',
+    labId: 'ltgeo',
+    name: 'Kit Mini-Prisma com Bastão Graduado + Trena (Kit 02)',
+    code: 'ACESS-MINI-02',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Kit adicional de mini-prisma e trena para equipes de práticas de campo de agrimensura.',
+    specs: 'Mini-prisma com nível de cantoneira / Trena de medição rápida'
+  },
+  {
+    id: 'eq-ltgeo-acess-03',
+    labId: 'ltgeo',
+    name: 'Kit de Tripés Topográficos e Miras Altimétricas de Alumínio',
+    code: 'ACESS-TRIPES-MIRAS',
+    category: 'topografia',
+    status: 'disponivel',
+    description: 'Conjunto de tripés de alumínio com trava dupla e miras telescópicas de 4 metros milimetradas para níveis e teodolitos.',
+    specs: 'Tripés com parafuso de fixação 5/8" / Miras de alumínio com nível de cantoneira'
   }
 ];
 

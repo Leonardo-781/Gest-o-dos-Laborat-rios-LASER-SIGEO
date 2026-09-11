@@ -83,6 +83,7 @@ export interface Equipment {
   labId: LabId;
   name: string;
   code: string;
+  patrimonio?: string;
   category: 'topografia' | 'laser_scanner' | 'gnss' | 'workstation' | 'drone' | 'periferico';
   status: 'disponivel' | 'em_uso' | 'manutencao' | 'em_campo';
   description: string;

@@ -305,7 +305,28 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [equipments, setEquipments] = useState<Equipment[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.EQUIPMENTS);
-    return saved ? JSON.parse(saved) : INITIAL_EQUIPMENTS;
+    if (!saved) return INITIAL_EQUIPMENTS;
+    try {
+      const parsed: Equipment[] = JSON.parse(saved);
+      // Remove deprecated mock items if present
+      const cleaned = parsed.filter(e => !['eq-ltgeo-01', 'eq-ltgeo-02', 'eq-ltgeo-03', 'eq-ltgeo-04', 'eq-ltgeo-05', 'eq-ltgeo-06'].includes(e.id));
+      const map = new Map<string, Equipment>(cleaned.map(e => [e.id, e]));
+      INITIAL_EQUIPMENTS.forEach(initE => {
+        if (!map.has(initE.id)) {
+          map.set(initE.id, initE);
+        } else {
+          const current = map.get(initE.id)!;
+          if (!current.patrimonio && initE.patrimonio) {
+            map.set(initE.id, { ...current, patrimonio: initE.patrimonio });
+          }
+        }
+      });
+      const merged = Array.from(map.values());
+      localStorage.setItem(STORAGE_KEYS.EQUIPMENTS, JSON.stringify(merged));
+      return merged;
+    } catch {
+      return INITIAL_EQUIPMENTS;
+    }
   });
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
@@ -427,7 +448,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const unsubEquip = subscribeToFirestoreCollection<Equipment>('equipamentos', (items) => {
       if (items && items.length > 0) {
-        setEquipments(items);
+        const cleaned = items.filter(e => !['eq-ltgeo-01', 'eq-ltgeo-02', 'eq-ltgeo-03', 'eq-ltgeo-04', 'eq-ltgeo-05', 'eq-ltgeo-06'].includes(e.id));
+        const remoteMap = new Map<string, Equipment>(cleaned.map(e => [e.id, e]));
+        INITIAL_EQUIPMENTS.forEach(initE => {
+          if (!remoteMap.has(initE.id)) {
+            remoteMap.set(initE.id, initE);
+          }
+        });
+        const merged = Array.from(remoteMap.values());
+        setEquipments(merged);
+        localStorage.setItem(STORAGE_KEYS.EQUIPMENTS, JSON.stringify(merged));
       }
     }, firebaseConfig);
 
