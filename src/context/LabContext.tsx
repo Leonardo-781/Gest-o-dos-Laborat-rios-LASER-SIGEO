@@ -58,7 +58,6 @@ import {
 import { 
   getStoredEmails, 
   saveStoredEmails, 
-  sendLoginAlertEmail, 
   sendReservationCreatedEmail, 
   sendReservationReviewedEmail, 
   sendMaintenanceEmail, 
@@ -446,7 +445,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const unsubEmails = subscribeToFirestoreCollection<EmailNotification>('emails_enviados', (items) => {
       if (items && items.length > 0) {
-        const sorted = [...items].sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+        const sorted = [...items]
+          .filter(e => e.category !== 'login')
+          .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
         setEmails(sorted);
       }
     }, firebaseConfig);
@@ -502,7 +503,6 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return false;
       }
       setCurrentUser(directUser);
-      sendLoginAlertEmail(directUser);
       showToast(`Bem-vindo, ${directUser.name}! (${directUser.roleTitle || directUser.role.toUpperCase()})`);
       return true;
     }
@@ -550,7 +550,6 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       setCurrentUser(masterUser);
-      sendLoginAlertEmail(masterUser);
       showToast(`Bem-vindo, Leonardo! Acesso de Administrador Master / Técnico Geral concedido.`);
       return true;
     }
@@ -577,7 +576,6 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       setCurrentUser(found);
-      sendLoginAlertEmail(found);
       showToast(`Bem-vindo, ${found.name}! (${found.roleTitle || found.role.toUpperCase()})`);
       return true;
     }

@@ -11,14 +11,17 @@ const STORAGE_EMAILS_KEY = 'silab_sent_emails_v3';
 export function getStoredEmails(): EmailNotification[] {
   try {
     const raw = localStorage.getItem(STORAGE_EMAILS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed: EmailNotification[] = JSON.parse(raw);
+    return parsed.filter(e => e.category !== 'login');
   } catch {
     return [];
   }
 }
 
 export function saveStoredEmails(emails: EmailNotification[]) {
-  localStorage.setItem(STORAGE_EMAILS_KEY, JSON.stringify(emails));
+  const sanitized = emails.filter(e => e.category !== 'login');
+  localStorage.setItem(STORAGE_EMAILS_KEY, JSON.stringify(sanitized));
 }
 
 /**

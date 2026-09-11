@@ -4,7 +4,7 @@ import {
   Mail, 
   CheckCircle2, 
   Clock, 
-  ShieldAlert, 
+  ShieldAlert,
   Calendar, 
   Wrench, 
   Code, 
@@ -67,12 +67,6 @@ export const EmailNotificationsModal: React.FC = () => {
 
   const getCategoryBadge = (category: EmailNotification['category']) => {
     switch (category) {
-      case 'login':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-            <ShieldAlert className="w-3 h-3 text-amber-600" /> Acesso / Login
-          </span>
-        );
       case 'solicitacao_criada':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
@@ -157,7 +151,6 @@ export const EmailNotificationsModal: React.FC = () => {
           <span className="text-[11px] font-bold text-slate-500 mr-2 uppercase tracking-wider">Filtrar:</span>
           {[
             { id: 'all', label: 'Todos os E-mails' },
-            { id: 'login', label: 'Alertas de Acesso' },
             { id: 'solicitacao_criada', label: 'Novas Solicitações' },
             { id: 'solicitacao_atualizada', label: 'Status de Horário' },
             { id: 'manutencao', label: 'Manutenções' },
