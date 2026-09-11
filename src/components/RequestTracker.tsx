@@ -169,9 +169,13 @@ export const RequestTracker: React.FC = () => {
                       {res.protocol}
                     </span>
                     <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                      isLaser ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                      res.labId === 'laser' 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : res.labId === 'sigeo' 
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : 'bg-orange-100 text-orange-800'
                     }`}>
-                      LAB {lab.name}
+                      LAB {lab?.name || res.labId.toUpperCase()}
                     </span>
                     <span className={`text-[10px] font-semibold px-2 py-0.2 rounded border ${badge.bg} ${badge.text} ${badge.border}`}>
                       {badge.label}
@@ -260,7 +264,11 @@ export const RequestTracker: React.FC = () => {
                       {man.protocol}
                     </span>
                     <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                      isLaser ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                      man.labId === 'laser' 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : man.labId === 'sigeo' 
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : 'bg-orange-100 text-orange-800'
                     }`}>
                       LAB {man.labId.toUpperCase()}
                     </span>
@@ -293,7 +301,7 @@ export const RequestTracker: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Técnico Encarregado:</span>
-                    <span className="font-bold text-slate-800">{man.assignedTechnician || 'Em triagem na Sala 1B308'}</span>
+                    <span className="font-bold text-slate-800">{man.assignedTechnician || (man.labId === 'ltgeo' ? 'Em triagem na Sala 1B210' : 'Em triagem na Sala 1B308')}</span>
                   </div>
                 </div>
 
@@ -317,7 +325,13 @@ export const RequestTracker: React.FC = () => {
                   <span className="font-mono text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-lg border border-purple-200">
                     {soft.protocol}
                   </span>
-                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
+                    soft.labId === 'laser' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : soft.labId === 'sigeo' 
+                      ? 'bg-emerald-100 text-emerald-800' 
+                      : 'bg-orange-100 text-orange-800'
+                  }`}>
                     LAB {soft.labId.toUpperCase()}
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200 flex items-center gap-1">

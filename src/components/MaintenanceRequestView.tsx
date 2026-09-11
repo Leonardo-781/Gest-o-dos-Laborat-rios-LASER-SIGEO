@@ -68,7 +68,9 @@ export const MaintenanceRequestView: React.FC = () => {
     if (equipmentId) {
       const selectedEq = equipments.find(e => e.id === equipmentId);
       if (selectedEq) {
-        finalEquipmentName = `${selectedEq.name} (${selectedEq.code})`;
+        finalEquipmentName = selectedEq.patrimonio
+          ? `${selectedEq.name} (Pat. ${selectedEq.patrimonio} • ${selectedEq.code})`
+          : `${selectedEq.name} (${selectedEq.code})`;
       }
     }
 
@@ -116,14 +118,14 @@ export const MaintenanceRequestView: React.FC = () => {
               Solicitar Manutenção & Averiguação de Máquinas
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Reporte computadores travando, periféricos danificados ou instrumentos com erro de leitura nos laboratórios Laser e Sigeo.
+              Reporte computadores travando, periféricos danificados ou instrumentos com erro de leitura nos laboratórios Laser, Sigeo e LTGEO.
             </p>
           </div>
         </div>
 
         <div className="text-xs bg-amber-50 border border-amber-200 text-amber-900 p-2.5 rounded-xl font-medium flex items-center gap-2">
           <Info className="w-4 h-4 text-amber-600 flex-shrink-0" />
-          <span>A equipe técnica na <strong>Sala 1B308</strong> recebe e analisa todos os chamados.</span>
+          <span>A equipe técnica nas <strong>Salas 1B308 e 1B210</strong> recebe e analisa todos os chamados.</span>
         </div>
       </div>
 
@@ -184,41 +186,59 @@ export const MaintenanceRequestView: React.FC = () => {
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
               1. Em qual laboratório está o equipamento?
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div
-                onClick={() => setLabId('sigeo')}
+                onClick={() => { setLabId('sigeo'); setEquipmentId(''); }}
                 className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between ${
                   labId === 'sigeo'
                     ? 'border-emerald-600 bg-emerald-50/60 shadow-xs'
                     : 'border-slate-200 hover:border-emerald-300'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <Globe className="w-5 h-5 text-emerald-600" />
+                <div className="flex items-center gap-2.5">
+                  <Globe className="w-5 h-5 text-emerald-600 shrink-0" />
                   <div>
                     <span className="font-bold text-xs text-emerald-950 block">LABORATÓRIO SIGEO</span>
-                    <span className="text-[11px] text-slate-500">Sala 1B307 • 24 Workstations & Plotter</span>
+                    <span className="text-[11px] text-slate-500">Sala 1B307 • Workstations</span>
                   </div>
                 </div>
-                {labId === 'sigeo' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                {labId === 'sigeo' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
               </div>
 
               <div
-                onClick={() => setLabId('laser')}
+                onClick={() => { setLabId('laser'); setEquipmentId(''); }}
                 className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between ${
                   labId === 'laser'
                     ? 'border-blue-600 bg-blue-50/60 shadow-xs'
                     : 'border-slate-200 hover:border-blue-300'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <Compass className="w-5 h-5 text-blue-600" />
+                <div className="flex items-center gap-2.5">
+                  <Compass className="w-5 h-5 text-blue-600 shrink-0" />
                   <div>
                     <span className="font-bold text-xs text-blue-950 block">LABORATÓRIO LASER</span>
-                    <span className="text-[11px] text-slate-500">Sala 1B309 • Sensores, GNSS & Scanners</span>
+                    <span className="text-[11px] text-slate-500">Sala 1B309 • Sensores & Scanners</span>
                   </div>
                 </div>
-                {labId === 'laser' && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                {labId === 'laser' && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
+              </div>
+
+              <div
+                onClick={() => { setLabId('ltgeo'); setEquipmentId(''); }}
+                className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between ${
+                  labId === 'ltgeo'
+                    ? 'border-orange-600 bg-orange-50/60 shadow-xs'
+                    : 'border-slate-200 hover:border-orange-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Wrench className="w-5 h-5 text-orange-600 shrink-0" />
+                  <div>
+                    <span className="font-bold text-xs text-orange-950 block">LABORATÓRIO LTGEO</span>
+                    <span className="text-[11px] text-slate-500">Sala 1B210 • Topografia & Geodésia</span>
+                  </div>
+                </div>
+                {labId === 'ltgeo' && <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />}
               </div>
             </div>
           </div>
@@ -245,7 +265,7 @@ export const MaintenanceRequestView: React.FC = () => {
                   <option value="">-- Selecionar item cadastrado --</option>
                   {labEquipments.map(eq => (
                     <option key={eq.id} value={eq.id}>
-                      {eq.name} ({eq.code}) {eq.status === 'manutencao' ? '[Já em Manutenção]' : ''}
+                      {eq.name} {eq.patrimonio ? `• [Pat. ${eq.patrimonio}]` : `(${eq.code})`} {eq.status === 'manutencao' ? '• [Já em Manutenção]' : ''}
                     </option>
                   ))}
                 </select>

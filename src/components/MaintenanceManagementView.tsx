@@ -153,7 +153,7 @@ export const MaintenanceManagementView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Gestão de equipamentos em manutenção, triagem de chamados e homologação de softwares dos laboratórios Laser e Sigeo.
+              Gestão de equipamentos em manutenção, triagem de chamados e homologação de softwares dos laboratórios Laser, Sigeo e LTGEO.
             </p>
           </div>
         </div>
@@ -244,13 +244,22 @@ export const MaintenanceManagementView: React.FC = () => {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                          eq.labId === 'laser' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                          eq.labId === 'laser' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : eq.labId === 'sigeo' 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-orange-100 text-orange-800'
                         }`}>
                           LAB {eq.labId.toUpperCase()}
                         </span>
                         <span className="font-mono text-xs font-bold text-slate-500">{eq.code}</span>
+                        {eq.patrimonio && (
+                          <span className="font-mono text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            Pat. {eq.patrimonio}
+                          </span>
+                        )}
                       </div>
                       <h4 className="text-sm font-bold text-slate-900 mt-1">{eq.name}</h4>
                     </div>
@@ -324,7 +333,11 @@ export const MaintenanceManagementView: React.FC = () => {
                         {req.protocol}
                       </span>
                       <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                        isLaser ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                        req.labId === 'laser' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : req.labId === 'sigeo' 
+                          ? 'bg-emerald-100 text-emerald-800' 
+                          : 'bg-orange-100 text-orange-800'
                       }`}>
                         LAB {req.labId.toUpperCase()}
                       </span>
@@ -418,7 +431,7 @@ export const MaintenanceManagementView: React.FC = () => {
                 Solicitações de Instalação & Atualização de Softwares ({softwareRequests.length})
               </h4>
               <p className="text-xs text-slate-500 mt-0.5">
-                Demandas de programas, plugins e bibliotecas para homologação nas bancadas do Laser e Sigeo.
+                Demandas de programas, plugins e bibliotecas para homologação nas bancadas do Laser, Sigeo e LTGEO.
               </p>
             </div>
           </div>
@@ -434,11 +447,17 @@ export const MaintenanceManagementView: React.FC = () => {
                     <span className="font-mono text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-lg border border-purple-200">
                       {soft.protocol}
                     </span>
-                    <span className="text-[10px] font-bold uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
+                      soft.labId === 'laser' 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : soft.labId === 'sigeo' 
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
                       LAB {soft.labId.toUpperCase()}
                     </span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                      {soft.targetScope === 'todas_maquinas' ? 'Todas as 24 Bancadas' : soft.specificWorkstations || 'Bancadas Específicas'}
+                      {soft.targetScope === 'todas_maquinas' ? `Todas as ${labs[soft.labId]?.workstationsCount || 24} Bancadas` : soft.specificWorkstations || 'Bancadas Específicas'}
                     </span>
                     {getSoftwareStatusBadge(soft.status)}
                   </div>
@@ -583,7 +602,7 @@ export const MaintenanceManagementView: React.FC = () => {
                   <option value="">-- Selecione o item --</option>
                   {equipments.filter(e => e.status !== 'manutencao').map(eq => (
                     <option key={eq.id} value={eq.id}>
-                      [{eq.labId.toUpperCase()}] {eq.name} ({eq.code})
+                      [{eq.labId.toUpperCase()}] {eq.name} {eq.patrimonio ? `• [Pat. ${eq.patrimonio}]` : `(${eq.code})`}
                     </option>
                   ))}
                 </select>

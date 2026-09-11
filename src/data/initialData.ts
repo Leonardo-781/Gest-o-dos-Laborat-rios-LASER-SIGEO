@@ -633,38 +633,6 @@ export const INITIAL_EQUIPMENTS: Equipment[] = [
     status: 'disponivel',
     description: 'Receptor geodésico integrado Topcon HiPer com antena, receptor e rádio UHF integrados para medições RTK e estático.',
     specs: 'Tecnologia Paradigm multi-frequência / Rádio UHF interno / Precisão estática 3mm + 0.5ppm'
-  },
-
-  // --- ACESSÓRIOS DE APOIO DE CAMPO (Planilha 02) ---
-  {
-    id: 'eq-ltgeo-acess-01',
-    labId: 'ltgeo',
-    name: 'Kit Mini-Prisma com Bastão Graduado + Trena (Kit 01)',
-    code: 'ACESS-MINI-01',
-    category: 'topografia',
-    status: 'disponivel',
-    description: 'Kit de mini-prisma com bastão em seções rosqueáveis e trena de precisão para pontaria em vértices de divisa e cantos.',
-    specs: 'Mini-prisma 25mm com bolha esférica / Bastão de 4 seções / Trena de precisão'
-  },
-  {
-    id: 'eq-ltgeo-acess-02',
-    labId: 'ltgeo',
-    name: 'Kit Mini-Prisma com Bastão Graduado + Trena (Kit 02)',
-    code: 'ACESS-MINI-02',
-    category: 'topografia',
-    status: 'disponivel',
-    description: 'Kit adicional de mini-prisma e trena para equipes de práticas de campo de agrimensura.',
-    specs: 'Mini-prisma com nível de cantoneira / Trena de medição rápida'
-  },
-  {
-    id: 'eq-ltgeo-acess-03',
-    labId: 'ltgeo',
-    name: 'Kit de Tripés Topográficos e Miras Altimétricas de Alumínio',
-    code: 'ACESS-TRIPES-MIRAS',
-    category: 'topografia',
-    status: 'disponivel',
-    description: 'Conjunto de tripés de alumínio com trava dupla e miras telescópicas de 4 metros milimetradas para níveis e teodolitos.',
-    specs: 'Tripés com parafuso de fixação 5/8" / Miras de alumínio com nível de cantoneira'
   }
 ];
 

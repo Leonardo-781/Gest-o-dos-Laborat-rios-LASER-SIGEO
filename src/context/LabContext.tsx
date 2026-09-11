@@ -308,8 +308,14 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!saved) return INITIAL_EQUIPMENTS;
     try {
       const parsed: Equipment[] = JSON.parse(saved);
-      // Remove deprecated mock items if present
-      const cleaned = parsed.filter(e => !['eq-ltgeo-01', 'eq-ltgeo-02', 'eq-ltgeo-03', 'eq-ltgeo-04', 'eq-ltgeo-05', 'eq-ltgeo-06'].includes(e.id));
+      // For LTGEO, keep exclusively the real patrimonio items from INITIAL_EQUIPMENTS
+      const initialLtgeoIds = new Set(INITIAL_EQUIPMENTS.filter(e => e.labId === 'ltgeo').map(e => e.id));
+      const cleaned = parsed.filter(e => {
+        if (e.labId === 'ltgeo') {
+          return initialLtgeoIds.has(e.id) && Boolean(e.patrimonio);
+        }
+        return true;
+      });
       const map = new Map<string, Equipment>(cleaned.map(e => [e.id, e]));
       INITIAL_EQUIPMENTS.forEach(initE => {
         if (!map.has(initE.id)) {
@@ -448,7 +454,13 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const unsubEquip = subscribeToFirestoreCollection<Equipment>('equipamentos', (items) => {
       if (items && items.length > 0) {
-        const cleaned = items.filter(e => !['eq-ltgeo-01', 'eq-ltgeo-02', 'eq-ltgeo-03', 'eq-ltgeo-04', 'eq-ltgeo-05', 'eq-ltgeo-06'].includes(e.id));
+        const initialLtgeoIds = new Set(INITIAL_EQUIPMENTS.filter(e => e.labId === 'ltgeo').map(e => e.id));
+        const cleaned = items.filter(e => {
+          if (e.labId === 'ltgeo') {
+            return initialLtgeoIds.has(e.id) && Boolean(e.patrimonio);
+          }
+          return true;
+        });
         const remoteMap = new Map<string, Equipment>(cleaned.map(e => [e.id, e]));
         INITIAL_EQUIPMENTS.forEach(initE => {
           if (!remoteMap.has(initE.id)) {

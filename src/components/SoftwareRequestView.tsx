@@ -120,7 +120,7 @@ export const SoftwareRequestView: React.FC = () => {
 
         <div className="text-xs bg-purple-50 border border-purple-200 text-purple-900 p-2.5 rounded-xl font-medium flex items-center gap-2">
           <Terminal className="w-4 h-4 text-purple-600 flex-shrink-0" />
-          <span>Instalações são homologadas e testadas previamente na <strong>Sala 1B308</strong>.</span>
+          <span>Instalações são homologadas e testadas previamente pelas equipes técnicas (Salas 1B308 e 1B210).</span>
         </div>
       </div>
 
@@ -182,7 +182,7 @@ export const SoftwareRequestView: React.FC = () => {
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
               1. Laboratório onde o software deve ser instalado:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div
                 onClick={() => setLabId('sigeo')}
                 className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between ${
@@ -191,14 +191,14 @@ export const SoftwareRequestView: React.FC = () => {
                     : 'border-slate-200 hover:border-emerald-300'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <Globe className="w-5 h-5 text-emerald-600" />
+                <div className="flex items-center gap-2.5">
+                  <Globe className="w-5 h-5 text-emerald-600 shrink-0" />
                   <div>
-                    <span className="font-bold text-xs text-emerald-950 block">LABORATÓRIO SIGEO (Recomendado)</span>
-                    <span className="text-[11px] text-slate-500">Sala 1B307 • 24 Workstations RTX com QGIS/Metashape</span>
+                    <span className="font-bold text-xs text-emerald-950 block">LABORATÓRIO SIGEO</span>
+                    <span className="text-[11px] text-slate-500">Sala 1B307 • 24 Workstations RTX</span>
                   </div>
                 </div>
-                {labId === 'sigeo' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                {labId === 'sigeo' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
               </div>
 
               <div
@@ -209,14 +209,32 @@ export const SoftwareRequestView: React.FC = () => {
                     : 'border-slate-200 hover:border-blue-300'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <Compass className="w-5 h-5 text-blue-600" />
+                <div className="flex items-center gap-2.5">
+                  <Compass className="w-5 h-5 text-blue-600 shrink-0" />
                   <div>
                     <span className="font-bold text-xs text-blue-950 block">LABORATÓRIO LASER</span>
-                    <span className="text-[11px] text-slate-500">Sala 1B309 • 6 Bancadas de Processamento de Campo</span>
+                    <span className="text-[11px] text-slate-500">Sala 1B309 • 6 Bancadas</span>
                   </div>
                 </div>
-                {labId === 'laser' && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                {labId === 'laser' && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
+              </div>
+
+              <div
+                onClick={() => setLabId('ltgeo')}
+                className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between ${
+                  labId === 'ltgeo'
+                    ? 'border-orange-600 bg-orange-50/60 shadow-xs'
+                    : 'border-slate-200 hover:border-orange-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Layers className="w-5 h-5 text-orange-600 shrink-0" />
+                  <div>
+                    <span className="font-bold text-xs text-orange-950 block">LABORATÓRIO LTGEO</span>
+                    <span className="text-[11px] text-slate-500">Sala 1B210 • 4 Computadores GNSS</span>
+                  </div>
+                </div>
+                {labId === 'ltgeo' && <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />}
               </div>
             </div>
           </div>
@@ -260,7 +278,7 @@ export const SoftwareRequestView: React.FC = () => {
                   onChange={(e) => setTargetScope(e.target.value as SoftwareScope)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-medium cursor-pointer focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="todas_maquinas">Todas as 24 Workstations (Turma inteira)</option>
+                  <option value="todas_maquinas">Todas as bancadas do laboratório ({labs[labId]?.workstationsCount || 4} estações)</option>
                   <option value="maquinas_especificas">Bancadas específicas (Grupo de pesquisa / TCC)</option>
                   <option value="servidor">Apenas no Servidor de Processamento</option>
                 </select>
