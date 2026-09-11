@@ -22,7 +22,8 @@ import {
   getWeekDays, 
   formatDateBR, 
   getPurposeBadge, 
-  timeToMinutes 
+  timeToMinutes,
+  isEventEnded
 } from '../utils/dateHelpers';
 import { MiniMonthCalendar } from './MiniMonthCalendar';
 
@@ -51,6 +52,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [searchFilter, setSearchFilter] = useState('');
+
+  // Ticker de 60s para atualizar automaticamente o status de horário finalizado em tempo real
+  const [, setClockTick] = useState(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => setClockTick(t => t + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const weekInfo = getWeekDays(referenceDate);
   const days = weekInfo.days;
@@ -399,6 +407,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-600 flex-shrink-0" />
                 Vermelho: Aula / Solicitação Externa
               </span>
+              <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-300 font-bold flex items-center gap-1.5 shadow-2xs">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 flex-shrink-0" />
+                Cinza: Solicitação Finalizada (Histórico)
+              </span>
             </div>
           </div>
 
@@ -586,12 +598,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                           >
                             {/* Renderizar cartões de eventos que iniciam neste horário */}
                             {startingEvents.map((ev) => {
-                              const isExternal = ev.isExternal !== undefined
+                              const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
+                              const isExternal = !isEnded && (ev.isExternal !== undefined
                                 ? Boolean(ev.isExternal)
-                                : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
-                              const isOrange = !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
-                              const isBlue = !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
-                              const isGreen = !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
+                                : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose')));
+                              const isOrange = !isEnded && !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
+                              const isBlue = !isEnded && !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
+                              const isGreen = !isEnded && !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
 
                               return (
                                 <div
@@ -601,7 +614,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                                     setSelectedEventDetail(ev);
                                   }}
                                   className={`p-1.5 rounded-lg border text-left mb-1 transition-all duration-150 hover:shadow-xs cursor-pointer ${
-                                    isExternal
+                                    isEnded
+                                      ? 'bg-slate-100/90 border-slate-300/90 text-slate-700 hover:border-slate-400 hover:bg-slate-200/60 opacity-80'
+                                      : isExternal
                                       ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
                                       : isOrange
                                       ? 'bg-orange-50 border-orange-200 text-orange-950 hover:border-orange-300'
@@ -611,16 +626,21 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                                   }`}
                                 >
                                   <div className="flex items-center justify-between gap-1 text-[9px] font-bold">
-                                    <span className={`px-1 rounded ${
-                                      isExternal 
-                                        ? 'bg-rose-700 text-white' 
-                                        : isOrange
-                                        ? 'bg-orange-600 text-white'
-                                        : isBlue 
-                                        ? 'bg-blue-600 text-white' 
-                                        : 'bg-emerald-600 text-white'
-                                    }`}>
-                                      {isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
+                                    <span 
+                                      className={`px-1 rounded ${
+                                        isEnded
+                                          ? 'bg-slate-500 text-white'
+                                          : isExternal 
+                                          ? 'bg-rose-700 text-white' 
+                                          : isOrange
+                                          ? 'bg-orange-600 text-white'
+                                          : isBlue 
+                                          ? 'bg-blue-600 text-white' 
+                                          : 'bg-emerald-600 text-white'
+                                      }`}
+                                      title={isEnded ? 'Solicitação encerrada (Histórico de uso)' : undefined}
+                                    >
+                                      {isEnded ? `${ev.labId.toUpperCase()} • FIM` : isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
                                     </span>
                                     <div className="flex items-center gap-1 font-mono text-slate-600 font-semibold">
                                       {ev.isRecurring && (
@@ -718,19 +738,22 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                 }
 
                 return dayEvents.map(ev => {
-                  const isExternal = ev.isExternal !== undefined
+                  const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
+                  const isExternal = !isEnded && (ev.isExternal !== undefined
                     ? Boolean(ev.isExternal)
-                    : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
-                  const isOrange = !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
-                  const isBlue = !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
-                  const isGreen = !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
+                    : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose')));
+                  const isOrange = !isEnded && !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
+                  const isBlue = !isEnded && !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
+                  const isGreen = !isEnded && !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
 
                   return (
                     <div
                       key={ev.id}
                       onClick={() => setSelectedEventDetail(ev)}
                       className={`p-3.5 rounded-xl border transition hover:shadow-xs cursor-pointer flex items-center justify-between gap-4 ${
-                        isExternal
+                        isEnded
+                          ? 'bg-slate-100/90 border-slate-300 text-slate-700 hover:bg-slate-200/60 opacity-85'
+                          : isExternal
                           ? 'bg-rose-50 border-rose-200'
                           : isOrange
                           ? 'bg-orange-50/60 border-orange-200'
@@ -742,7 +765,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                            isExternal 
+                            isEnded
+                              ? 'bg-slate-500 text-white'
+                              : isExternal 
                               ? 'bg-rose-700 text-white' 
                               : isOrange
                               ? 'bg-orange-600 text-white'
@@ -750,7 +775,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                               ? 'bg-blue-600 text-white' 
                               : 'bg-emerald-600 text-white'
                           }`}>
-                            {isExternal ? `${ev.labId.toUpperCase()} • EXTERNA` : ev.labId.toUpperCase()}
+                            {isEnded ? `${ev.labId.toUpperCase()} • FINALIZADO` : isExternal ? `${ev.labId.toUpperCase()} • EXTERNA` : ev.labId.toUpperCase()}
                           </span>
                           <span className="text-xs font-bold text-slate-900">{ev.title}</span>
                         </div>
@@ -818,19 +843,26 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                     );
                   });
 
-                  return filtered.map(({ day, event: ev }, idx) => (
-                    <tr 
-                      key={idx} 
-                      onClick={() => setSelectedEventDetail(ev)} 
-                      className="hover:bg-slate-50 cursor-pointer transition"
-                    >
-                      <td className="p-2.5 font-bold text-slate-900">{day}</td>
-                      <td className="p-2.5 font-mono text-slate-700 font-semibold">{ev.startTime} - {ev.endTime}</td>
-                      <td className="p-2.5 font-bold uppercase">{ev.labId}</td>
-                      <td className="p-2.5 font-bold text-slate-900">{ev.title}</td>
-                      <td className="p-2.5 text-slate-600">{ev.responsible || ev.subtitle || '—'}</td>
-                    </tr>
-                  ));
+                  return filtered.map(({ day, event: ev }, idx) => {
+                    const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
+                    return (
+                      <tr 
+                        key={idx} 
+                        onClick={() => setSelectedEventDetail(ev)} 
+                        className={`hover:bg-slate-50 cursor-pointer transition ${isEnded ? 'bg-slate-50/70 text-slate-500' : ''}`}
+                      >
+                        <td className="p-2.5 font-bold text-slate-900">{day}</td>
+                        <td className="p-2.5 font-mono text-slate-700 font-semibold">{ev.startTime} - {ev.endTime}</td>
+                        <td className="p-2.5 font-bold uppercase">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] ${isEnded ? 'bg-slate-200 text-slate-700 font-medium' : ''}`}>
+                            {ev.labId} {isEnded ? '(Finalizado)' : ''}
+                          </span>
+                        </td>
+                        <td className={`p-2.5 font-bold ${isEnded ? 'text-slate-700' : 'text-slate-900'}`}>{ev.title}</td>
+                        <td className="p-2.5 text-slate-600">{ev.responsible || ev.subtitle || '—'}</td>
+                      </tr>
+                    );
+                  });
                 })()}
               </tbody>
             </table>

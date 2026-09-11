@@ -235,6 +235,7 @@ export interface ScheduleEvent {
   userTeacher?: string;        // Público
   isExternal?: boolean;
   customColor?: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho';
+  isEnded?: boolean; // True se a solicitação/reserva já terminou em relação ao momento atual (histórico)
   rawItem: FixedClass | Reservation;
 }
 

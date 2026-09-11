@@ -38,7 +38,8 @@ import {
   formatDateToYYYYMMDD,
   getDayOfWeekFromDateStr,
   addWeeksToDateStr,
-  timeToMinutes
+  timeToMinutes,
+  isEventEnded
 } from '../utils/dateHelpers';
 import { getSavedCloudConfig, saveCloudConfig } from '../services/supabaseClient';
 import { 
@@ -1806,6 +1807,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     reservations
       .filter(res => matchesLab(res.labId) && res.date === dateStr && res.status === 'aprovada')
       .forEach(res => {
+        const isEnded = isEventEnded(res.date, res.endTime);
         const isExternal = res.isExternal !== undefined
           ? Boolean(res.isExternal)
           : Boolean(res.customColor === 'vermelho' || res.highlightColor?.includes('rose'));
@@ -1815,13 +1817,15 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? 'vermelho'
           : (res.customColor && res.customColor !== 'vermelho' ? res.customColor : defaultLabColor);
 
-        const highlightColor = isExternal
-          ? 'bg-rose-100 text-rose-950 border-rose-300'
-          : (customColor === 'azul'
-            ? 'bg-blue-50 text-blue-950 border-blue-200'
-            : (customColor === 'laranja'
-              ? 'bg-orange-50 text-orange-950 border-orange-200'
-              : 'bg-emerald-50 text-emerald-950 border-emerald-200'));
+        const highlightColor = isEnded
+          ? 'bg-slate-100 text-slate-700 border-slate-300'
+          : (isExternal
+            ? 'bg-rose-100 text-rose-950 border-rose-300'
+            : (customColor === 'azul'
+              ? 'bg-blue-50 text-blue-950 border-blue-200'
+              : (customColor === 'laranja'
+                ? 'bg-orange-50 text-orange-950 border-orange-200'
+                : 'bg-emerald-50 text-emerald-950 border-emerald-200')));
 
         events.push({
           id: `event-${res.id}`,
@@ -1842,6 +1846,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           isExternal,
           customColor,
           highlightColor,
+          isEnded,
           status: res.status,
           isRecurring: res.isRecurring,
           recurrenceWeekIndex: res.recurrenceWeekIndex,

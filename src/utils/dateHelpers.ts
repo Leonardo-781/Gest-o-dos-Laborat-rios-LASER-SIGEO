@@ -64,6 +64,23 @@ export function formatDateTimeBR(isoString: string): string {
   }
 }
 
+/**
+ * Verifica se um evento (ex: solicitação/reserva pontual) já terminou em relação ao momento atual.
+ */
+export function isEventEnded(dateStr?: string, endTime?: string): boolean {
+  if (!dateStr || !endTime) return false;
+  try {
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length < 3) return false;
+    const [year, month, day] = parts;
+    const [hours, minutes] = endTime.split(':').map(Number);
+    const eventEnd = new Date(year, month - 1, day, hours || 0, minutes || 0, 0);
+    return new Date() > eventEnd;
+  } catch {
+    return false;
+  }
+}
+
 export function getWeekDays(referenceDate: Date = new Date()) {
   const current = new Date(referenceDate);
   const day = current.getDay(); // 0 is Sunday, 1 is Monday...

@@ -16,7 +16,7 @@ import {
   Lock
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { formatDateBR, getPurposeBadge, getStatusBadge } from '../utils/dateHelpers';
+import { formatDateBR, getPurposeBadge, getStatusBadge, isEventEnded } from '../utils/dateHelpers';
 import { Reservation, FixedClass } from '../types';
 
 export const EventDetailModal: React.FC = () => {
@@ -51,11 +51,12 @@ export const EventDetailModal: React.FC = () => {
     : [];
 
   const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
-  const isExternal = ev.isExternal !== undefined
+  const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
+  const isExternal = !isEnded && (ev.isExternal !== undefined
     ? Boolean(ev.isExternal)
-    : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose'));
-  const isOrange = !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
-  const isBlue = !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
+    : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose')));
+  const isOrange = !isEnded && !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
+  const isBlue = !isEnded && !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
@@ -63,7 +64,9 @@ export const EventDetailModal: React.FC = () => {
         
         {/* Header com cor do Lab */}
         <div className={`p-6 text-white relative ${
-          isExternal 
+          isEnded
+            ? 'bg-gradient-to-r from-slate-600 to-slate-850'
+            : isExternal 
             ? 'bg-gradient-to-r from-rose-700 to-rose-950'
             : isOrange
             ? 'bg-gradient-to-r from-orange-600 to-orange-800'
@@ -82,11 +85,15 @@ export const EventDetailModal: React.FC = () => {
             <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded bg-white/20 backdrop-blur-xs">
               LAB {lab.name}
             </span>
-            {isExternal && (
+            {isEnded ? (
+              <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded bg-slate-900/60 backdrop-blur-xs text-white border border-white/20">
+                ⏳ Horário Finalizado (Histórico)
+              </span>
+            ) : isExternal ? (
               <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded bg-rose-500/80 backdrop-blur-xs text-white border border-white/30">
                 🔴 Aula / Solicitação Externa
               </span>
-            )}
+            ) : null}
             <span className="text-xs font-semibold text-white/90">
               {isFixedClass ? '• Grade Semestral Oficial' : `• Protocolo: ${reservationItem?.protocol}`}
             </span>
@@ -99,6 +106,19 @@ export const EventDetailModal: React.FC = () => {
         {/* Corpo dos Detalhes */}
         <div className="p-6 space-y-5 text-xs text-slate-600">
           
+          {/* Banner de Horário Finalizado */}
+          {isEnded && (
+            <div className="p-3 bg-slate-100 border border-slate-300 rounded-2xl text-xs text-slate-700 flex items-start gap-2.5 shadow-2xs">
+              <Clock className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-slate-800 block">Horário Finalizado / Histórico de Uso</span>
+                <span className="text-[11px] text-slate-500 leading-tight">
+                  A data e horário desta solicitação já se encerraram. O registro permanece visível na grade em tom cinza exclusivamente para fins de histórico e prestação de contas de uso do laboratório.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Card de Horário & Local */}
           <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
             <div className="flex items-center gap-2.5">
@@ -145,9 +165,13 @@ export const EventDetailModal: React.FC = () => {
             {statusBadge && (
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Status da Reserva</span>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
-                  <span className={`w-2 h-2 rounded-full ${statusBadge.dot}`} />
-                  {statusBadge.label}
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold ${
+                  isEnded 
+                    ? 'bg-slate-100 text-slate-700 border-slate-300' 
+                    : `${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${isEnded ? 'bg-slate-400' : statusBadge.dot}`} />
+                  {isEnded ? 'Concluída (Histórico)' : statusBadge.label}
                 </span>
               </div>
             )}
