@@ -53,6 +53,12 @@ export const AuditLogView: React.FC = () => {
         return { label: 'Aula Regular Cadastrada', bg: 'bg-cyan-50 text-cyan-800 border-cyan-200', icon: <Layers className="w-3.5 h-3.5 text-cyan-600" /> };
       case 'aula_removida':
         return { label: 'Aula Regular Removida', bg: 'bg-amber-50 text-amber-800 border-amber-200', icon: <Clock className="w-3.5 h-3.5 text-amber-600" /> };
+      case 'equipamento_criado':
+        return { label: 'Equipamento Cadastrado', bg: 'bg-blue-50 text-blue-800 border-blue-200', icon: <PlusCircle className="w-3.5 h-3.5 text-blue-600" /> };
+      case 'equipamento_alterado':
+        return { label: 'Equipamento Alterado', bg: 'bg-indigo-50 text-indigo-800 border-indigo-200', icon: <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" /> };
+      case 'equipamento_removido':
+        return { label: 'Equipamento Removido', bg: 'bg-rose-50 text-rose-800 border-rose-200', icon: <XCircle className="w-3.5 h-3.5 text-rose-600" /> };
       default:
         return { label: 'Ação do Sistema', bg: 'bg-slate-100 text-slate-700 border-slate-200', icon: <ShieldCheck className="w-3.5 h-3.5 text-slate-500" /> };
     }
@@ -127,6 +133,9 @@ export const AuditLogView: React.FC = () => {
               <option value="solicitacao_aprovada">Apenas Aprovações</option>
               <option value="solicitacao_recusada">Apenas Recusas</option>
               <option value="solicitacao_criada">Apenas Criações</option>
+              <option value="equipamento_criado">Equipamentos Cadastrados</option>
+              <option value="equipamento_alterado">Equipamentos Alterados</option>
+              <option value="equipamento_removido">Equipamentos Removidos</option>
               <option value="pdf_importado">Importações de PDF</option>
               <option value="aula_adicionada">Aulas da Grade</option>
             </select>

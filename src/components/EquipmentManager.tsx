@@ -9,16 +9,60 @@ import {
   CheckCircle2, 
   Clock, 
   Wrench, 
-  Truck
+  Truck,
+  PlusCircle,
+  Edit3,
+  Trash2,
+  X,
+  Check,
+  AlertTriangle,
+  Layers,
+  Compass,
+  Globe
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { Equipment } from '../types';
+import { Equipment, LabId } from '../types';
 import { getEquipmentCategoryLabel, getEquipmentStatusBadge } from '../utils/dateHelpers';
 
 export const EquipmentManager: React.FC = () => {
-  const { equipments, updateEquipmentStatus, currentUser, labs, canUserManageLab } = useLab();
+  const { 
+    equipments, 
+    updateEquipmentStatus, 
+    addEquipment, 
+    editEquipment, 
+    deleteEquipment, 
+    currentUser, 
+    labs, 
+    canUserManageLab 
+  } = useLab();
+
   const [selectedLabFilter, setSelectedLabFilter] = useState<'all' | 'laser' | 'sigeo' | 'ltgeo'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Estados do Modal de Criação / Edição
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+
+  // Campos do formulário
+  const [formData, setFormData] = useState<{
+    labId: LabId;
+    name: string;
+    code: string;
+    patrimonio: string;
+    category: Equipment['category'];
+    status: Equipment['status'];
+    description: string;
+    specs: string;
+  }>({
+    labId: 'ltgeo',
+    name: '',
+    code: '',
+    patrimonio: '',
+    category: 'topografia',
+    status: 'disponivel',
+    description: '',
+    specs: ''
+  });
 
   const filteredEquipments = equipments.filter(eq => {
     const matchesLab = selectedLabFilter === 'all' || eq.labId === selectedLabFilter;
@@ -36,12 +80,100 @@ export const EquipmentManager: React.FC = () => {
 
   const canEditStatus = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
 
+  // Determinar qual laboratório padrão usar ao abrir o modal de criação
+  const getDefaultLabForUser = (): LabId => {
+    if (selectedLabFilter !== 'all' && canUserManageLab(selectedLabFilter)) {
+      return selectedLabFilter;
+    }
+    if (canUserManageLab('ltgeo')) return 'ltgeo';
+    if (canUserManageLab('laser')) return 'laser';
+    if (canUserManageLab('sigeo')) return 'sigeo';
+    return 'ltgeo';
+  };
+
+  const handleOpenCreateModal = () => {
+    setEditingEquipment(null);
+    setFormData({
+      labId: getDefaultLabForUser(),
+      name: '',
+      code: '',
+      patrimonio: '',
+      category: 'topografia',
+      status: 'disponivel',
+      description: '',
+      specs: ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (eq: Equipment) => {
+    setEditingEquipment(eq);
+    setFormData({
+      labId: eq.labId,
+      name: eq.name,
+      code: eq.code,
+      patrimonio: eq.patrimonio || '',
+      category: eq.category,
+      status: eq.status,
+      description: eq.description,
+      specs: eq.specs || ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (eq: Equipment) => {
+    const identifier = eq.patrimonio ? `Pat. ${eq.patrimonio}` : eq.code;
+    if (confirm(`Deseja realmente remover o equipamento "${eq.name}" (${identifier}) do acervo oficial?`)) {
+      deleteEquipment(eq.id);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.trim()) {
+      alert('Informe o nome do equipamento.');
+      return;
+    }
+
+    if (!formData.code.trim()) {
+      alert('Informe o código identificador do equipamento (ex: TEO-081804, ET-01).');
+      return;
+    }
+
+    if (editingEquipment) {
+      editEquipment(editingEquipment.id, {
+        labId: formData.labId,
+        name: formData.name.trim(),
+        code: formData.code.trim(),
+        patrimonio: formData.patrimonio.trim() || undefined,
+        category: formData.category,
+        status: formData.status,
+        description: formData.description.trim(),
+        specs: formData.specs.trim() || undefined
+      });
+    } else {
+      addEquipment({
+        labId: formData.labId,
+        name: formData.name.trim(),
+        code: formData.code.trim(),
+        patrimonio: formData.patrimonio.trim() || undefined,
+        category: formData.category,
+        status: formData.status,
+        description: formData.description.trim(),
+        specs: formData.specs.trim() || undefined
+      });
+    }
+
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       
       {/* Header e Filtros */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-xl font-bold text-slate-900 tracking-tight">Inventário de Equipamentos & Recursos</h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -49,11 +181,23 @@ export const EquipmentManager: React.FC = () => {
             </p>
           </div>
 
-          {canEditStatus && (
-            <span className="text-xs px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200 self-start sm:self-auto">
-              ✓ Edição de status habilitada ({currentUser?.role || 'gestão'})
-            </span>
-          )}
+          <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+            {canEditStatus && (
+              <button
+                onClick={handleOpenCreateModal}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>+ Novo Equipamento</span>
+              </button>
+            )}
+
+            {canEditStatus && (
+              <span className="text-xs px-3 py-1.5 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200">
+                ✓ Modo Gestão ({currentUser?.role || 'gestão'})
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Barra de Filtros */}
@@ -149,9 +293,29 @@ export const EquipmentManager: React.FC = () => {
                     )}
                   </div>
 
-                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${statusBadge.bg}`}>
-                    {statusBadge.label}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${statusBadge.bg}`}>
+                      {statusBadge.label}
+                    </span>
+                    {canEditStatus && canUserManageLab(eq.labId) && (
+                      <div className="flex items-center gap-1 pl-1.5 border-l border-slate-200">
+                        <button
+                          onClick={() => handleOpenEditModal(eq)}
+                          title="Editar Equipamento"
+                          className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(eq)}
+                          title="Excluir Equipamento"
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <h4 className="text-base font-bold text-slate-900">{eq.name}</h4>
@@ -207,6 +371,208 @@ export const EquipmentManager: React.FC = () => {
         })}
       </div>
 
+      {/* Modal de Criação / Edição de Equipamento */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden my-6">
+            {/* Header do Modal */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600/30 text-blue-400 rounded-xl border border-blue-500/30">
+                  {editingEquipment ? <Edit3 className="w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {editingEquipment ? 'Editar Equipamento' : 'Novo Equipamento'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {editingEquipment 
+                      ? `Alterando dados do equipamento ${editingEquipment.name}` 
+                      : 'Cadastre um novo recurso ou instrumento no inventário dos laboratórios'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Formulário */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {/* Seleção do Laboratório */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Laboratório Pertencente *
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['ltgeo', 'laser', 'sigeo'] as const).map(labKey => {
+                    const hasPerm = canUserManageLab(labKey);
+                    const isSelected = formData.labId === labKey;
+
+                    return (
+                      <button
+                        key={labKey}
+                        type="button"
+                        disabled={!hasPerm}
+                        onClick={() => setFormData({ ...formData, labId: labKey })}
+                        className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                          !hasPerm
+                            ? 'opacity-40 bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed'
+                            : isSelected
+                            ? labKey === 'laser'
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                              : labKey === 'sigeo'
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                              : 'bg-orange-600 text-white border-orange-600 shadow-sm'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <span className="uppercase tracking-wider font-extrabold">{labKey}</span>
+                        <span className="text-[10px] font-normal opacity-80">
+                          {hasPerm ? labs[labKey]?.location.split('-')[0] : '🔒 Sem Permissão'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Nome do Equipamento */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Nome do Equipamento *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Estação Total Leica TS06 Plus, Workstation Dell..."
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                />
+              </div>
+
+              {/* Código Identificador e Patrimônio */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Código Interno / Identificador *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: TEO-081804, ET-01, WS-08"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="w-full text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nº Patrimônio UFPR (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 081804, 703274, 095174"
+                    value={formData.patrimonio}
+                    onChange={(e) => setFormData({ ...formData, patrimonio: e.target.value })}
+                    className="w-full text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-amber-900 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Categoria e Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Categoria *
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value as Equipment['category'] })}
+                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 cursor-pointer"
+                  >
+                    <option value="topografia">Topografia & Geodésia</option>
+                    <option value="gnss">Receptores GNSS / RTK</option>
+                    <option value="laser_scanner">Laser Scanner 3D</option>
+                    <option value="workstation">Estações de Trabalho SIG</option>
+                    <option value="drone">VANT / Drones & LiDAR</option>
+                    <option value="periferico">Periféricos & Impressão</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Status Operacional *
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as Equipment['status'] })}
+                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 cursor-pointer"
+                  >
+                    <option value="disponivel">Disponível / Livre</option>
+                    <option value="em_uso">Em Uso Interno</option>
+                    <option value="em_campo">Em Campo</option>
+                    <option value="manutencao">Em Manutenção</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Descrição */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Descrição & Aplicação
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Finalidade de uso, acessórios inclusos (estojo, tripé, baterias), etc."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 resize-none"
+                />
+              </div>
+
+              {/* Especificações Técnicas */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Especificações Técnicas (Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Precisão angular 2 segundos, alcance 500m, memória interna..."
+                  value={formData.specs}
+                  onChange={(e) => setFormData({ ...formData, specs: e.target.value })}
+                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                />
+              </div>
+
+              {/* Ações do Formulário */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{editingEquipment ? 'Salvar Alterações' : 'Cadastrar Equipamento'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+

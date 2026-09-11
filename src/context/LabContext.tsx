@@ -191,6 +191,9 @@ interface LabContextType {
   bulkImportPdfClasses: (classes: ParsedPdfClass[], sourceDocument: string) => void;
 
   // Ações de Equipamentos e Manutenção Direta
+  addEquipment: (equipmentData: Omit<Equipment, 'id'>) => { success: boolean; id?: string };
+  editEquipment: (id: string, updatedData: Partial<Omit<Equipment, 'id'>>) => { success: boolean };
+  deleteEquipment: (id: string) => { success: boolean };
   updateEquipmentStatus: (id: string, status: Equipment['status']) => void;
   setEquipmentMaintenance: (equipmentId: string, inMaintenance: boolean, reason?: string, technician?: string) => void;
 
@@ -1722,6 +1725,132 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`${newFixedClasses.length} disciplinas importadas com sucesso!`);
   };
 
+  const addEquipment = (data: Omit<Equipment, 'id'>): { success: boolean; id?: string } => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas a Coordenação e Técnicos podem cadastrar equipamentos.');
+      return { success: false };
+    }
+
+    if (!canUserManageLab(data.labId)) {
+      showToast(`Você não possui permissão técnica para cadastrar equipamentos no laboratório ${data.labId.toUpperCase()}.`);
+      return { success: false };
+    }
+
+    const newId = `eq-${data.labId}-${Date.now()}`;
+    const newEquipment: Equipment = {
+      ...data,
+      id: newId,
+      code: data.code.trim().toUpperCase(),
+      patrimonio: data.patrimonio?.trim() || undefined,
+    };
+
+    setEquipments(prev => {
+      const updated = [...prev, newEquipment];
+      localStorage.setItem(STORAGE_KEYS.EQUIPMENTS, JSON.stringify(updated));
+      return updated;
+    });
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('equipamentos', newEquipment, firebaseConfig);
+    }
+
+    logAudit(
+      'equipamento_criado',
+      newEquipment.id,
+      'equipamento',
+      `${newEquipment.name} (${newEquipment.code})`,
+      `Novo equipamento cadastrado no ${newEquipment.labId.toUpperCase()} por ${currentUser?.name} (${currentUser?.role}). Patrimônio: ${newEquipment.patrimonio || 'N/A'}.`
+    );
+
+    showToast(`Equipamento "${newEquipment.name}" cadastrado com sucesso!`);
+    return { success: true, id: newId };
+  };
+
+  const editEquipment = (id: string, updatedData: Partial<Omit<Equipment, 'id'>>): { success: boolean } => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas a Coordenação e Técnicos podem editar equipamentos.');
+      return { success: false };
+    }
+
+    const target = equipments.find(e => e.id === id);
+    if (!target) {
+      showToast('Equipamento não encontrado.');
+      return { success: false };
+    }
+
+    if (!canUserManageLab(target.labId) || (updatedData.labId && !canUserManageLab(updatedData.labId))) {
+      showToast(`Você não possui permissão técnica para gerenciar equipamentos deste laboratório.`);
+      return { success: false };
+    }
+
+    const updated: Equipment = {
+      ...target,
+      ...updatedData,
+      code: updatedData.code ? updatedData.code.trim().toUpperCase() : target.code,
+      patrimonio: updatedData.patrimonio !== undefined ? (updatedData.patrimonio.trim() || undefined) : target.patrimonio,
+    };
+
+    setEquipments(prev => {
+      const list = prev.map(eq => eq.id === id ? updated : eq);
+      localStorage.setItem(STORAGE_KEYS.EQUIPMENTS, JSON.stringify(list));
+      return list;
+    });
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('equipamentos', updated, firebaseConfig);
+    }
+
+    logAudit(
+      'equipamento_alterado',
+      target.id,
+      'equipamento',
+      `${updated.name} (${updated.code})`,
+      `Dados do equipamento atualizados por ${currentUser?.name}. Patrimônio: ${updated.patrimonio || 'N/A'}, Status: ${updated.status}.`
+    );
+
+    showToast(`Equipamento "${updated.name}" atualizado com sucesso!`);
+    return { success: true };
+  };
+
+  const deleteEquipment = (id: string): { success: boolean } => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas a Coordenação e Técnicos podem remover equipamentos.');
+      return { success: false };
+    }
+
+    const target = equipments.find(e => e.id === id);
+    if (!target) {
+      showToast('Equipamento não encontrado.');
+      return { success: false };
+    }
+
+    if (!canUserManageLab(target.labId)) {
+      showToast(`Você não possui permissão técnica para remover equipamentos do laboratório ${target.labId.toUpperCase()}.`);
+      return { success: false };
+    }
+
+    setEquipments(prev => {
+      const list = prev.filter(eq => eq.id !== id);
+      localStorage.setItem(STORAGE_KEYS.EQUIPMENTS, JSON.stringify(list));
+      return list;
+    });
+
+    if (firebaseConfig.isConnected) {
+      removeDocFromFirestore('equipamentos', id, firebaseConfig);
+    }
+
+    logAudit(
+      'equipamento_removido',
+      target.id,
+      'equipamento',
+      `${target.name} (${target.code})`,
+      `Equipamento removido do acervo por ${currentUser?.name}. Patrimônio: ${target.patrimonio || 'N/A'}.`
+    );
+
+    showToast(`Equipamento "${target.name}" removido com sucesso.`);
+    return { success: true };
+  };
+
   const updateEquipmentStatus = (id: string, status: Equipment['status']) => {
     if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
       showToast('Apenas técnicos e coordenadores podem alterar status de equipamentos.');
@@ -2182,6 +2311,9 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         editFixedClass,
         deleteFixedClass,
         bulkImportPdfClasses,
+        addEquipment,
+        editEquipment,
+        deleteEquipment,
         updateEquipmentStatus,
         setEquipmentMaintenance,
         createMaintenanceRequest,
