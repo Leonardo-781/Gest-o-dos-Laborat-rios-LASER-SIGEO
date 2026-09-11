@@ -13,7 +13,6 @@ import {
   Layers,
   Sparkles,
   Repeat,
-  MapPin,
   BookOpen,
   ShieldCheck,
   Lock
@@ -135,10 +134,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
   return (
     <div className="space-y-4">
       {/* SELETOR PRINCIPAL DE LABORATÓRIOS (SEGMENTED CONTROL DE ALTA FIDELIDADE) */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 no-print">
+      <div className="bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 flex-nowrap overflow-x-auto no-scrollbar no-print">
         
         {/* Segmented Switcher */}
-        <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 gap-1.5 self-start md:self-auto items-center flex-wrap">
+        <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 gap-1 items-center flex-nowrap shrink-0">
           
           {/* Aba 1: Complexo LASER & SIGEO */}
           <button
@@ -147,34 +146,23 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
               setActiveLabGroup('laser_sigeo');
               if (selectedLab === 'ltgeo') setSelectedLab('all');
             }}
-            className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeLabGroup === 'laser_sigeo'
-                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-slate-900/5'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/90 ring-1 ring-slate-900/5'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <div className="flex items-center -space-x-1">
+            <div className="flex items-center -space-x-1 shrink-0">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white" />
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
             </div>
-            <div className="text-left">
-              <div className="leading-tight font-extrabold flex items-center gap-1.5">
+            <div className="text-left leading-tight">
+              <div className="font-extrabold flex items-center gap-1.5">
                 <span>LASER & SIGEO</span>
                 {activeLabGroup === 'laser_sigeo' && (
-                  <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                  <span className="text-[9px] font-black uppercase text-blue-700 bg-blue-50 px-1 py-0.2 rounded border border-blue-200">
                     Ativo
                   </span>
-                )}
-                {currentUser && isManager && (
-                  (canUserManageLab('laser') || canUserManageLab('sigeo')) ? (
-                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200 flex items-center gap-0.5" title="Você tem permissão de gestão nestes laboratórios">
-                      ✓ Gestão
-                    </span>
-                  ) : (
-                    <span className="text-[9px] font-medium text-slate-500 bg-slate-200/70 px-1 py-0.2 rounded border border-slate-300 flex items-center gap-0.5" title="Somente leitura: fora da sua jurisdição">
-                      🔒 Leitura
-                    </span>
-                  )
                 )}
               </div>
               <div className="text-[10px] text-slate-400 font-medium">Salas 1B309 & 1B307</div>
@@ -188,31 +176,20 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
               setActiveLabGroup('ltgeo');
               setSelectedLab('ltgeo');
             }}
-            className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeLabGroup === 'ltgeo'
-                ? 'bg-white text-orange-950 shadow-sm border border-orange-200/90 ring-1 ring-orange-500/10'
+                ? 'bg-white text-orange-950 shadow-xs border border-orange-200/90 ring-1 ring-orange-500/10'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <span className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-2 ring-white" />
-            <div className="text-left">
-              <div className="leading-tight font-extrabold flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-2 ring-white shrink-0" />
+            <div className="text-left leading-tight">
+              <div className="font-extrabold flex items-center gap-1.5">
                 <span>LTGEO</span>
                 {activeLabGroup === 'ltgeo' && (
-                  <span className="text-[10px] font-black uppercase text-orange-700 bg-orange-50 px-1.5 py-0.2 rounded border border-orange-200">
+                  <span className="text-[9px] font-black uppercase text-orange-700 bg-orange-50 px-1 py-0.2 rounded border border-orange-200">
                     Ativo
                   </span>
-                )}
-                {currentUser && isManager && (
-                  canUserManageLab('ltgeo') ? (
-                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200 flex items-center gap-0.5" title="Você tem permissão de gestão neste laboratório">
-                      ✓ Gestão
-                    </span>
-                  ) : (
-                    <span className="text-[9px] font-medium text-slate-500 bg-slate-200/70 px-1 py-0.2 rounded border border-slate-300 flex items-center gap-0.5" title="Somente leitura: fora da sua jurisdição">
-                      🔒 Leitura
-                    </span>
-                  )
                 )}
               </div>
               <div className="text-[10px] text-slate-400 font-medium">Sala 1B210 (Topografia)</div>
@@ -221,12 +198,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
 
         </div>
 
-        {/* Lado Direito: Micro-Metadados da Sala Ativa + Ação Rápida */}
-        <div className="flex items-center gap-2.5 self-end md:self-auto flex-wrap">
+        {/* Lado Direito: Ações e Indicador em Linha Única */}
+        <div className="flex items-center gap-2 shrink-0 flex-nowrap ml-auto">
           
           {/* Indicador de Jurisdição para Usuário Gestor Logado */}
           {currentUser && isManager && (
-            <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition shadow-2xs ${
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition shadow-2xs shrink-0 whitespace-nowrap ${
               (activeLabGroup === 'ltgeo' ? canUserManageLab('ltgeo') : (canUserManageLab('laser') || canUserManageLab('sigeo')))
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 : 'bg-amber-50 text-amber-800 border-amber-200'
@@ -245,19 +222,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
             </div>
           )}
 
-          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
-            <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            {activeLabGroup === 'ltgeo' ? (
-              <span><strong>Sala 1B210</strong> • 30 vagas • Estações Totais & Receptores GNSS</span>
-            ) : (
-              <span><strong>Salas 1B309 & 1B307</strong> • 70 postos • Estações SIG & Laser</span>
-            )}
-          </div>
-
           <button
             type="button"
             onClick={() => setIsRulesOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer shrink-0 whitespace-nowrap"
             title="Consultar normas e regras de uso dos laboratórios"
           >
             <BookOpen className="w-3.5 h-3.5" />
@@ -267,7 +235,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
           <button
             type="button"
             onClick={() => setIsBookingOpen(true)}
-            className={`flex items-center gap-1.5 px-3.5 py-2 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer shrink-0 whitespace-nowrap ${
               activeLabGroup === 'ltgeo' 
                 ? 'bg-orange-600 hover:bg-orange-700' 
                 : 'bg-blue-600 hover:bg-blue-700'
