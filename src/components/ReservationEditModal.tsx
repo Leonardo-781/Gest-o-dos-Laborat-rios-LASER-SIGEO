@@ -32,7 +32,9 @@ export const ReservationEditModal: React.FC = () => {
     cancelReservation,
     checkAvailability,
     labs,
-    currentUser
+    currentUser,
+    canUserManageLab,
+    showToast
   } = useLab();
 
   const [title, setTitle] = useState('');
@@ -89,6 +91,11 @@ export const ReservationEditModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!canUserManageLab(labId)) {
+      showToast(`Você não possui autorização técnica para gerenciar o laboratório ${labId.toUpperCase()}.`);
+      return;
+    }
 
     if (!conflictStatus.available && status === 'aprovada') {
       alert(`Não é possível salvar com o horário atual:\n${conflictStatus.conflictReason}`);
@@ -228,41 +235,43 @@ export const ReservationEditModal: React.FC = () => {
               1. Laboratório:
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <div
-                onClick={() => setLabId('laser')}
-                className={`p-3 rounded-xl border-2 transition cursor-pointer ${
-                  labId === 'laser'
-                    ? 'border-blue-600 bg-blue-50/60 shadow-xs'
-                    : 'border-slate-200 hover:border-blue-300'
-                }`}
-              >
-                <span className="font-bold text-xs text-blue-900 block">LABORATÓRIO LASER</span>
-                <span className="text-[10px] text-slate-500">Sala 1B309 • {labs.laser?.capacity || 25} vagas</span>
-              </div>
+              {[
+                { id: 'laser' as LabId, name: 'LABORATÓRIO LASER', room: 'Sala 1B309', cap: labs.laser?.capacity || 25, activeBorder: 'border-blue-600 bg-blue-50/60 text-blue-900' },
+                { id: 'sigeo' as LabId, name: 'LABORATÓRIO SIGEO', room: 'Sala 1B307', cap: labs.sigeo?.capacity || 35, activeBorder: 'border-emerald-600 bg-emerald-50/60 text-emerald-900' },
+                { id: 'ltgeo' as LabId, name: 'LABORATÓRIO LTGEO', room: 'Sala 1B210', cap: labs.ltgeo?.capacity || 30, activeBorder: 'border-orange-600 bg-orange-50/60 text-orange-950' },
+              ].map(item => {
+                const isAllowed = canUserManageLab(item.id);
+                const isSelected = labId === item.id;
 
-              <div
-                onClick={() => setLabId('sigeo')}
-                className={`p-3 rounded-xl border-2 transition cursor-pointer ${
-                  labId === 'sigeo'
-                    ? 'border-emerald-600 bg-emerald-50/60 shadow-xs'
-                    : 'border-slate-200 hover:border-emerald-300'
-                }`}
-              >
-                <span className="font-bold text-xs text-emerald-900 block">LABORATÓRIO SIGEO</span>
-                <span className="text-[10px] text-slate-500">Sala 1B307 • {labs.sigeo?.capacity || 35} vagas</span>
-              </div>
-
-              <div
-                onClick={() => setLabId('ltgeo')}
-                className={`p-3 rounded-xl border-2 transition cursor-pointer ${
-                  labId === 'ltgeo'
-                    ? 'border-orange-600 bg-orange-50/60 shadow-xs'
-                    : 'border-slate-200 hover:border-orange-300'
-                }`}
-              >
-                <span className="font-bold text-xs text-orange-950 block">LABORATÓRIO LTGEO</span>
-                <span className="text-[10px] text-slate-500">Sala 1B210 • {labs.ltgeo?.capacity || 30} vagas</span>
-              </div>
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      if (!isAllowed) {
+                        showToast(`Você não possui autorização técnica para o laboratório ${item.name}.`);
+                        return;
+                      }
+                      setLabId(item.id);
+                    }}
+                    className={`p-3 rounded-xl border-2 transition ${
+                      isSelected
+                        ? `${item.activeBorder} shadow-xs font-bold ring-1 ring-blue-400`
+                        : isAllowed
+                        ? 'border-slate-200 hover:border-slate-300 cursor-pointer bg-white'
+                        : 'border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs block">{item.name}</span>
+                      {!isAllowed && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+                    </div>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">{item.room} • {item.cap} vagas</span>
+                    {!isAllowed && (
+                      <span className="text-[9px] text-amber-700 font-bold block mt-1">🔒 Sem jurisdição</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

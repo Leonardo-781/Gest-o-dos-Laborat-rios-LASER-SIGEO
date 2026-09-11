@@ -258,7 +258,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isMaster) return true;
     if (currentUser.role === 'coordenador') return true;
     if (currentUser.role === 'tecnico') {
-      const allowed = currentUser.assignedLabs ?? ['laser', 'sigeo'];
+      const allowed = currentUser.assignedLabs ?? currentUser.permissions?.assignedLabs ?? ['laser', 'sigeo'];
       return allowed.includes(labId);
     }
     return false;
@@ -266,7 +266,15 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [usersList, setUsersList] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USERS_LIST);
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    const parsed: UserAccount[] = saved ? JSON.parse(saved) : [];
+    const existingIds = new Set(parsed.map(u => u.id));
+    const merged = [...parsed];
+    for (const initU of INITIAL_USERS) {
+      if (!existingIds.has(initU.id)) {
+        merged.push(initU);
+      }
+    }
+    return merged.length > 0 ? merged : INITIAL_USERS;
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -592,8 +600,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const approveUserAccount = (userId: string, approvedLabs?: LabId[]) => {
-    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas coordenadores e técnicos podem aprovar contas.');
+    const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+    const isCoord = currentUser?.role === 'coordenador';
+    if (!isMaster && !isCoord) {
+      showToast('Apenas o Administrador Master (Leonardo Cardoso) ou a Coordenação podem aprovar contas e definir jurisdições.');
       return;
     }
 
@@ -633,8 +643,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const rejectUserAccount = (userId: string) => {
-    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas coordenadores e técnicos podem rejeitar contas.');
+    const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+    const isCoord = currentUser?.role === 'coordenador';
+    if (!isMaster && !isCoord) {
+      showToast('Apenas o Administrador Master (Leonardo Cardoso) ou a Coordenação podem rejeitar contas.');
       return;
     }
 
@@ -669,9 +681,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setUsersList(prev => prev.map(u => {
       if (u.id === userId) {
+        const nextLabs = assignedLabs !== undefined ? assignedLabs : u.assignedLabs;
         const merged: UserAccount = {
           ...u,
-          assignedLabs: assignedLabs !== undefined ? assignedLabs : u.assignedLabs,
+          assignedLabs: nextLabs,
           permissions: {
             canViewEmails: false,
             canApproveBookings: false,
@@ -680,7 +693,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             canManageSoftware: false,
             canViewAudit: false,
             ...u.permissions,
-            ...newPermissions
+            ...newPermissions,
+            assignedLabs: nextLabs
           }
         };
         targetUser = merged;
@@ -1182,6 +1196,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cancelReservation = (id: string, cancelWholeSeries?: boolean) => {
     const target = reservations.find(r => r.id === id);
     if (!target) return;
+
+    if (currentUser?.role === 'tecnico' && !canUserManageLab(target.labId)) {
+      showToast(`Você não possui permissão técnica para cancelar horários do laboratório ${target.labId.toUpperCase()}.`);
+      return;
+    }
 
     const targets = (cancelWholeSeries && target.recurrenceGroupId)
       ? reservations.filter(r => r.recurrenceGroupId === target.recurrenceGroupId)

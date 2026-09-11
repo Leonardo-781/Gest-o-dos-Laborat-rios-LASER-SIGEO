@@ -11,11 +11,15 @@ import {
   Eye, 
   EyeOff, 
   AlertCircle,
-  Building2
+  Building2,
+  Sparkles,
+  Crown,
+  CheckCircle2
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { UserRole, UserAccount, LabId } from '../types';
 import { validateEmailStrict, hashPassword, generateSalt } from '../services/authSecurity';
+import { INITIAL_USERS } from '../data/initialData';
 
 export const AuthModal: React.FC = () => {
   const { 
@@ -25,7 +29,8 @@ export const AuthModal: React.FC = () => {
     login, 
     logout, 
     registerUser,
-    showToast
+    showToast,
+    canUserManageLab
   } = useLab();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -199,8 +204,18 @@ export const AuthModal: React.FC = () => {
           {currentUser ? (
             <div className="space-y-4">
               <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-xs shrink-0">
-                  {currentUser.avatarInitials || currentUser.name.slice(0, 2).toUpperCase()}
+                <div className={`w-11 h-11 rounded-full font-black flex items-center justify-center text-sm shadow-xs shrink-0 ${
+                  currentUser.id === 'usr-master'
+                    ? 'bg-amber-500 text-white'
+                    : currentUser.role === 'tecnico'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-blue-600 text-white'
+                }`}>
+                  {currentUser.id === 'usr-master' ? (
+                    <Crown className="w-5 h-5 text-white" />
+                  ) : (
+                    currentUser.avatarInitials || currentUser.name.slice(0, 2).toUpperCase()
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-xs sm:text-sm text-slate-900 truncate">{currentUser.name}</div>
@@ -212,12 +227,101 @@ export const AuthModal: React.FC = () => {
                 </div>
               </div>
 
+              {/* Jurisdição de Laboratórios Autorizados */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2">
+                <div className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Jurisdição & Escopo de Ação:</span>
+                  </span>
+                  {currentUser.id === 'usr-master' || currentUser.role === 'coordenador' ? (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-extrabold">
+                      Gestão Total (Todos Labs)
+                    </span>
+                  ) : currentUser.role === 'tecnico' ? (
+                    <span className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full font-extrabold">
+                      Gestão Específica
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 bg-slate-200/70 border border-slate-300 px-2 py-0.5 rounded-full font-semibold">
+                      Consulta / Solicitação
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {LAB_OPTIONS.map(lab => {
+                    const isAllowed = canUserManageLab(lab.id);
+                    return (
+                      <div 
+                        key={lab.id}
+                        className={`p-2 rounded-xl border text-center transition-all ${
+                          isAllowed 
+                            ? 'bg-white border-emerald-300 shadow-2xs ring-1 ring-emerald-500/20' 
+                            : 'bg-slate-100/70 border-slate-200 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          <span className={`w-2 h-2 rounded-full ${lab.badgeColor}`} />
+                          <span className="font-extrabold text-[11px] text-slate-800">{lab.name}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-500 mt-0.5">{lab.room}</div>
+                        <div className="mt-1.5">
+                          {isAllowed ? (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                              ✓ Autorizado
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-slate-500">
+                              🔒 Bloqueado
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="text-[11px] text-slate-600 space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
                 <div><strong>Permissões:</strong> {getRoleDescription(currentUser.role)}</div>
                 <div><strong>Identificação:</strong> {currentUser.documentId}</div>
                 <div><strong>Departamento:</strong> {currentUser.department}</div>
                 <div className="text-emerald-700 font-semibold flex items-center gap-1 pt-0.5">
-                  <span>✓ Notificações e e-mails validados</span>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Notificações e e-mails institucionais ativos</span>
+                </div>
+              </div>
+
+              {/* Alternador Rápido de Perfis de Teste */}
+              <div className="pt-2 border-t border-slate-100">
+                <div className="text-[11px] font-bold text-slate-700 mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Alternar Perfil para Testar Jurisdição:</span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {INITIAL_USERS.filter(u => u.id !== currentUser.id).map(u => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={async () => {
+                        await login(u.email, undefined, u);
+                      }}
+                      className="p-1.5 rounded-xl border border-slate-200 hover:border-blue-400 bg-white hover:bg-blue-50/50 text-left text-xs transition cursor-pointer flex items-center gap-2"
+                    >
+                      <span className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-700 shrink-0">
+                        {u.id === 'usr-master' ? <Crown className="w-3 h-3 text-amber-600" /> : u.avatarInitials}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-[11px] text-slate-800 truncate">{u.name.split(' ')[0]}</div>
+                        <div className="text-[9px] text-slate-500 truncate">
+                          {u.id === 'usr-tech-ltgeo' ? 'Técnico LTGEO (1B210)' : u.id === 'usr-tech-laser' ? 'Técnico LASER/SIGEO' : u.id === 'usr-master' ? 'Master (Todos)' : u.role}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -260,62 +364,152 @@ export const AuthModal: React.FC = () => {
 
               {/* 1. FORMULÁRIO DE LOGIN */}
               {mode === 'login' ? (
-                <form onSubmit={handleLoginSubmit} className="space-y-3 pt-1">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">E-mail Institucional:</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        required
-                        placeholder="seu.email@ufu.br"
-                        value={loginEmail}
-                        onChange={(e) => handleLoginEmailChange(e.target.value)}
-                        className={`w-full text-xs bg-slate-50 border rounded-xl px-3 py-2 pl-9 focus:ring-2 focus:ring-blue-500 font-medium ${
-                          loginEmailError ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300'
-                        }`}
-                      />
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <div className="space-y-4 pt-1">
+                  {/* SELEÇÃO INSTANTÂNEA DE PERFIS DE TESTE DE JURISDIÇÃO */}
+                  <div className="p-3 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 rounded-2xl border border-blue-200/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-extrabold text-blue-950 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Acesso Rápido para Teste de Jurisdição (1 Clique):</span>
+                      </span>
+                      <span className="text-[10px] text-blue-700 font-bold bg-white px-1.5 py-0.2 rounded border border-blue-200">
+                        Demonstração
+                      </span>
                     </div>
-                    {loginEmailError && (
-                      <p className="mt-1 text-[10px] font-semibold text-rose-600 flex items-start gap-1">
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.2" />
-                        <span>{loginEmailError}</span>
-                      </p>
-                    )}
+
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {INITIAL_USERS.map((u) => {
+                        const isMaster = u.id === 'usr-master';
+                        const isLtgeoOnly = u.id === 'usr-tech-ltgeo';
+                        const isLaserOnly = u.id === 'usr-tech-laser';
+                        const isCoord = u.id === 'usr-coord';
+
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={async () => {
+                              await login(u.email, undefined, u);
+                              setIsAuthModalOpen(false);
+                            }}
+                            className="w-full text-left p-2 rounded-xl bg-white hover:bg-blue-100/60 border border-slate-200/90 hover:border-blue-300 transition-all cursor-pointer flex items-center justify-between group shadow-2xs"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
+                                isMaster 
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                                  : isLtgeoOnly 
+                                  ? 'bg-orange-100 text-orange-900 border border-orange-300' 
+                                  : isLaserOnly
+                                  ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                                  : isCoord
+                                  ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                                  : 'bg-slate-100 text-slate-800 border border-slate-300'
+                              }`}>
+                                {isMaster ? <Crown className="w-4 h-4 text-amber-600" /> : u.avatarInitials}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-slate-900 truncate group-hover:text-blue-700">
+                                  {u.name}
+                                </div>
+                                <div className="text-[10px] text-slate-500 truncate">
+                                  {u.roleTitle || u.role}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 flex items-center gap-1.5">
+                              {isMaster || isCoord ? (
+                                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                  Todos Labs
+                                </span>
+                              ) : isLtgeoOnly ? (
+                                <span className="text-[9px] font-bold text-orange-700 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded">
+                                  LTGEO (1B210)
+                                </span>
+                              ) : isLaserOnly ? (
+                                <span className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                                  LASER & SIGEO
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
+                                  Solicitante
+                                </span>
+                              )}
+                              <span className="text-[11px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                                Entrar →
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Senha de Acesso:</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        placeholder="Digite sua senha"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 pl-9 pr-10 focus:ring-2 focus:ring-blue-500 font-medium"
-                      />
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                        title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
+                  <div className="relative flex items-center justify-center my-1">
+                    <div className="border-t border-slate-200 w-full"></div>
+                    <span className="bg-white px-2 text-[10px] uppercase font-bold text-slate-400 absolute">
+                      ou entre com suas credenciais
+                    </span>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !!loginEmailError}
-                    className="w-full py-2.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 mt-2"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    <span>{isSubmitting ? 'Autenticando...' : 'Entrar no Sistema'}</span>
-                  </button>
-                </form>
+                  <form onSubmit={handleLoginSubmit} className="space-y-3 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">E-mail Institucional:</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          placeholder="seu.email@ufu.br"
+                          value={loginEmail}
+                          onChange={(e) => handleLoginEmailChange(e.target.value)}
+                          className={`w-full text-xs bg-slate-50 border rounded-xl px-3 py-2 pl-9 focus:ring-2 focus:ring-blue-500 font-medium ${
+                            loginEmailError ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300'
+                          }`}
+                        />
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      </div>
+                      {loginEmailError && (
+                        <p className="mt-1 text-[10px] font-semibold text-rose-600 flex items-start gap-1">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.2" />
+                          <span>{loginEmailError}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">Senha de Acesso:</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          placeholder="Digite sua senha"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 pl-9 pr-10 focus:ring-2 focus:ring-blue-500 font-medium"
+                        />
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !!loginEmailError}
+                      className="w-full py-2.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 mt-2"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span>{isSubmitting ? 'Autenticando...' : 'Entrar no Sistema'}</span>
+                    </button>
+                  </form>
+                </div>
               ) : (
                 /* 2. FORMULÁRIO DE CADASTRO */
                 <form onSubmit={handleRegisterSubmit} className="space-y-3 pt-1">

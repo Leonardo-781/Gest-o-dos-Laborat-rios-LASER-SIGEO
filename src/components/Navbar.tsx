@@ -121,18 +121,30 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-bold transition cursor-pointer border ${
                   currentUser.id === 'usr-master'
                     ? 'bg-gradient-to-r from-amber-50 to-amber-100/80 text-amber-950 border-amber-300 hover:border-amber-400 shadow-2xs'
+                    : currentUser.role === 'tecnico'
+                    ? 'text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
                     : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-200'
                 }`}
+                title="Clique para ver detalhes do seu perfil e gerenciar jurisdição"
               >
                 {currentUser.id === 'usr-master' ? (
                   <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                 ) : (
-                  <div className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">
+                  <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 ${
+                    currentUser.role === 'tecnico' ? 'bg-indigo-600' : 'bg-blue-600'
+                  }`}>
                     {currentUser.avatarInitials || currentUser.name[0]}
                   </div>
                 )}
                 <span>
-                  {currentUser.name.split(' ')[0]} {currentUser.id === 'usr-master' ? '(Master / Técnico)' : `(${currentUser.role.toUpperCase()})`}
+                  {currentUser.name.split(' ')[0]}{' '}
+                  {currentUser.id === 'usr-master'
+                    ? '(Master • Todos Labs)'
+                    : currentUser.role === 'tecnico'
+                    ? `(Técnico • ${(currentUser.assignedLabs || currentUser.permissions?.assignedLabs || ['laser', 'sigeo']).map(l => l.toUpperCase()).join('/')})`
+                    : currentUser.role === 'coordenador'
+                    ? '(Coordenação • Todos Labs)'
+                    : `(${currentUser.role.toUpperCase()})`}
                 </span>
               </button>
             ) : (

@@ -117,6 +117,102 @@ export const INITIAL_USERS: UserAccount[] = [
       assignedLabs: ['laser', 'sigeo', 'ltgeo'],
     },
     createdAt: '2026-01-01T08:00:00Z'
+  },
+  // 2. TÉCNICO EXCLUSIVO DO LTGEO (Sala 1B210)
+  {
+    id: 'usr-tech-ltgeo',
+    name: 'Marcos Vinícius (Técnico LTGEO)',
+    email: 'marcos.ltgeo@ufu.br',
+    role: 'tecnico',
+    roleTitle: 'Técnico de Laboratório • LTGEO (Sala 1B210)',
+    documentId: 'TEC-2101',
+    department: 'Laboratório de Topografia e Geodésia (1B210) - UFU',
+    status: 'ativo',
+    avatarInitials: 'MV',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: MASTER_USER_CONFIG.passwordHash,
+    emailVerified: true,
+    assignedLabs: ['ltgeo'],
+    requestedLabs: ['ltgeo'],
+    permissions: {
+      canViewEmails: false,
+      canApproveBookings: true,
+      canManageTechnicians: false,
+      canManageEquipment: true,
+      canManageSoftware: true,
+      canViewAudit: false,
+      assignedLabs: ['ltgeo'],
+    },
+    createdAt: '2026-02-01T08:00:00Z'
+  },
+  // 3. TÉCNICO DOS LABORATÓRIOS LASER E SIGEO (Salas 1B309 & 1B307)
+  {
+    id: 'usr-tech-laser',
+    name: 'Gabriel Santos (Técnico LASER/SIGEO)',
+    email: 'gabriel.laser@ufu.br',
+    role: 'tecnico',
+    roleTitle: 'Técnico de Laboratório • LASER & SIGEO',
+    documentId: 'TEC-3081',
+    department: 'Laboratórios LASER (1B309) & SIGEO (1B307) - UFU',
+    status: 'ativo',
+    avatarInitials: 'GS',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: MASTER_USER_CONFIG.passwordHash,
+    emailVerified: true,
+    assignedLabs: ['laser', 'sigeo'],
+    requestedLabs: ['laser', 'sigeo'],
+    permissions: {
+      canViewEmails: false,
+      canApproveBookings: true,
+      canManageTechnicians: false,
+      canManageEquipment: true,
+      canManageSoftware: true,
+      canViewAudit: false,
+      assignedLabs: ['laser', 'sigeo'],
+    },
+    createdAt: '2026-02-01T08:00:00Z'
+  },
+  // 4. COORDENADOR GERAL DOS LABORATÓRIOS
+  {
+    id: 'usr-coord',
+    name: 'Prof. Dr. Coordenador',
+    email: 'coordenacao.agrimensura@ufu.br',
+    role: 'coordenador',
+    roleTitle: 'Coordenação Geral de Laboratórios',
+    documentId: 'SIAPE-99881',
+    department: 'Coordenação de Curso de Eng. de Agrimensura - UFU',
+    status: 'ativo',
+    avatarInitials: 'CD',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: MASTER_USER_CONFIG.passwordHash,
+    emailVerified: true,
+    assignedLabs: ['laser', 'sigeo', 'ltgeo'],
+    permissions: {
+      canViewEmails: true,
+      canApproveBookings: true,
+      canManageTechnicians: true,
+      canManageEquipment: true,
+      canManageSoftware: true,
+      canViewAudit: true,
+      assignedLabs: ['laser', 'sigeo', 'ltgeo'],
+    },
+    createdAt: '2026-01-10T08:00:00Z'
+  },
+  // 5. ALUNO DE GRADUAÇÃO
+  {
+    id: 'usr-aluno',
+    name: 'Lucas Ferreira (Aluno)',
+    email: 'lucas.aluno@ufu.br',
+    role: 'aluno',
+    roleTitle: 'Aluno de Graduação',
+    documentId: '12011AGR042',
+    department: 'Graduação em Eng. de Agrimensura - UFU',
+    status: 'ativo',
+    avatarInitials: 'LF',
+    passwordSalt: DEFAULT_INSTITUTIONAL_SALT,
+    passwordHash: MASTER_USER_CONFIG.passwordHash,
+    emailVerified: true,
+    createdAt: '2026-02-15T08:00:00Z'
   }
 ];
 

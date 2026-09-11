@@ -14,7 +14,9 @@ import {
   Sparkles,
   Repeat,
   MapPin,
-  BookOpen
+  BookOpen,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { ViewMode, ScheduleEvent, FixedClass, LabId } from '../types';
@@ -42,6 +44,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
     openBookingWithPreselection,
     openClassModalForNew,
     currentUser,
+    canUserManageLab,
     labs,
     activeLabGroup,
     setActiveLabGroup,
@@ -135,7 +138,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
       <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 no-print">
         
         {/* Segmented Switcher */}
-        <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 gap-1.5 self-start md:self-auto">
+        <div className="inline-flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 gap-1.5 self-start md:self-auto items-center flex-wrap">
           
           {/* Aba 1: Complexo LASER & SIGEO */}
           <button
@@ -161,6 +164,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                   <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
                     Ativo
                   </span>
+                )}
+                {currentUser && isManager && (
+                  (canUserManageLab('laser') || canUserManageLab('sigeo')) ? (
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200 flex items-center gap-0.5" title="Você tem permissão de gestão nestes laboratórios">
+                      ✓ Gestão
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-medium text-slate-500 bg-slate-200/70 px-1 py-0.2 rounded border border-slate-300 flex items-center gap-0.5" title="Somente leitura: fora da sua jurisdição">
+                      🔒 Leitura
+                    </span>
+                  )
                 )}
               </div>
               <div className="text-[10px] text-slate-400 font-medium">Salas 1B309 & 1B307</div>
@@ -189,6 +203,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                     Ativo
                   </span>
                 )}
+                {currentUser && isManager && (
+                  canUserManageLab('ltgeo') ? (
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200 flex items-center gap-0.5" title="Você tem permissão de gestão neste laboratório">
+                      ✓ Gestão
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-medium text-slate-500 bg-slate-200/70 px-1 py-0.2 rounded border border-slate-300 flex items-center gap-0.5" title="Somente leitura: fora da sua jurisdição">
+                      🔒 Leitura
+                    </span>
+                  )
+                )}
               </div>
               <div className="text-[10px] text-slate-400 font-medium">Sala 1B210 (Topografia)</div>
             </div>
@@ -199,6 +224,27 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
         {/* Lado Direito: Micro-Metadados da Sala Ativa + Ação Rápida */}
         <div className="flex items-center gap-2.5 self-end md:self-auto flex-wrap">
           
+          {/* Indicador de Jurisdição para Usuário Gestor Logado */}
+          {currentUser && isManager && (
+            <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition shadow-2xs ${
+              (activeLabGroup === 'ltgeo' ? canUserManageLab('ltgeo') : (canUserManageLab('laser') || canUserManageLab('sigeo')))
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-amber-50 text-amber-800 border-amber-200'
+            }`}>
+              {(activeLabGroup === 'ltgeo' ? canUserManageLab('ltgeo') : (canUserManageLab('laser') || canUserManageLab('sigeo'))) ? (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Sua Jurisdição Autorizada</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Modo Somente Leitura</span>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
             <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
             {activeLabGroup === 'ltgeo' ? (
