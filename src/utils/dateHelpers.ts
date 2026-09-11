@@ -81,6 +81,24 @@ export function isEventEnded(dateStr?: string, endTime?: string): boolean {
   }
 }
 
+/**
+ * Retorna a próxima data a partir de hoje (ou de baseDate) que coincida com o dia da semana especificado.
+ * dayOfWeek: 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado.
+ */
+export function getNextDayOfWeekDate(targetDayOfWeek: number, baseDate: Date = new Date()): string {
+  const currentDay = baseDate.getDay(); // 0 = Domingo, 1 = Segunda...
+  // Converte Domingo (0) para 7 para simplificar aritmética de semanas letivas
+  const currentNormalized = currentDay === 0 ? 7 : currentDay;
+  
+  let diff = targetDayOfWeek - currentNormalized;
+  if (diff <= 0) {
+    diff += 7; // Sempre avança para a próxima semana para reativação futura
+  }
+  const next = new Date(baseDate);
+  next.setDate(baseDate.getDate() + diff);
+  return formatDateToYYYYMMDD(next);
+}
+
 export function getWeekDays(referenceDate: Date = new Date()) {
   const current = new Date(referenceDate);
   const day = current.getDay(); // 0 is Sunday, 1 is Monday...

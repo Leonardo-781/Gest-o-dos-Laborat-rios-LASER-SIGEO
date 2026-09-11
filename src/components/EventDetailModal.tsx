@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   Clock, 
@@ -13,10 +13,19 @@ import {
   Repeat,
   Ban,
   Globe,
-  Lock
+  Lock,
+  Sparkles
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { formatDateBR, getPurposeBadge, getStatusBadge, isEventEnded } from '../utils/dateHelpers';
+import { 
+  formatDateBR, 
+  formatDateToYYYYMMDD,
+  getPurposeBadge, 
+  getStatusBadge, 
+  isEventEnded,
+  getNextDayOfWeekDate,
+  addWeeksToDateStr
+} from '../utils/dateHelpers';
 import { Reservation, FixedClass } from '../types';
 
 export const EventDetailModal: React.FC = () => {
@@ -30,7 +39,10 @@ export const EventDetailModal: React.FC = () => {
     deleteReservation,
     deleteFixedClass,
     openClassModalForEdit,
-    openReservationModalForEdit
+    openReservationModalForEdit,
+    reactivateReservation,
+    canUserManageLab,
+    checkAvailability
   } = useLab();
 
   if (!selectedEventDetail) return null;
@@ -51,12 +63,81 @@ export const EventDetailModal: React.FC = () => {
     : [];
 
   const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
+  const canManageThisLab = Boolean(isManager && reservationItem && canUserManageLab(reservationItem.labId));
   const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
   const isExternal = !isEnded && (ev.isExternal !== undefined
     ? Boolean(ev.isExternal)
     : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose')));
   const isOrange = !isEnded && !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
   const isBlue = !isEnded && !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
+
+  // Estados para reativação de horário pelo técnico
+  const [showReactivateForm, setShowReactivateForm] = useState(false);
+  const [reactivateDate, setReactivateDate] = useState<string>('');
+  const [reactivateStartTime, setReactivateStartTime] = useState<string>('');
+  const [reactivateEndTime, setReactivateEndTime] = useState<string>('');
+  const [reactivateWeeks, setReactivateWeeks] = useState<number>(1);
+
+  const todayStr = formatDateToYYYYMMDD(new Date());
+
+  useEffect(() => {
+    if (selectedEventDetail && selectedEventDetail.originType === 'reservation') {
+      setShowReactivateForm(false);
+      setReactivateStartTime(selectedEventDetail.startTime);
+      setReactivateEndTime(selectedEventDetail.endTime);
+      setReactivateWeeks(1);
+      
+      // Sugere a próxima data correspondente ao dia da semana do evento
+      const nextDate = getNextDayOfWeekDate(selectedEventDetail.dayOfWeek);
+      setReactivateDate(nextDate);
+    }
+  }, [selectedEventDetail]);
+
+  // Checagem de disponibilidade em tempo real das semanas selecionadas para reativação
+  const availabilityCheck = useMemo(() => {
+    if (!reservationItem || !reactivateDate || !reactivateStartTime || !reactivateEndTime) {
+      return { hasConflict: false, firstConflictReason: null, dates: [], lastDate: reactivateDate };
+    }
+
+    const count = Math.max(1, Math.min(16, reactivateWeeks || 1));
+    const dates: string[] = [];
+    let firstConflictReason: string | null = null;
+
+    for (let w = 0; w < count; w++) {
+      const dStr = addWeeksToDateStr(reactivateDate, w);
+      dates.push(dStr);
+      if (!firstConflictReason) {
+        const chk = checkAvailability(reservationItem.labId, dStr, reactivateStartTime, reactivateEndTime);
+        if (!chk.available) {
+          firstConflictReason = `Semana ${w + 1} (${formatDateBR(dStr)}): ${chk.conflictReason || 'Horário já ocupado nesta data.'}`;
+        }
+      }
+    }
+
+    return {
+      hasConflict: Boolean(firstConflictReason),
+      firstConflictReason,
+      dates,
+      lastDate: dates[dates.length - 1] || reactivateDate
+    };
+  }, [reservationItem, reactivateDate, reactivateStartTime, reactivateEndTime, reactivateWeeks, checkAvailability]);
+
+  const handleConfirmReactivate = () => {
+    if (!reservationItem) return;
+    const res = reactivateReservation(
+      reservationItem,
+      reactivateDate,
+      reactivateStartTime,
+      reactivateEndTime,
+      reactivateWeeks
+    );
+    if (res.success) {
+      setShowReactivateForm(false);
+      setSelectedEventDetail(null);
+    } else if (res.error) {
+      alert(`Não foi possível reativar:\n${res.error}`);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
@@ -315,47 +396,208 @@ export const EventDetailModal: React.FC = () => {
 
               {/* Se for Reserva de Horário */}
               {!isFixedClass && reservationItem && (
-                <div className="flex items-center justify-end gap-2 flex-wrap">
-                  <button
-                    onClick={() => {
-                      const isRec = Boolean(reservationItem.isRecurring && reservationItem.recurrenceGroupId);
-                      const deleteWhole = isRec ? confirm(`Esta é uma reserva recorrente.\n\nClique em OK para excluir TODA a série de ${reservationItem.recurrenceTotalWeeks || ''} semanas.\nClique em CANCELAR para excluir apenas este dia (${formatDateBR(reservationItem.date)}).`) : false;
-                      
-                      deleteReservation(reservationItem.id, deleteWhole);
-                      setSelectedEventDetail(null);
-                    }}
-                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition cursor-pointer flex items-center gap-1.5"
-                    title="Exclui definitivamente do banco de dados"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Excluir Reserva</span>
-                  </button>
+                <div className="space-y-3">
+                  {/* Painel de Reativação e Repetição Aberto pelo Técnico */}
+                  {showReactivateForm && canManageThisLab && (
+                    <div className="p-4 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl space-y-3.5 shadow-sm text-slate-700 animate-fade-in">
+                      <div className="flex items-center justify-between pb-2 border-b border-emerald-200">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+                            <Repeat className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-emerald-950">Reativar & Repetir Horário na Grade</h4>
+                            <p className="text-[10px] text-emerald-700 font-medium">Ação exclusiva de técnico • Aprovação direta</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-200/80 px-2 py-0.5 rounded-full uppercase">
+                          Lab {reservationItem.labId}
+                        </span>
+                      </div>
 
-                  <button
-                    onClick={() => {
-                      const isRec = Boolean(reservationItem.isRecurring && reservationItem.recurrenceGroupId);
-                      const cancelWhole = isRec ? confirm(`Esta é uma reserva recorrente.\n\nClique em OK para cancelar TODA a série de ${reservationItem.recurrenceTotalWeeks || ''} semanas.\nClique em CANCELAR para cancelar apenas este dia (${formatDateBR(reservationItem.date)}).`) : false;
+                      {/* Inputs: Data inicial e horários */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
+                            Data Inicial:
+                          </label>
+                          <input
+                            type="date"
+                            value={reactivateDate}
+                            min={todayStr}
+                            onChange={e => setReactivateDate(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
 
-                      cancelReservation(reservationItem.id, cancelWhole);
-                      setSelectedEventDetail(null);
-                    }}
-                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-xl border border-amber-300 transition cursor-pointer flex items-center gap-1.5"
-                    title="Cancela a reserva e libera o horário para outros usuários"
-                  >
-                    <Ban className="w-3.5 h-3.5" />
-                    <span>Cancelar Horário</span>
-                  </button>
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
+                            Início:
+                          </label>
+                          <input
+                            type="time"
+                            value={reactivateStartTime}
+                            onChange={e => setReactivateStartTime(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
 
-                  <button
-                    onClick={() => {
-                      setSelectedEventDetail(null);
-                      openReservationModalForEdit(reservationItem);
-                    }}
-                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Modificar Horário / Detalhes</span>
-                  </button>
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
+                            Término:
+                          </label>
+                          <input
+                            type="time"
+                            value={reactivateEndTime}
+                            onChange={e => setReactivateEndTime(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Seletor de Semanas de Recorrência */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase text-slate-600">
+                            Repetir por Quantas Semanas Consecutivas?
+                          </label>
+                          <span className="text-xs font-extrabold text-emerald-800">
+                            {reactivateWeeks === 1 ? '1 semana (uso único)' : `${reactivateWeeks} semanas consecutivas`}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {[1, 2, 4, 8, 12, 16].map(w => (
+                            <button
+                              key={w}
+                              type="button"
+                              onClick={() => setReactivateWeeks(w)}
+                              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                reactivateWeeks === w
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-white hover:bg-emerald-100 text-slate-700 border border-slate-200'
+                              }`}
+                            >
+                              {w === 1 ? '1 sem. (única)' : `${w} semanas`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Painel de Checagem de Conflitos em Tempo Real */}
+                      <div className="p-2.5 bg-white rounded-xl border border-emerald-200/80 space-y-1 text-xs">
+                        <div className="flex items-center justify-between font-bold text-[11px]">
+                          <span>Cronograma Planejado ({reactivateWeeks} {reactivateWeeks === 1 ? 'semana' : 'semanas'}):</span>
+                          {availabilityCheck.hasConflict ? (
+                            <span className="text-rose-600 flex items-center gap-1 font-bold">
+                              ⚠️ Conflito Detectado
+                            </span>
+                          ) : (
+                            <span className="text-emerald-600 flex items-center gap-1 font-bold">
+                              ✓ 100% Disponível
+                            </span>
+                          )}
+                        </div>
+
+                        {availabilityCheck.hasConflict ? (
+                          <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-[11px] leading-tight">
+                            <strong>Atenção:</strong> {availabilityCheck.firstConflictReason}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-500">
+                            De <strong>{formatDateBR(reactivateDate)}</strong> até <strong>{formatDateBR(availabilityCheck.lastDate)}</strong> ({reactivateStartTime} às {reactivateEndTime}) no Lab {reservationItem.labId.toUpperCase()}.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Ações do Form de Reativação */}
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowReactivateForm(false)}
+                          className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-600 font-semibold text-xs rounded-xl border border-slate-200 transition cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={availabilityCheck.hasConflict}
+                          onClick={handleConfirmReactivate}
+                          className={`px-4 py-1.5 font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs ${
+                            availabilityCheck.hasConflict
+                              ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Confirmar Reativação ({reactivateWeeks} {reactivateWeeks === 1 ? 'sem.' : 'semanas'})</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Barra de Botões do Técnico */}
+                  <div className="flex items-center justify-end gap-2 flex-wrap">
+                    {canManageThisLab && (
+                      <button
+                        type="button"
+                        onClick={() => setShowReactivateForm(!showReactivateForm)}
+                        className={`px-3.5 py-1.5 font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs ${
+                          showReactivateForm
+                            ? 'bg-emerald-700 text-white ring-2 ring-emerald-400'
+                            : isEnded
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-300'
+                            : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        }`}
+                        title="Reativar este horário para repetir em novas semanas"
+                      >
+                        <Repeat className="w-3.5 h-3.5" />
+                        <span>{showReactivateForm ? 'Ocultar Reativação' : 'Reativar / Repetir por Semanas'}</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        const isRec = Boolean(reservationItem.isRecurring && reservationItem.recurrenceGroupId);
+                        const deleteWhole = isRec ? confirm(`Esta é uma reserva recorrente.\n\nClique em OK para excluir TODA a série de ${reservationItem.recurrenceTotalWeeks || ''} semanas.\nClique em CANCELAR para excluir apenas este dia (${formatDateBR(reservationItem.date)}).`) : false;
+                        
+                        deleteReservation(reservationItem.id, deleteWhole);
+                        setSelectedEventDetail(null);
+                      }}
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition cursor-pointer flex items-center gap-1.5"
+                      title="Exclui definitivamente do banco de dados"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Excluir Reserva</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const isRec = Boolean(reservationItem.isRecurring && reservationItem.recurrenceGroupId);
+                        const cancelWhole = isRec ? confirm(`Esta é uma reserva recorrente.\n\nClique em OK para cancelar TODA a série de ${reservationItem.recurrenceTotalWeeks || ''} semanas.\nClique em CANCELAR para cancelar apenas este dia (${formatDateBR(reservationItem.date)}).`) : false;
+
+                        cancelReservation(reservationItem.id, cancelWhole);
+                        setSelectedEventDetail(null);
+                      }}
+                      className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-xl border border-amber-300 transition cursor-pointer flex items-center gap-1.5"
+                      title="Cancela a reserva e libera o horário para outros usuários"
+                    >
+                      <Ban className="w-3.5 h-3.5" />
+                      <span>Cancelar Horário</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedEventDetail(null);
+                        openReservationModalForEdit(reservationItem);
+                      }}
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Modificar Horário / Detalhes</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

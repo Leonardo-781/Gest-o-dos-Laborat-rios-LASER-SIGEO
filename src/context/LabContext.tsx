@@ -171,6 +171,13 @@ interface LabContextType {
     updatedData: Partial<Reservation>,
     updateWholeSeries?: boolean
   ) => { success: boolean; error?: string };
+  reactivateReservation: (
+    sourceReservation: Reservation,
+    newStartDate: string,
+    newStartTime: string,
+    newEndTime: string,
+    weeksCount?: number
+  ) => { success: boolean; protocol?: string; error?: string; totalCreated?: number };
 
   // Modal de Edição de Reservas
   isReservationModalOpen: boolean;
@@ -1367,6 +1374,148 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const reactivateReservation = (
+    sourceReservation: Reservation,
+    newStartDate: string,
+    newStartTime: string,
+    newEndTime: string,
+    weeksCount: number = 1
+  ): { success: boolean; protocol?: string; error?: string; totalCreated?: number } => {
+    if (!currentUser || (currentUser.role !== 'tecnico' && currentUser.role !== 'coordenador')) {
+      return {
+        success: false,
+        error: 'Permissão negada. Apenas técnicos ou a coordenação podem reativar solicitações de horário.'
+      };
+    }
+
+    if (!canUserManageLab(sourceReservation.labId)) {
+      return {
+        success: false,
+        error: `Você não possui jurisdição técnica para gerenciar o laboratório ${sourceReservation.labId.toUpperCase()}.`
+      };
+    }
+
+    const count = Math.max(1, Math.min(16, weeksCount || 1));
+    const isRecurring = count > 1;
+
+    // Calcular datas
+    const dates: string[] = [];
+    for (let w = 0; w < count; w++) {
+      dates.push(addWeeksToDateStr(newStartDate, w));
+    }
+
+    // Checagem de disponibilidade em todas as semanas
+    for (let i = 0; i < dates.length; i++) {
+      const dStr = dates[i];
+      const check = checkAvailability(sourceReservation.labId, dStr, newStartTime, newEndTime);
+      if (!check.available) {
+        return {
+          success: false,
+          error: isRecurring
+            ? `Conflito na semana ${i + 1} (${formatDateBR(dStr)}): ${check.conflictReason || 'Horário já ocupado nesta data.'}`
+            : (check.conflictReason || 'Horário já ocupado nesta data.')
+        };
+      }
+    }
+
+    const newProtocol = generateProtocol();
+    const nowIso = new Date().toISOString();
+    const recurrenceGroupId = isRecurring ? `rec-${Date.now()}` : undefined;
+
+    // Cor apropriada do laboratório ou externa
+    const isExternal = Boolean(sourceReservation.isExternal);
+    const defaultLabColor: 'azul' | 'verde' | 'laranja' = sourceReservation.labId === 'laser' ? 'azul' : (sourceReservation.labId === 'ltgeo' ? 'laranja' : 'verde');
+    const effectiveColor: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho' = isExternal
+      ? 'vermelho'
+      : (sourceReservation.customColor && sourceReservation.customColor !== 'vermelho' ? sourceReservation.customColor : defaultLabColor);
+
+    const highlightColor = isExternal
+      ? 'bg-rose-100 text-rose-950 border-rose-300'
+      : (effectiveColor === 'azul'
+        ? 'bg-blue-50 text-blue-950 border-blue-200'
+        : (effectiveColor === 'laranja'
+          ? 'bg-orange-50 text-orange-950 border-orange-200'
+          : 'bg-emerald-50 text-emerald-950 border-emerald-200'));
+
+    const newReservations: Reservation[] = dates.map((dateStr, idx) => ({
+      ...sourceReservation,
+      id: `res-${Date.now()}-${idx}`,
+      protocol: idx === 0 ? newProtocol : `${newProtocol}-S${idx + 1}`,
+      labId: sourceReservation.labId,
+      date: dateStr,
+      startTime: newStartTime,
+      endTime: newEndTime,
+      purposeType: sourceReservation.purposeType,
+      title: sourceReservation.title,
+      description: sourceReservation.description,
+      applicantName: sourceReservation.applicantName,
+      applicantEmail: sourceReservation.applicantEmail,
+      applicantPhone: sourceReservation.applicantPhone,
+      applicantRole: sourceReservation.applicantRole,
+      applicantId: sourceReservation.applicantId,
+      supervisorName: sourceReservation.supervisorName,
+      responsibleTeacher: sourceReservation.responsibleTeacher,
+      userTeacher: sourceReservation.userTeacher,
+      isExternal,
+      customColor: effectiveColor,
+      highlightColor,
+      expectedAttendees: sourceReservation.expectedAttendees,
+      requestedEquipments: sourceReservation.requestedEquipments ? [...sourceReservation.requestedEquipments] : [],
+      isRecurring,
+      recurrenceGroupId,
+      recurrenceWeekIndex: isRecurring ? idx + 1 : undefined,
+      recurrenceTotalWeeks: isRecurring ? dates.length : undefined,
+      status: 'aprovada' as ReservationStatus,
+      adminNotes: sourceReservation.adminNotes 
+        ? `${sourceReservation.adminNotes} | Reativado por ${currentUser.name}`
+        : `Horário reativado pelo técnico ${currentUser.name}`,
+      reviewedBy: {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userEmail: currentUser.email || '',
+        userRole: currentUser.role,
+        actionDate: nowIso
+      },
+      createdById: currentUser.id,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    }));
+
+    setReservations(prev => [...newReservations, ...prev]);
+
+    if (firebaseConfig.isConnected) {
+      for (const resItem of newReservations) {
+        syncDocToFirestore('reservas', resItem, firebaseConfig);
+      }
+    }
+
+    logAudit(
+      'solicitacao_aprovada',
+      newReservations[0].id,
+      'reserva',
+      `Reativação de Horário: ${sourceReservation.title} (${newProtocol})`,
+      `Horário reativado e aprovado pelo técnico ${currentUser.name} para o Lab ${sourceReservation.labId.toUpperCase()} (${newStartTime} às ${newEndTime}) a partir de ${formatDateBR(newStartDate)} por ${count} semana(s).`,
+      {
+        name: currentUser.name,
+        email: currentUser.email,
+        id: currentUser.id,
+        role: currentUser.role
+      }
+    );
+
+    showToast(
+      isRecurring
+        ? `Horário reativado com sucesso! Protocolo: ${newProtocol} (${count} semanas aprovadas)`
+        : `Horário reativado com sucesso! Protocolo: ${newProtocol} (${formatDateBR(newStartDate)})`
+    );
+
+    return {
+      success: true,
+      protocol: newProtocol,
+      totalCreated: newReservations.length
+    };
+  };
+
   const addFixedClass = (classData: Omit<FixedClass, 'id'>) => {
     if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
       showToast('Apenas a Coordenação e Técnicos podem cadastrar disciplinas na grade.');
@@ -1951,6 +2100,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cancelReservation,
         deleteReservation,
         editReservation,
+        reactivateReservation,
         isReservationModalOpen,
         setIsReservationModalOpen,
         editingReservation,
