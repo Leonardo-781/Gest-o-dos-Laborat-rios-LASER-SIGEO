@@ -415,12 +415,12 @@ export const EquipmentManager: React.FC = () => {
 
       {/* Modal de Criação / Edição de Equipamento */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden my-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs p-3 sm:p-4 md:p-6 flex items-start sm:items-center justify-center min-h-screen">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl sm:max-w-2xl w-full border border-slate-200 shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-scale-up">
             {/* Header do Modal */}
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600/30 text-blue-400 rounded-xl border border-blue-500/30">
+                <div className="p-2.5 bg-blue-600/30 text-blue-400 rounded-xl border border-blue-500/30">
                   {editingEquipment ? <Edit3 className="w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
                 </div>
                 <div>
@@ -435,6 +435,7 @@ export const EquipmentManager: React.FC = () => {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
               >
@@ -443,7 +444,8 @@ export const EquipmentManager: React.FC = () => {
             </div>
 
             {/* Formulário */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {/* Seleção do Laboratório */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -592,18 +594,20 @@ export const EquipmentManager: React.FC = () => {
                 />
               </div>
 
-              {/* Ações do Formulário */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              </div>
+
+              {/* Ações do Formulário Fixo */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-xl transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
                   <span>{editingEquipment ? 'Salvar Alterações' : 'Cadastrar Equipamento'}</span>

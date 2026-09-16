@@ -786,415 +786,494 @@ export const EquipmentMovementView: React.FC = () => {
 
       {/* Modal de Criação / Edição de Movimentação */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden my-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs p-3 sm:p-4 md:p-6 flex items-start sm:items-center justify-center min-h-screen">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-3xl sm:max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-scale-up">
             {/* Header do Modal */}
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+            <div className={`px-6 py-4 text-white flex items-center justify-between flex-shrink-0 transition-colors ${
+              formData.movementType === 'manutencao_externa'
+                ? 'bg-gradient-to-r from-purple-800 to-indigo-900'
+                : formData.movementType === 'transferencia'
+                ? 'bg-gradient-to-r from-amber-700 to-amber-900'
+                : 'bg-slate-900'
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600/30 text-blue-400 rounded-xl border border-blue-500/30">
+                <div className="p-2.5 bg-white/10 text-white rounded-xl border border-white/20">
                   {editingMovement ? <Edit3 className="w-5 h-5" /> : <ArrowLeftRight className="w-5 h-5" />}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
-                    {editingMovement ? 'Editar Registro de Movimentação' : 'Registrar Nova Movimentação'}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Controle de saída, cautela e destinação de equipamentos e máquinas
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-white">
+                      {editingMovement ? 'Editar Registro de Movimentação' : 'Registrar Nova Movimentação'}
+                    </h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full border border-white/20">
+                      Uso Interno
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/80 mt-0.5">
+                    Controle de saída para campo, assistência externa e remanejamento
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Formulário */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* Formulário com corpo rolável interno e rodapé fixo */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4">
 
-              {/* Tipo / Finalidade da Movimentação */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Finalidade / Tipo de Movimentação *
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      movementType: 'campo',
-                      destinationLocation: prev.destinationLocation.includes('Manutenção Externa') ? '' : prev.destinationLocation
-                    }))}
-                    className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1 ${
-                      formData.movementType === 'campo'
-                        ? 'bg-blue-50 border-blue-400 text-blue-900 font-bold ring-2 ring-blue-500/20'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="text-base">🏕️</span>
-                    <span className="text-xs">Saída de Campo</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      movementType: 'manutencao_externa',
-                      destinationLocation: prev.destinationLocation && prev.destinationLocation.includes('Manutenção Externa') ? prev.destinationLocation : 'Manutenção Externa Autorizada'
-                    }))}
-                    className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1 ${
-                      formData.movementType === 'manutencao_externa'
-                        ? 'bg-purple-50 border-purple-400 text-purple-900 font-bold ring-2 ring-purple-500/20'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="text-base">🔧</span>
-                    <span className="text-xs">Manutenção Externa</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      movementType: 'transferencia'
-                    }))}
-                    className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1 ${
-                      formData.movementType === 'transferencia'
-                        ? 'bg-amber-50 border-amber-400 text-amber-900 font-bold ring-2 ring-amber-500/20'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="text-base">🔄</span>
-                    <span className="text-xs">Transferência</span>
-                  </button>
-                </div>
-              </div>
-              
-              {/* Seleção Rápida de Equipamento do Acervo */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Selecionar Equipamento do Acervo (Opcional)
-                </label>
-                <select
-                  value={formData.equipmentId || ''}
-                  onChange={(e) => handleSelectEquipment(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 cursor-pointer"
-                >
-                  <option value="">-- Digitar dados manualmente ou selecionar abaixo --</option>
-                  {equipments.map(eq => (
-                    <option key={eq.id} value={eq.id}>
-                      [{eq.labId.toUpperCase()}] {eq.patrimonio ? `Pat. ${eq.patrimonio} • ` : ''}{eq.name} ({eq.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Patrimônio e Nome do Equipamento */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-1">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nº Patrimônio *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: 081814"
-                    value={formData.patrimonio}
-                    onChange={(e) => setFormData({ ...formData, patrimonio: e.target.value })}
-                    className="w-full text-xs font-mono font-bold text-amber-900 bg-amber-50/40 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nome do Equipamento / Máquina *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Estação Total Leica TS06 Plus"
-                    value={formData.equipmentName}
-                    onChange={(e) => setFormData({ ...formData, equipmentName: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
-                  />
-                </div>
-              </div>
-
-              {/* Data/Hora e Técnico Responsável */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Seletor Segmentado de Finalidade / Tipo */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Data & Hora da Saída *
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Finalidade / Tipo de Movimentação *
                   </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Técnico Responsável *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Nome do técnico"
-                    value={formData.responsibleTechnician}
-                    onChange={(e) => setFormData({ ...formData, responsibleTechnician: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
-                  />
-                </div>
-              </div>
-
-              {/* Local de Saída (Origem) */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700">
-                    Local de Saída (Origem) *
-                  </label>
-                  <span className="text-[10px] text-slate-400">Atalhos rápidos:</span>
-                </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: LTGEO - Sala 1B210"
-                  value={formData.originLocation}
-                  onChange={(e) => setFormData({ ...formData, originLocation: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
-                />
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  {[
-                    'LTGEO - Sala 1B210',
-                    'LASER - Sala 1B309',
-                    'SIGEO - Sala 1B307',
-                    'Sala dos Técnicos 1B308',
-                    'Almoxarifado'
-                  ].map(loc => (
+                  <div className="bg-slate-100 p-1.5 rounded-2xl grid grid-cols-3 gap-1.5">
                     <button
-                      key={loc}
                       type="button"
-                      onClick={() => setFormData({ ...formData, originLocation: loc })}
-                      className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition cursor-pointer"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        movementType: 'campo',
+                        destinationLocation: prev.destinationLocation.includes('Manutenção Externa') ? '' : prev.destinationLocation
+                      }))}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        formData.movementType === 'campo'
+                          ? 'bg-white text-blue-900 shadow-xs ring-1 ring-slate-200'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      {loc}
+                      <span>🏕️</span>
+                      <span>Saída de Campo</span>
                     </button>
-                  ))}
-                </div>
-              </div>
 
-              {/* Local de Destino */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700">
-                    Local de Destino *
-                  </label>
-                  <span className="text-[10px] text-slate-400">Atalhos rápidos:</span>
-                </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Campo de Topografia (Pátio Bloco 1B)"
-                  value={formData.destinationLocation}
-                  onChange={(e) => setFormData({ ...formData, destinationLocation: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
-                />
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  {[
-                    'Campo de Topografia (Bloco 1B)',
-                    'Fazenda Experimental do Glória',
-                    'Bloco 1B (Salas de Aula)',
-                    'Manutenção Externa Autorizada',
-                    'Gabinete Docente'
-                  ].map(loc => (
                     <button
-                      key={loc}
                       type="button"
-                      onClick={() => setFormData({ ...formData, destinationLocation: loc })}
-                      className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition cursor-pointer"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        movementType: 'manutencao_externa',
+                        destinationLocation: prev.destinationLocation && !prev.destinationLocation.includes('Manutenção Externa') ? prev.destinationLocation : 'Manutenção Externa Autorizada'
+                      }))}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        formData.movementType === 'manutencao_externa'
+                          ? 'bg-purple-700 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      {loc}
+                      <span>🔧</span>
+                      <span>Manutenção Externa</span>
                     </button>
-                  ))}
-                </div>
-              </div>
 
-              {/* Detalhes Específicos para Manutenção Externa */}
-              {formData.movementType === 'manutencao_externa' && (
-                <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-purple-700" />
-                    <span className="text-xs font-bold text-purple-950">Dados da Assistência Técnica & Ordem de Serviço</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        movementType: 'transferencia'
+                      }))}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        formData.movementType === 'transferencia'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>🔄</span>
+                      <span>Transferência</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Seleção do Equipamento */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">
+                      Equipamento do Acervo / Inventário
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {formData.equipmentId ? 'Item vinculado' : 'Opcional (preenchimento automático)'}
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {formData.equipmentId ? (
+                    (() => {
+                      const selectedEq = equipments.find(e => e.id === formData.equipmentId);
+                      if (!selectedEq) return null;
+                      return (
+                        <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center gap-2.5">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                              selectedEq.labId === 'laser' 
+                                ? 'bg-blue-100 text-blue-800' 
+                                : selectedEq.labId === 'sigeo' 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : 'bg-orange-100 text-orange-800'
+                            }`}>
+                              {selectedEq.labId.toUpperCase()}
+                            </span>
+                            <div>
+                              <span className="font-bold text-slate-900">{selectedEq.name}</span>
+                              <span className="text-slate-500 text-[11px] block">
+                                Código: <strong className="font-mono text-slate-700">{selectedEq.code}</strong>
+                                {selectedEq.patrimonio && <> • Patrimônio: <strong className="font-mono text-amber-900">Pat. {selectedEq.patrimonio}</strong></>}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectEquipment('')}
+                            className="text-[11px] text-blue-700 hover:text-blue-900 font-semibold underline cursor-pointer shrink-0"
+                          >
+                            Trocar item
+                          </button>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <select
+                      value={formData.equipmentId || ''}
+                      onChange={(e) => handleSelectEquipment(e.target.value)}
+                      className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 cursor-pointer"
+                    >
+                      <option value="">-- Selecione um equipamento do acervo (ou digite manualmente abaixo) --</option>
+                      <optgroup label="LTGEO - Laboratório de Topografia e Geodésia (1B210)">
+                        {equipments.filter(e => e.labId === 'ltgeo').map(eq => (
+                          <option key={eq.id} value={eq.id}>
+                            {eq.patrimonio ? `[Pat. ${eq.patrimonio}] ` : ''}{eq.name} ({eq.code})
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="LASER - Laboratório de Sensoriamento Remoto (1B309)">
+                        {equipments.filter(e => e.labId === 'laser').map(eq => (
+                          <option key={eq.id} value={eq.id}>
+                            {eq.patrimonio ? `[Pat. ${eq.patrimonio}] ` : ''}{eq.name} ({eq.code})
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="SIGEO - Sistema de Informações Geográficas (1B307)">
+                        {equipments.filter(e => e.labId === 'sigeo').map(eq => (
+                          <option key={eq.id} value={eq.id}>
+                            {eq.patrimonio ? `[Pat. ${eq.patrimonio}] ` : ''}{eq.name} ({eq.code})
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  )}
+                </div>
+
+                {/* Grade de 2 Colunas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Coluna 1: Dados do Instrumento e Locais */}
+                  <div className="space-y-3.5">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-1">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Nº Patrimônio *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: 081814"
+                          value={formData.patrimonio}
+                          onChange={(e) => setFormData({ ...formData, patrimonio: e.target.value })}
+                          className="w-full text-xs font-mono font-bold text-amber-900 bg-amber-50/40 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Nome da Máquina / Equipamento *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: Estação Total Leica TS06 Plus"
+                          value={formData.equipmentName}
+                          onChange={(e) => setFormData({ ...formData, equipmentName: e.target.value })}
+                          className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Local de Saída */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-bold text-purple-900">
-                          Empresa / Assistência *
+                        <label className="text-xs font-bold text-slate-700">
+                          Local de Saída (Origem) *
                         </label>
-                        <span className="text-[10px] text-purple-700 font-semibold">Atalhos:</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[10px] text-slate-400">Atalhos:</span>
+                          {['LTGEO', 'LASER', 'SIGEO', '1B308', 'Almoxarifado'].map(abbr => {
+                            const full = abbr === 'LTGEO' ? 'LTGEO - Sala 1B210' : abbr === 'LASER' ? 'LASER - Sala 1B309' : abbr === 'SIGEO' ? 'SIGEO - Sala 1B307' : abbr === '1B308' ? 'Sala dos Técnicos 1B308' : 'Almoxarifado';
+                            return (
+                              <button
+                                key={abbr}
+                                type="button"
+                                onClick={() => setFormData({ ...formData, originLocation: full })}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition cursor-pointer"
+                              >
+                                {abbr}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                       <input
                         type="text"
-                        placeholder="Ex: Leica Geosystems, Trimble, DTI..."
-                        value={formData.companyName || ''}
-                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                        className="w-full text-xs bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-purple-500"
+                        list="origin-locations"
+                        required
+                        placeholder="Ex: LTGEO - Sala 1B210"
+                        value={formData.originLocation}
+                        onChange={(e) => setFormData({ ...formData, originLocation: e.target.value })}
+                        className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
                       />
-                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                        {['Leica Geosystems', 'Trimble', 'DTI UFU', 'Topcon'].map(c => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => setFormData({ ...formData, companyName: c })}
-                            className="px-1.5 py-0.2 text-[9px] bg-white hover:bg-purple-100 text-purple-800 border border-purple-200 rounded transition cursor-pointer"
-                          >
-                            {c}
-                          </button>
-                        ))}
-                      </div>
+                      <datalist id="origin-locations">
+                        <option value="LTGEO - Sala 1B210" />
+                        <option value="LASER - Sala 1B309" />
+                        <option value="SIGEO - Sala 1B307" />
+                        <option value="Sala dos Técnicos 1B308" />
+                        <option value="Almoxarifado" />
+                      </datalist>
                     </div>
 
+                    {/* Local de Destino */}
                     <div>
-                      <label className="block text-[11px] font-bold text-purple-900 mb-1">
-                        Nº da O.S. / Guia de Remessa
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">
+                          Local de Destino *
+                        </label>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[10px] text-slate-400">Atalhos:</span>
+                          {['Campo (Bloco 1B)', 'Fazenda Glória', 'Salas 1B', 'Manut. Externa'].map(dest => {
+                            const full = dest === 'Campo (Bloco 1B)' ? 'Campo de Topografia (Bloco 1B)' : dest === 'Fazenda Glória' ? 'Fazenda Experimental do Glória' : dest === 'Salas 1B' ? 'Bloco 1B (Salas de Aula)' : 'Manutenção Externa Autorizada';
+                            return (
+                              <button
+                                key={dest}
+                                type="button"
+                                onClick={() => setFormData({ ...formData, destinationLocation: full })}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition cursor-pointer"
+                              >
+                                {dest}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <input
                         type="text"
-                        placeholder="Ex: OS-2026/890 ou NF-e 1243"
-                        value={formData.serviceOrder || ''}
-                        onChange={(e) => setFormData({ ...formData, serviceOrder: e.target.value })}
-                        className="w-full text-xs font-mono font-bold bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-purple-500"
+                        list="dest-locations"
+                        required
+                        placeholder="Ex: Campo de Topografia (Bloco 1B)"
+                        value={formData.destinationLocation}
+                        onChange={(e) => setFormData({ ...formData, destinationLocation: e.target.value })}
+                        className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
                       />
+                      <datalist id="dest-locations">
+                        <option value="Campo de Topografia (Bloco 1B)" />
+                        <option value="Fazenda Experimental do Glória" />
+                        <option value="Bloco 1B (Salas de Aula)" />
+                        <option value="Manutenção Externa Autorizada" />
+                        <option value="Gabinete Docente" />
+                      </datalist>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Coluna 2: Responsável, Datas & Observações */}
+                  <div className="space-y-3.5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Data & Hora da Saída *
+                        </label>
+                        <input
+                          type="datetime-local"
+                          required
+                          value={formData.date}
+                          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                          className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Técnico Responsável *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.responsibleTechnician}
+                          onChange={(e) => setFormData({ ...formData, responsibleTechnician: e.target.value })}
+                          className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                        />
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="block text-[11px] font-bold text-purple-900 mb-1">
-                        Previsão de Retorno Estimada
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Motivação de Uso / Finalidade *
                       </label>
-                      <input
-                        type="date"
-                        value={formData.expectedReturnDate || ''}
-                        onChange={(e) => setFormData({ ...formData, expectedReturnDate: e.target.value })}
-                        className="w-full text-xs bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-purple-500"
+                      <textarea
+                        rows={2}
+                        required
+                        placeholder="Ex: Aula prática da turma de Topografia 2..."
+                        value={formData.purpose}
+                        onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                        className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 resize-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-purple-900 mb-1">
-                        Acessórios Acompanhantes Enviados
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Observações Gerais & Acessórios Inclusos
                       </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Estojo, 2 baterias, carregador, cabo USB..."
-                        value={formData.accessories || ''}
-                        onChange={(e) => setFormData({ ...formData, accessories: e.target.value })}
-                        className="w-full text-xs bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-purple-500"
+                      <textarea
+                        rows={2}
+                        placeholder="Ex: Acompanha tripé de alumínio, prisma, 2 baterias recarregadas..."
+                        value={formData.generalNotes}
+                        onChange={(e) => setFormData({ ...formData, generalNotes: e.target.value })}
+                        className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 resize-none"
                       />
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Motivação de Uso */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Motivação de Uso / Finalidade *
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  placeholder="Ex: Aula prática de levantamento planialtimétrico da turma de Topografia 2..."
-                  value={formData.purpose}
-                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 resize-none"
-                />
-              </div>
+                {/* Seção Especial de Manutenção Externa */}
+                {formData.movementType === 'manutencao_externa' && (
+                  <div className="p-4 bg-purple-50/80 border border-purple-200 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-purple-700" />
+                        <span className="text-xs font-bold text-purple-950">
+                          Dados da Assistência Técnica & Ordem de Serviço Externa
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md border border-purple-200">
+                        Rastreio de Conserto
+                      </span>
+                    </div>
 
-              {/* Observações Gerais e Acessórios */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Observações Gerais & Acessórios Inclusos
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Ex: Acompanha tripé de alumínio, prisma com bastão, 2 baterias recarregadas e estojo rígido..."
-                  value={formData.generalNotes}
-                  onChange={(e) => setFormData({ ...formData, generalNotes: e.target.value })}
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 resize-none"
-                />
-              </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] font-bold text-purple-900">
+                            Empresa / Assistência de Destino *
+                          </label>
+                          <span className="text-[10px] text-purple-700 font-semibold">Atalhos:</span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Ex: Leica Geosystems, Trimble, DTI..."
+                          value={formData.companyName || ''}
+                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                          className="w-full text-xs bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-purple-500"
+                        />
+                        <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                          {['Leica Geosystems', 'Trimble', 'DTI UFU', 'Topcon'].map(c => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, companyName: c })}
+                              className="px-2 py-0.5 text-[9px] font-semibold bg-white hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-md transition cursor-pointer"
+                            >
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-              {/* Status da Movimentação */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Situação do Deslocamento
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, status: 'em_transito' })}
-                    className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      formData.status === 'em_transito' 
-                        ? 'bg-amber-500 text-white border-amber-500 shadow-xs' 
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Em Campo</span>
-                  </button>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-purple-900 mb-1">
+                            Nº da O.S. / Guia de Remessa
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: OS-2026/890 ou NF-e 1243"
+                            value={formData.serviceOrder || ''}
+                            onChange={(e) => setFormData({ ...formData, serviceOrder: e.target.value })}
+                            className="w-full text-xs font-mono font-bold bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, status: 'concluido' })}
-                    className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      formData.status === 'concluido' 
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Já Devolvido</span>
-                  </button>
+                        <div>
+                          <label className="block text-[11px] font-bold text-purple-900 mb-1">
+                            Previsão de Retorno Estimada
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.expectedReturnDate || ''}
+                            onChange={(e) => setFormData({ ...formData, expectedReturnDate: e.target.value })}
+                            className="w-full text-xs bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, status: 'remanejado' })}
-                    className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      formData.status === 'remanejado' 
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Remanejamento</span>
-                  </button>
+                {/* Situação do Registro */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Situação Atual do Deslocamento
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, status: 'em_transito' })}
+                      className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        formData.status === 'em_transito' 
+                          ? 'bg-amber-500 text-white border-amber-500 shadow-xs' 
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Em Aberto / Fora</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, status: 'concluido' })}
+                      className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        formData.status === 'concluido' 
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Já Retornado</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, status: 'remanejado' })}
+                      className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        formData.status === 'remanejado' 
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Remanejamento</span>
+                    </button>
+                  </div>
                 </div>
+
               </div>
 
-              {/* Botões do Rodapé */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              {/* Rodapé Fixo com Ações */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-xl transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  className="px-6 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
-                  <span>{editingMovement ? 'Salvar Alterações' : 'Confirmar Movimentação'}</span>
+                  <span>{editingMovement ? 'Salvar Alterações' : 'Confirmar e Registrar Movimentação'}</span>
                 </button>
               </div>
             </form>
@@ -1204,9 +1283,9 @@ export const EquipmentMovementView: React.FC = () => {
 
       {/* Modal de Registro de Devolução / Retorno */}
       {returnModalMovement && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-6">
-            <div className="px-6 py-4 bg-emerald-700 text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs p-3 sm:p-4 md:p-6 flex items-start sm:items-center justify-center min-h-screen">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh] animate-scale-up">
+            <div className="px-6 py-4 bg-emerald-700 text-white flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-xl">
                   <CheckCircle2 className="w-5 h-5 text-white" />
@@ -1226,79 +1305,81 @@ export const EquipmentMovementView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmReturn} className="p-6 space-y-4">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-semibold">Equipamento:</span>
-                  <span className="font-bold text-slate-800">{returnModalMovement.equipmentName}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-semibold">Patrimônio:</span>
-                  <span className="font-mono font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                    Pat. {returnModalMovement.patrimonio}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-semibold">Estava em:</span>
-                  <span className="font-bold text-slate-700">{returnModalMovement.destinationLocation}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Técnico que Recebeu a Devolução *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nome do técnico responsável pela conferência"
-                  value={returnReceiver}
-                  onChange={(e) => setReturnReceiver(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Condições de Retorno & Observações da Conferência
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Ex: Equipamento conferido e limpo, baterias descarregadas, tripé e prisma íntegros..."
-                  value={returnNotes}
-                  onChange={(e) => setReturnNotes(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 resize-none"
-                />
-              </div>
-
-              {(returnModalMovement.movementType === 'manutencao_externa' || returnModalMovement.destinationLocation.toLowerCase().includes('manutenção externa')) && (
-                <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-xl space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
-                    <span className="text-xs font-bold text-purple-950">Retorno de Manutenção Externa</span>
+            <form onSubmit={handleConfirmReturn} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-semibold">Equipamento:</span>
+                    <span className="font-bold text-slate-800">{returnModalMovement.equipmentName}</span>
                   </div>
-                  <label className="flex items-start gap-2.5 text-xs text-purple-950 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={defectResolved}
-                      onChange={(e) => setDefectResolved(e.target.checked)}
-                      className="w-4 h-4 text-purple-600 rounded mt-0.5"
-                    />
-                    <div>
-                      <span className="font-bold block">Defeito solucionado / Equipamento reparado e testado?</span>
-                      <span className="text-[11px] text-purple-700 block">
-                        Ao confirmar, o equipamento voltará imediatamente ao status <strong>DISPONÍVEL</strong> no inventário do laboratório.
-                      </span>
-                    </div>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-semibold">Patrimônio:</span>
+                    <span className="font-mono font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      Pat. {returnModalMovement.patrimonio}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-semibold">Estava em:</span>
+                    <span className="font-bold text-slate-700">{returnModalMovement.destinationLocation}</span>
+                  </div>
                 </div>
-              )}
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Técnico que Recebeu a Devolução *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nome do técnico responsável pela conferência"
+                    value={returnReceiver}
+                    onChange={(e) => setReturnReceiver(e.target.value)}
+                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Condições de Retorno & Observações da Conferência
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Ex: Equipamento conferido e limpo, baterias descarregadas, tripé e prisma íntegros..."
+                    value={returnNotes}
+                    onChange={(e) => setReturnNotes(e.target.value)}
+                    className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 resize-none"
+                  />
+                </div>
+
+                {(returnModalMovement.movementType === 'manutencao_externa' || returnModalMovement.destinationLocation.toLowerCase().includes('manutenção externa')) && (
+                  <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-xl space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
+                      <span className="text-xs font-bold text-purple-950">Retorno de Manutenção Externa</span>
+                    </div>
+                    <label className="flex items-start gap-2.5 text-xs text-purple-950 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={defectResolved}
+                        onChange={(e) => setDefectResolved(e.target.checked)}
+                        className="w-4 h-4 text-purple-600 rounded mt-0.5"
+                      />
+                      <div>
+                        <span className="font-bold block">Defeito solucionado / Equipamento reparado e testado?</span>
+                        <span className="text-[11px] text-purple-700 block">
+                          Ao confirmar, o equipamento voltará imediatamente ao status <strong>DISPONÍVEL</strong> no inventário do laboratório.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setReturnModalMovement(null)}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-xl transition cursor-pointer"
                 >
                   Cancelar
                 </button>

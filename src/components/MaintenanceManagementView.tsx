@@ -613,8 +613,8 @@ export const MaintenanceManagementView: React.FC = () => {
 
       {/* Modal Manual: Colocar Máquina em Manutenção */}
       {isManualModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 animate-scale-up">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 min-h-screen">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 my-auto animate-scale-up">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Wrench className="w-5 h-5 text-amber-600" />
@@ -688,8 +688,8 @@ export const MaintenanceManagementView: React.FC = () => {
 
       {/* Modal de Conclusão de Chamado de Manutenção */}
       {resolvingReq && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-scale-up">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 min-h-screen">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 my-auto animate-scale-up">
             <h4 className="text-base font-bold text-slate-900">Concluir Chamado de Manutenção</h4>
             <p className="text-xs text-slate-500">
               Informe o parecer técnico de resolução para {resolvingReq.equipmentName} ({resolvingReq.protocol}):
@@ -727,8 +727,8 @@ export const MaintenanceManagementView: React.FC = () => {
 
       {/* Modal de Conclusão de Software */}
       {resolvingSoft && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-scale-up">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 min-h-screen">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 my-auto animate-scale-up">
             <h4 className="text-base font-bold text-slate-900">Homologar Instalação de Software</h4>
             <p className="text-xs text-slate-500">
               Confirme a instalação de {resolvingSoft.softwareName} ({resolvingSoft.protocol}):
