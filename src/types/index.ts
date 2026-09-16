@@ -241,6 +241,26 @@ export interface ScheduleEvent {
   rawItem: FixedClass | Reservation;
 }
 
+export interface EquipmentMovement {
+  id: string;
+  equipmentId?: string;
+  patrimonio: string;
+  equipmentName: string;
+  labId?: LabId;
+  date: string; // ISO ou YYYY-MM-DDTHH:mm
+  originLocation: string;
+  destinationLocation: string;
+  responsibleTechnician: string;
+  purpose: string;
+  generalNotes?: string;
+  status: 'em_transito' | 'concluido' | 'remanejado';
+  returnDate?: string;
+  returnedBy?: string;
+  returnNotes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export type AuditActionType = 
   | 'solicitacao_criada'
   | 'solicitacao_aprovada'
@@ -258,13 +278,16 @@ export type AuditActionType =
   | 'manutencao_solicitada'
   | 'manutencao_atualizada'
   | 'software_solicitado'
-  | 'software_atualizado';
+  | 'software_atualizado'
+  | 'movimentacao_registrada'
+  | 'movimentacao_concluida'
+  | 'movimentacao_excluida';
 
 export interface AuditLog {
   id: string;
   actionType: AuditActionType;
   targetId: string;
-  targetType: 'reserva' | 'aula_fixa' | 'equipamento' | 'usuario' | 'manutencao' | 'software' | 'sistema';
+  targetType: 'reserva' | 'aula_fixa' | 'equipamento' | 'usuario' | 'manutencao' | 'software' | 'sistema' | 'movimentacao';
   targetTitle: string;
   performedBy: {
     id: string;
@@ -328,6 +351,7 @@ export type ActiveTab =
   | 'gestao_manutencao' 
   | 'admin' 
   | 'equipamentos' 
+  | 'movimentacoes'
   | 'indicadores' 
   | 'auditoria' 
   | 'importar_pdf';

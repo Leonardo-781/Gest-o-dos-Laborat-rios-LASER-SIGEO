@@ -18,6 +18,7 @@ import { MaintenanceRequestView } from './components/MaintenanceRequestView';
 import { SoftwareRequestView } from './components/SoftwareRequestView';
 import { MaintenanceManagementView } from './components/MaintenanceManagementView';
 import { EmailNotificationsModal } from './components/EmailNotificationsModal';
+import { EquipmentMovementView } from './components/EquipmentMovementView';
 import { ActiveTab } from './types';
 
 const AppContent: React.FC = () => {
@@ -81,6 +82,12 @@ const AppContent: React.FC = () => {
         {activeTab === 'equipamentos' && (
           <div>
             <EquipmentManager />
+          </div>
+        )}
+
+        {activeTab === 'movimentacoes' && (
+          <div>
+            <EquipmentMovementView />
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import { LabId, LabInfo, Equipment, FixedClass, Reservation, UserAccount, AuditLog, MaintenanceRequest, SoftwareRequest } from '../types';
+import { LabId, LabInfo, Equipment, FixedClass, Reservation, UserAccount, AuditLog, MaintenanceRequest, SoftwareRequest, EquipmentMovement } from '../types';
 import { MASTER_USER_CONFIG, DEFAULT_TEST_PASSWORD_HASH, DEFAULT_INSTITUTIONAL_SALT } from '../services/authSecurity';
 
 export const LABS_INFO: Record<LabId, LabInfo> = {
@@ -897,8 +897,44 @@ export const INITIAL_FIXED_CLASSES: FixedClass[] = [
   }
 ];
 
-// Dados operacionais limpos (zero registros fictícios)
+// Dados operacionais limpos
 export const INITIAL_RESERVATIONS: Reservation[] = [];
 export const INITIAL_AUDIT_LOGS: AuditLog[] = [];
 export const INITIAL_MAINTENANCE_REQUESTS: MaintenanceRequest[] = [];
 export const INITIAL_SOFTWARE_REQUESTS: SoftwareRequest[] = [];
+
+export const INITIAL_EQUIPMENT_MOVEMENTS: EquipmentMovement[] = [
+  {
+    id: 'mov-001',
+    patrimonio: '081814',
+    equipmentName: 'Estação Total Eletrônica Topcon GPT-3200N',
+    labId: 'ltgeo',
+    date: '2026-09-15T08:30',
+    originLocation: 'LTGEO - Sala 1B210',
+    destinationLocation: 'Campo de Topografia (Pátio Bloco 1B)',
+    responsibleTechnician: 'Leonardo Cardoso',
+    purpose: 'Aula prática de Topografia Aplicada à Agrimensura',
+    generalNotes: 'Acompanha tripé de alumínio, estojo de transporte rígido, prisma com bastão e bateria reserva.',
+    status: 'em_transito',
+    createdAt: '2026-09-15T08:30:00Z'
+  },
+  {
+    id: 'mov-002',
+    patrimonio: '703274',
+    equipmentName: 'Receptor GNSS Geodésico Topcon HiPer SR',
+    labId: 'ltgeo',
+    date: '2026-09-12T09:00',
+    originLocation: 'LTGEO - Sala 1B210',
+    destinationLocation: 'Fazenda Experimental do Glória (UFU)',
+    responsibleTechnician: 'Leonardo Cardoso',
+    purpose: 'Rastreio de marcos geodésicos para projeto de pesquisa',
+    generalNotes: 'Acompanha bastão de fibra de carbono, base nivelante e antena auxiliar.',
+    status: 'concluido',
+    returnDate: '2026-09-14T16:45',
+    returnedBy: 'Leonardo Cardoso',
+    returnNotes: 'Equipamento devolvido limpo, ópticas e níveis sem avarias. Baterias recarregadas.',
+    createdAt: '2026-09-12T09:00:00Z',
+    updatedAt: '2026-09-14T16:45:00Z'
+  }
+];
+

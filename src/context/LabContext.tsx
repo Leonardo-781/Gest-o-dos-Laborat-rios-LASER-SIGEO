@@ -19,7 +19,8 @@ import {
   MaintenanceStatus,
   SoftwareRequestStatus,
   EmailNotification,
-  UserPermissions
+  UserPermissions,
+  EquipmentMovement
 } from '../types';
 import { 
   LABS_INFO, 
@@ -29,7 +30,8 @@ import {
   INITIAL_USERS,
   INITIAL_AUDIT_LOGS,
   INITIAL_MAINTENANCE_REQUESTS,
-  INITIAL_SOFTWARE_REQUESTS
+  INITIAL_SOFTWARE_REQUESTS,
+  INITIAL_EQUIPMENT_MOVEMENTS
 } from '../data/initialData';
 import { 
   checkTimeOverlap, 
@@ -83,6 +85,7 @@ interface LabContextType {
   usersList: UserAccount[];
   maintenanceRequests: MaintenanceRequest[];
   softwareRequests: SoftwareRequest[];
+  movements: EquipmentMovement[];
   
   // Hub e Navegação de Grupos de Laboratório
   activeLabGroup: LabGroupId;
@@ -197,6 +200,12 @@ interface LabContextType {
   updateEquipmentStatus: (id: string, status: Equipment['status']) => void;
   setEquipmentMaintenance: (equipmentId: string, inMaintenance: boolean, reason?: string, technician?: string) => void;
 
+  // Ações de Movimentações & Modificações de Máquinas/Equipamentos
+  addMovement: (data: Omit<EquipmentMovement, 'id' | 'createdAt'>) => { success: boolean; id?: string };
+  updateMovement: (id: string, data: Partial<EquipmentMovement>) => { success: boolean };
+  deleteMovement: (id: string) => { success: boolean };
+  markMovementReturned: (id: string, returnNotes?: string, returnedBy?: string) => { success: boolean };
+
   // Ações de Chamados de Manutenção / Averiguação (Aberto a todos)
   createMaintenanceRequest: (data: Omit<MaintenanceRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
     success: boolean;
@@ -231,7 +240,8 @@ const STORAGE_KEYS = {
   AUDIT: 'laser_sigeo_audit_v6',
   USERS_LIST: 'laser_sigeo_users_list_v6',
   MAINTENANCE: 'laser_sigeo_maintenance_v6',
-  SOFTWARE: 'laser_sigeo_software_v6'
+  SOFTWARE: 'laser_sigeo_software_v6',
+  MOVEMENTS: 'laser_sigeo_movements_v6'
 };
 
 export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -353,6 +363,11 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_SOFTWARE_REQUESTS;
   });
 
+  const [movements, setMovements] = useState<EquipmentMovement[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.MOVEMENTS);
+    return saved ? JSON.parse(saved) : INITIAL_EQUIPMENT_MOVEMENTS;
+  });
+
   // E-mails e Notificações Institucionais
   const [emails, setEmails] = useState<EmailNotification[]>(() => getStoredEmails());
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -427,6 +442,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEYS.SOFTWARE, JSON.stringify(softwareRequests));
   }, [softwareRequests]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(movements));
+  }, [movements]);
+
   // Sincronização em Tempo Real via Firebase Firestore (para apresentação ao vivo)
   useEffect(() => {
     if (!firebaseConfig.isConnected || !firebaseConfig.autoSync) return;
@@ -497,6 +516,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }, firebaseConfig);
 
+    const unsubMov = subscribeToFirestoreCollection<EquipmentMovement>('movimentacoes', (items) => {
+      if (items && items.length > 0) {
+        setMovements(items);
+      }
+    }, firebaseConfig);
+
     return () => {
       unsubRes?.();
       unsubMan?.();
@@ -506,6 +531,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubUsers?.();
       unsubAudit?.();
       unsubEmails?.();
+      unsubMov?.();
     };
   }, [firebaseConfig.isConnected, firebaseConfig.autoSync, firebaseConfig.projectId]);
 
@@ -1920,6 +1946,182 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // --------------------------------------------------------------------------
+  // MOVIMENTAÇÕES & MODIFICAÇÕES DE MÁQUINAS / EQUIPAMENTOS
+  // --------------------------------------------------------------------------
+  const addMovement = (data: Omit<EquipmentMovement, 'id' | 'createdAt'>): { success: boolean; id?: string } => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas a Coordenação e Técnicos podem registrar movimentações de equipamentos.');
+      return { success: false };
+    }
+
+    const newId = `mov-${Date.now()}`;
+    const newMovement: EquipmentMovement = {
+      ...data,
+      id: newId,
+      patrimonio: data.patrimonio.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    setMovements(prev => {
+      const updated = [newMovement, ...prev];
+      localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(updated));
+      return updated;
+    });
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('movimentacoes', newMovement, firebaseConfig);
+    }
+
+    logAudit(
+      'movimentacao_registrada',
+      newMovement.id,
+      'movimentacao',
+      `${newMovement.equipmentName} (Pat. ${newMovement.patrimonio})`,
+      `Movimentação registrada de "${newMovement.originLocation}" para "${newMovement.destinationLocation}" por ${newMovement.responsibleTechnician}. Motivação: ${newMovement.purpose}.`
+    );
+
+    // Se houver equipamento correspondente no inventário e a movimentação for "em_transito", atualiza status para "em_campo" se aplicável
+    if (data.status === 'em_transito' && data.equipmentId) {
+      const eqTarget = equipments.find(e => e.id === data.equipmentId);
+      if (eqTarget && eqTarget.status === 'disponivel') {
+        updateEquipmentStatus(eqTarget.id, 'em_campo');
+      }
+    }
+
+    showToast(`Movimentação do equipamento Pat. ${newMovement.patrimonio} registrada com sucesso!`);
+    return { success: true, id: newId };
+  };
+
+  const updateMovement = (id: string, updatedData: Partial<EquipmentMovement>): { success: boolean } => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas a Coordenação e Técnicos podem editar movimentações.');
+      return { success: false };
+    }
+
+    const target = movements.find(m => m.id === id);
+    if (!target) {
+      showToast('Registro de movimentação não encontrado.');
+      return { success: false };
+    }
+
+    const updated: EquipmentMovement = {
+      ...target,
+      ...updatedData,
+      updatedAt: new Date().toISOString()
+    };
+
+    setMovements(prev => {
+      const list = prev.map(m => m.id === id ? updated : m);
+      localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(list));
+      return list;
+    });
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('movimentacoes', updated, firebaseConfig);
+    }
+
+    logAudit(
+      'movimentacao_registrada',
+      target.id,
+      'movimentacao',
+      `${updated.equipmentName} (Pat. ${updated.patrimonio})`,
+      `Registro de movimentação atualizado por ${currentUser?.name}. Destino: ${updated.destinationLocation}, Status: ${updated.status}.`
+    );
+
+    showToast('Movimentação atualizada com sucesso!');
+    return { success: true };
+  };
+
+  const deleteMovement = (id: string): { success: boolean } => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas a Coordenação e Técnicos podem excluir registros de movimentação.');
+      return { success: false };
+    }
+
+    const target = movements.find(m => m.id === id);
+    if (!target) {
+      showToast('Movimentação não encontrada.');
+      return { success: false };
+    }
+
+    setMovements(prev => {
+      const list = prev.filter(m => m.id !== id);
+      localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(list));
+      return list;
+    });
+
+    if (firebaseConfig.isConnected) {
+      removeDocFromFirestore('movimentacoes', id, firebaseConfig);
+    }
+
+    logAudit(
+      'movimentacao_excluida',
+      target.id,
+      'movimentacao',
+      `${target.equipmentName} (Pat. ${target.patrimonio})`,
+      `Registro de movimentação para "${target.destinationLocation}" excluído por ${currentUser?.name}.`
+    );
+
+    showToast('Registro de movimentação excluído com sucesso.');
+    return { success: true };
+  };
+
+  const markMovementReturned = (id: string, returnNotes?: string, returnedBy?: string): { success: boolean } => {
+    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
+      showToast('Apenas a Coordenação e Técnicos podem registrar o retorno do equipamento.');
+      return { success: false };
+    }
+
+    const target = movements.find(m => m.id === id);
+    if (!target) {
+      showToast('Movimentação não encontrada.');
+      return { success: false };
+    }
+
+    const now = new Date();
+    const returnDateStr = now.toISOString().slice(0, 16);
+    const techName = returnedBy || currentUser?.name || 'Técnico Responsável';
+
+    const updated: EquipmentMovement = {
+      ...target,
+      status: 'concluido',
+      returnDate: returnDateStr,
+      returnedBy: techName,
+      returnNotes: returnNotes?.trim() || 'Devolvido ao laboratório de origem sem avarias registradas.',
+      updatedAt: now.toISOString()
+    };
+
+    setMovements(prev => {
+      const list = prev.map(m => m.id === id ? updated : m);
+      localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(list));
+      return list;
+    });
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('movimentacoes', updated, firebaseConfig);
+    }
+
+    // Se houver equipamento correspondente no inventário que estava em_campo, retorna para disponivel
+    if (target.equipmentId) {
+      const eqTarget = equipments.find(e => e.id === target.equipmentId);
+      if (eqTarget && eqTarget.status === 'em_campo') {
+        updateEquipmentStatus(eqTarget.id, 'disponivel');
+      }
+    }
+
+    logAudit(
+      'movimentacao_concluida',
+      target.id,
+      'movimentacao',
+      `${updated.equipmentName} (Pat. ${updated.patrimonio})`,
+      `Devolução confirmada por ${techName}. Notas de retorno: ${updated.returnNotes}`
+    );
+
+    showToast(`Retorno do equipamento Pat. ${updated.patrimonio} registrado com sucesso!`);
+    return { success: true };
+  };
+
+  // --------------------------------------------------------------------------
   // CHAMADOS DE MANUTENÇÃO / AVERIGUAÇÃO (Aberto a todos)
   // --------------------------------------------------------------------------
   const createMaintenanceRequest = (data: Omit<MaintenanceRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
@@ -2236,6 +2438,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsersList(INITIAL_USERS);
     setMaintenanceRequests(INITIAL_MAINTENANCE_REQUESTS);
     setSoftwareRequests(INITIAL_SOFTWARE_REQUESTS);
+    setMovements(INITIAL_EQUIPMENT_MOVEMENTS);
     setCurrentUser(null);
     localStorage.clear();
     showToast('Dados restaurados para a grade horária oficial. Modo visitante ativo.');
@@ -2259,6 +2462,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         usersList,
         maintenanceRequests,
         softwareRequests,
+        movements,
         currentUser,
         currentProfile,
         isAuthModalOpen,
@@ -2316,6 +2520,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteEquipment,
         updateEquipmentStatus,
         setEquipmentMaintenance,
+        addMovement,
+        updateMovement,
+        deleteMovement,
+        markMovementReturned,
         createMaintenanceRequest,
         updateMaintenanceStatus,
         createSoftwareRequest,
