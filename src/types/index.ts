@@ -86,12 +86,15 @@ export interface Equipment {
   code: string;
   patrimonio?: string;
   category: 'topografia' | 'laser_scanner' | 'gnss' | 'workstation' | 'drone' | 'periferico';
-  status: 'disponivel' | 'em_uso' | 'manutencao' | 'em_campo';
+  status: 'disponivel' | 'em_uso' | 'manutencao' | 'em_campo' | 'manutencao_externa';
   description: string;
   specs?: string;
   maintenanceReason?: string;
   maintenanceSince?: string;
   assignedTechnician?: string;
+  externalCompany?: string;
+  externalServiceOrder?: string;
+  externalExpectedReturn?: string;
 }
 
 export interface FixedClass {
@@ -242,12 +245,15 @@ export interface ScheduleEvent {
   rawItem: FixedClass | Reservation;
 }
 
+export type MovementType = 'campo' | 'manutencao_externa' | 'transferencia';
+
 export interface EquipmentMovement {
   id: string;
   equipmentId?: string;
   patrimonio: string;
   equipmentName: string;
   labId?: LabId;
+  movementType?: MovementType;
   date: string; // ISO ou YYYY-MM-DDTHH:mm
   originLocation: string;
   destinationLocation: string;
@@ -255,9 +261,14 @@ export interface EquipmentMovement {
   purpose: string;
   generalNotes?: string;
   status: 'em_transito' | 'concluido' | 'remanejado';
+  serviceOrder?: string;
+  companyName?: string;
+  accessories?: string;
+  expectedReturnDate?: string;
   returnDate?: string;
   returnedBy?: string;
   returnNotes?: string;
+  defectResolved?: boolean;
   createdAt: string;
   updatedAt?: string;
 }

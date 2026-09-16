@@ -240,7 +240,9 @@ export function getEquipmentStatusBadge(status: Equipment['status']): { label: s
     case 'em_uso':
       return { label: 'Em Uso', bg: 'bg-blue-50 text-blue-700 border border-blue-200', text: 'text-blue-700' };
     case 'manutencao':
-      return { label: 'Manutenção', bg: 'bg-amber-50 text-amber-700 border border-amber-200', text: 'text-amber-700' };
+      return { label: 'Manutenção Interna', bg: 'bg-amber-50 text-amber-700 border border-amber-200', text: 'text-amber-700' };
+    case 'manutencao_externa':
+      return { label: 'Manutenção Externa', bg: 'bg-rose-50 text-rose-700 border border-rose-200', text: 'text-rose-700' };
     case 'em_campo':
       return { label: 'Em Campo', bg: 'bg-purple-50 text-purple-700 border border-purple-200', text: 'text-purple-700' };
   }

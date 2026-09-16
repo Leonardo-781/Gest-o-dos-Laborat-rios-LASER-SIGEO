@@ -19,11 +19,13 @@ import {
   RotateCcw,
   ShieldCheck,
   Copy,
-  Key
+  Key,
+  Truck
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, formatDateTimeBR } from '../utils/dateHelpers';
 import { Equipment, MaintenanceRequest, SoftwareRequest, MaintenanceStatus, SoftwareRequestStatus } from '../types';
+import { ExternalMaintenanceModal } from './ExternalMaintenanceModal';
 
 export const MaintenanceManagementView: React.FC = () => {
   const { 
@@ -34,7 +36,8 @@ export const MaintenanceManagementView: React.FC = () => {
     updateSoftwareStatus, 
     setEquipmentMaintenance, 
     currentUser,
-    labs
+    labs,
+    canUserManageMovements
   } = useLab();
 
   const [activeTab, setActiveTab] = useState<'maquinas' | 'chamados' | 'softwares'>('maquinas');
@@ -45,6 +48,9 @@ export const MaintenanceManagementView: React.FC = () => {
   const [manualReason, setManualReason] = useState('');
   const [manualTech, setManualTech] = useState(currentUser?.name || 'Técnico Responsável');
 
+  // Modal de Manutenção Externa Integrada
+  const [externalModalEq, setExternalModalEq] = useState<Equipment | null>(null);
+
   // Modal de Resolução de Chamado de Manutenção
   const [resolvingReq, setResolvingReq] = useState<MaintenanceRequest | null>(null);
   const [techNotes, setTechNotes] = useState('');
@@ -53,7 +59,7 @@ export const MaintenanceManagementView: React.FC = () => {
   const [resolvingSoft, setResolvingSoft] = useState<SoftwareRequest | null>(null);
   const [softNotes, setSoftNotes] = useState('');
 
-  const machinesInMaintenance = equipments.filter(e => e.status === 'manutencao');
+  const machinesInMaintenance = equipments.filter(e => e.status === 'manutencao' || e.status === 'manutencao_externa');
   const pendingMaintenanceReports = maintenanceRequests.filter(m => m.status === 'pendente' || m.status === 'em_averiguacao');
   const pendingSoftwareRequests = softwareRequests.filter(s => s.status === 'pendente' || s.status === 'em_analise' || s.status === 'em_instalacao');
 
@@ -240,7 +246,9 @@ export const MaintenanceManagementView: React.FC = () => {
               {machinesInMaintenance.map(eq => (
                 <div 
                   key={eq.id}
-                  className="bg-white p-5 rounded-3xl border-2 border-amber-200 shadow-xs space-y-3 relative overflow-hidden"
+                  className={`bg-white p-5 rounded-3xl border-2 shadow-xs space-y-3 relative overflow-hidden ${
+                    eq.status === 'manutencao_externa' ? 'border-purple-300' : 'border-amber-200'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -264,27 +272,54 @@ export const MaintenanceManagementView: React.FC = () => {
                       <h4 className="text-sm font-bold text-slate-900 mt-1">{eq.name}</h4>
                     </div>
 
-                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-300 flex items-center gap-1">
-                      <Wrench className="w-3 h-3 text-amber-600" />
-                      <span>Em Manutenção</span>
-                    </span>
+                    {eq.status === 'manutencao_externa' ? (
+                      <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300 flex items-center gap-1">
+                        <Truck className="w-3 h-3 text-purple-700" />
+                        <span>Manutenção Externa</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-300 flex items-center gap-1">
+                        <Wrench className="w-3 h-3 text-amber-600" />
+                        <span>Manutenção Interna</span>
+                      </span>
+                    )}
                   </div>
 
-                  <div className="p-3 bg-amber-50/70 rounded-2xl border border-amber-200 text-xs text-amber-950 space-y-1">
+                  <div className={`p-3 rounded-2xl border text-xs space-y-1 ${
+                    eq.status === 'manutencao_externa'
+                      ? 'bg-purple-50/70 border-purple-200 text-purple-950'
+                      : 'bg-amber-50/70 border-amber-200 text-amber-950'
+                  }`}>
+                    {eq.status === 'manutencao_externa' && eq.externalCompany && (
+                      <div className="font-bold text-purple-900">
+                        Assistência / Empresa: {eq.externalCompany}
+                        {eq.externalServiceOrder && <> • O.S.: <span className="font-mono">{eq.externalServiceOrder}</span></>}
+                      </div>
+                    )}
                     <div>
                       <strong>Motivo:</strong> {eq.maintenanceReason || 'Manutenção preventiva e aferição de rotina.'}
                     </div>
-                    <div className="text-[11px] text-amber-800">
+                    <div className="text-[11px] opacity-90">
                       <strong>Técnico Responsável:</strong> {eq.assignedTechnician || 'Corpo Técnico (Sala 1B308)'}
                     </div>
                     {eq.maintenanceSince && (
-                      <div className="text-[10px] text-amber-700">
+                      <div className="text-[10px] opacity-80">
                         Entrada em manutenção: {formatDateTimeBR(eq.maintenanceSince)}
                       </div>
                     )}
                   </div>
 
-                  <div className="pt-2 flex items-center justify-end">
+                  <div className="pt-2 flex items-center justify-end gap-2 flex-wrap">
+                    {canUserManageMovements() && (
+                      <button
+                        onClick={() => setExternalModalEq(eq)}
+                        className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Truck className="w-3.5 h-3.5" />
+                        <span>{eq.status === 'manutencao_externa' ? 'Ver / Editar Envio Externo' : '📦 Enviar p/ Manutenção Externa'}</span>
+                      </button>
+                    )}
+
                     <button
                       onClick={() => {
                         if (confirm(`Concluir manutenção e liberar "${eq.name}" para uso normal?`)) {
@@ -294,7 +329,7 @@ export const MaintenanceManagementView: React.FC = () => {
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>Concluir Reparo & Liberar Máquina</span>
+                      <span>Concluir Reparo & Liberar</span>
                     </button>
                   </div>
                 </div>
@@ -728,6 +763,13 @@ export const MaintenanceManagementView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Manutenção Externa Integrada */}
+      <ExternalMaintenanceModal 
+        isOpen={!!externalModalEq} 
+        onClose={() => setExternalModalEq(null)} 
+        equipment={externalModalEq} 
+      />
 
     </div>
   );

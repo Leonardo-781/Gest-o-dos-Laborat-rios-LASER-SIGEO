@@ -286,15 +286,16 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     )}
                   </button>
 
-                  {/* Painel da Coordenação */}
+                  {/* Painel da Coordenação & Gestão de Usuários */}
                   <button
                     onClick={() => setActiveTab('admin')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer relative whitespace-nowrap ${
                       activeTab === 'admin' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
                     }`}
+                    title="Coordenação Geral, Aprovação de Usuários e Permissões Master"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Coordenação</span>
+                    <span>Coordenação & Usuários</span>
                     {totalPendingCoord > 0 && (
                       <span className="flex h-4 px-1 min-w-[16px] items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
                         {totalPendingCoord}

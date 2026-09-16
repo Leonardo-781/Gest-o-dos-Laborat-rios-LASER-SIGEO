@@ -205,7 +205,16 @@ interface LabContextType {
   addMovement: (data: Omit<EquipmentMovement, 'id' | 'createdAt'>) => { success: boolean; id?: string };
   updateMovement: (id: string, data: Partial<EquipmentMovement>) => { success: boolean };
   deleteMovement: (id: string) => { success: boolean };
-  markMovementReturned: (id: string, returnNotes?: string, returnedBy?: string) => { success: boolean };
+  markMovementReturned: (id: string, returnNotes?: string, returnedBy?: string, defectResolved?: boolean) => { success: boolean };
+  sendEquipmentToExternalMaintenance: (params: {
+    equipmentId: string;
+    companyName: string;
+    serviceOrder?: string;
+    defectDescription: string;
+    expectedReturnDate?: string;
+    accessories?: string;
+    responsibleTechnician?: string;
+  }) => { success: boolean; movementId?: string };
 
   // Ações de Chamados de Manutenção / Averiguação (Aberto a todos)
   createMaintenanceRequest: (data: Omit<MaintenanceRequest, 'id' | 'protocol' | 'status' | 'createdAt' | 'updatedAt'>) => {
@@ -1990,11 +1999,15 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Movimentação registrada de "${newMovement.originLocation}" para "${newMovement.destinationLocation}" por ${newMovement.responsibleTechnician}. Motivação: ${newMovement.purpose}.`
     );
 
-    // Se houver equipamento correspondente no inventário e a movimentação for "em_transito", atualiza status para "em_campo" se aplicável
+    // Se houver equipamento correspondente no inventário e a movimentação for "em_transito", atualiza status de acordo
     if (data.status === 'em_transito' && data.equipmentId) {
       const eqTarget = equipments.find(e => e.id === data.equipmentId);
-      if (eqTarget && eqTarget.status === 'disponivel') {
-        updateEquipmentStatus(eqTarget.id, 'em_campo');
+      if (eqTarget) {
+        if (data.movementType === 'manutencao_externa' || data.destinationLocation?.toLowerCase().includes('manutenção externa')) {
+          updateEquipmentStatus(eqTarget.id, 'manutencao_externa');
+        } else if (eqTarget.status === 'disponivel') {
+          updateEquipmentStatus(eqTarget.id, 'em_campo');
+        }
       }
     }
 
@@ -2076,7 +2089,12 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true };
   };
 
-  const markMovementReturned = (id: string, returnNotes?: string, returnedBy?: string): { success: boolean } => {
+  const markMovementReturned = (
+    id: string, 
+    returnNotes?: string, 
+    returnedBy?: string, 
+    defectResolved: boolean = true
+  ): { success: boolean } => {
     if (!canUserManageMovements()) {
       showToast('Acesso restrito. Apenas técnicos e coordenadores com permissão concedida pelo Master Leonardo Cardoso podem registrar devolução de equipamentos.');
       return { success: false };
@@ -2098,6 +2116,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       returnDate: returnDateStr,
       returnedBy: techName,
       returnNotes: returnNotes?.trim() || 'Devolvido ao laboratório de origem sem avarias registradas.',
+      defectResolved,
       updatedAt: now.toISOString()
     };
 
@@ -2111,11 +2130,32 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       syncDocToFirestore('movimentacoes', updated, firebaseConfig);
     }
 
-    // Se houver equipamento correspondente no inventário que estava em_campo, retorna para disponivel
+    // Se houver equipamento correspondente no inventário, restaura para disponível se liberado
     if (target.equipmentId) {
       const eqTarget = equipments.find(e => e.id === target.equipmentId);
-      if (eqTarget && eqTarget.status === 'em_campo') {
-        updateEquipmentStatus(eqTarget.id, 'disponivel');
+      if (eqTarget) {
+        if (eqTarget.status === 'em_campo' || eqTarget.status === 'manutencao_externa' || (defectResolved && eqTarget.status === 'manutencao')) {
+          const restoredEq: Equipment = {
+            ...eqTarget,
+            status: 'disponivel',
+            maintenanceReason: undefined,
+            maintenanceSince: undefined,
+            assignedTechnician: undefined,
+            externalCompany: undefined,
+            externalServiceOrder: undefined,
+            externalExpectedReturn: undefined
+          };
+
+          setEquipments(prev => {
+            const list = prev.map(e => e.id === eqTarget.id ? restoredEq : e);
+            localStorage.setItem(STORAGE_KEYS.EQUIPMENTS, JSON.stringify(list));
+            return list;
+          });
+
+          if (firebaseConfig.isConnected) {
+            syncDocToFirestore('equipamentos', restoredEq, firebaseConfig);
+          }
+        }
       }
     }
 
@@ -2124,11 +2164,108 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       target.id,
       'movimentacao',
       `${updated.equipmentName} (Pat. ${updated.patrimonio})`,
-      `Devolução confirmada por ${techName}. Notas de retorno: ${updated.returnNotes}`
+      `Devolução confirmada por ${techName}. ${target.movementType === 'manutencao_externa' ? `Retorno de Manutenção Externa (Defeito corrigido: ${defectResolved ? 'SIM' : 'NÃO'}). ` : ''}Notas: ${updated.returnNotes}`
     );
 
     showToast(`Retorno do equipamento Pat. ${updated.patrimonio} registrado com sucesso!`);
     return { success: true };
+  };
+
+  // Enviar Equipamento Diretamente para Manutenção Externa (Fluxo Integrado em 1 Clique)
+  const sendEquipmentToExternalMaintenance = (params: {
+    equipmentId: string;
+    companyName: string;
+    serviceOrder?: string;
+    defectDescription: string;
+    expectedReturnDate?: string;
+    accessories?: string;
+    responsibleTechnician?: string;
+  }): { success: boolean; movementId?: string } => {
+    if (!canUserManageMovements()) {
+      showToast('Apenas técnicos e coordenadores com permissão concedida pelo Master Leonardo podem enviar equipamentos para manutenção externa.');
+      return { success: false };
+    }
+
+    const eqTarget = equipments.find(e => e.id === params.equipmentId);
+    if (!eqTarget) {
+      showToast('Equipamento não encontrado.');
+      return { success: false };
+    }
+
+    const tech = params.responsibleTechnician || currentUser?.name || 'Técnico Responsável';
+    const nowIso = new Date().toISOString();
+
+    // 1. Atualiza o equipamento para status manutencao_externa
+    const updatedEq: Equipment = {
+      ...eqTarget,
+      status: 'manutencao_externa',
+      maintenanceReason: params.defectDescription,
+      maintenanceSince: nowIso,
+      assignedTechnician: tech,
+      externalCompany: params.companyName,
+      externalServiceOrder: params.serviceOrder,
+      externalExpectedReturn: params.expectedReturnDate
+    };
+
+    setEquipments(prev => {
+      const list = prev.map(eq => eq.id === eqTarget.id ? updatedEq : eq);
+      localStorage.setItem(STORAGE_KEYS.EQUIPMENTS, JSON.stringify(list));
+      return list;
+    });
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('equipamentos', updatedEq, firebaseConfig);
+    }
+
+    // 2. Cria a movimentação automática
+    const movId = `mov-${Date.now()}`;
+    const origin = eqTarget.labId === 'ltgeo' ? 'LTGEO - Sala 1B210' : eqTarget.labId === 'laser' ? 'LASER - Sala 1B309' : 'SIGEO - Sala 1B307';
+    const newMovement: EquipmentMovement = {
+      id: movId,
+      equipmentId: eqTarget.id,
+      patrimonio: eqTarget.patrimonio || eqTarget.code,
+      equipmentName: eqTarget.name,
+      labId: eqTarget.labId,
+      movementType: 'manutencao_externa',
+      date: nowIso.slice(0, 16),
+      originLocation: origin,
+      destinationLocation: `Manutenção Externa: ${params.companyName}`,
+      responsibleTechnician: tech,
+      purpose: `Reparo / Calibração Externa: ${params.defectDescription}`,
+      generalNotes: [
+        params.serviceOrder ? `O.S. / Protocolo: ${params.serviceOrder}` : '',
+        params.expectedReturnDate ? `Previsão de Retorno: ${params.expectedReturnDate}` : '',
+        params.accessories ? `Acessórios enviados: ${params.accessories}` : ''
+      ].filter(Boolean).join(' | '),
+      status: 'em_transito',
+      serviceOrder: params.serviceOrder,
+      companyName: params.companyName,
+      accessories: params.accessories,
+      expectedReturnDate: params.expectedReturnDate,
+      createdAt: nowIso
+    };
+
+    setMovements(prev => {
+      const list = [newMovement, ...prev];
+      localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(list));
+      return list;
+    });
+
+    if (firebaseConfig.isConnected) {
+      syncDocToFirestore('movimentacoes', newMovement, firebaseConfig);
+    }
+
+    // 3. Auditoria
+    logAudit(
+      'movimentacao_registrada',
+      newMovement.id,
+      'movimentacao',
+      `${newMovement.equipmentName} (Pat. ${newMovement.patrimonio})`,
+      `Equipamento enviado para Manutenção Externa na empresa ${params.companyName}. O.S.: ${params.serviceOrder || 'N/A'}. Motivo: ${params.defectDescription}. Autorizado por ${tech}.`
+    );
+
+    showToast(`Equipamento Pat. ${newMovement.patrimonio} enviado para Manutenção Externa com sucesso!`);
+    return { success: true, movementId: movId };
   };
 
   // --------------------------------------------------------------------------
@@ -2535,6 +2672,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateMovement,
         deleteMovement,
         markMovementReturned,
+        sendEquipmentToExternalMaintenance,
         createMaintenanceRequest,
         updateMaintenanceStatus,
         createSoftwareRequest,

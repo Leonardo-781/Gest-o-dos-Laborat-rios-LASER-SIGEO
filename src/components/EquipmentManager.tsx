@@ -23,6 +23,7 @@ import {
 import { useLab } from '../context/LabContext';
 import { Equipment, LabId } from '../types';
 import { getEquipmentCategoryLabel, getEquipmentStatusBadge } from '../utils/dateHelpers';
+import { ExternalMaintenanceModal } from './ExternalMaintenanceModal';
 
 export const EquipmentManager: React.FC = () => {
   const { 
@@ -33,7 +34,8 @@ export const EquipmentManager: React.FC = () => {
     deleteEquipment, 
     currentUser, 
     labs, 
-    canUserManageLab 
+    canUserManageLab,
+    canUserManageMovements
   } = useLab();
 
   const [selectedLabFilter, setSelectedLabFilter] = useState<'all' | 'laser' | 'sigeo' | 'ltgeo'>('all');
@@ -42,6 +44,9 @@ export const EquipmentManager: React.FC = () => {
   // Estados do Modal de Criação / Edição
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+
+  // Modal de Manutenção Externa Integrada
+  const [externalModalEq, setExternalModalEq] = useState<Equipment | null>(null);
 
   // Campos do formulário
   const [formData, setFormData] = useState<{
@@ -334,26 +339,63 @@ export const EquipmentManager: React.FC = () => {
                 )}
               </div>
 
+              {/* Informações de Manutenção Externa se ativo */}
+              {eq.status === 'manutencao_externa' && (
+                <div className="mt-2.5 p-3 bg-purple-50 rounded-2xl border border-purple-200 text-xs text-purple-950 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-purple-900">
+                    <Truck className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                    <span>Em Manutenção Externa</span>
+                  </div>
+                  <div className="text-[11px] text-purple-800">
+                    Destino: <strong>{eq.externalCompany || 'Assistência Técnica'}</strong>
+                    {eq.externalServiceOrder && <> • O.S.: <strong>{eq.externalServiceOrder}</strong></>}
+                  </div>
+                  {eq.maintenanceReason && (
+                    <div className="text-[11px] text-purple-700 italic">
+                      Motivo: {eq.maintenanceReason}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Ação de Modificar Status para Técnicos / Coordenação */}
               {canEditStatus ? (
                 canUserManageLab(eq.labId) ? (
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-                    <span className="text-[11px] font-semibold text-slate-400">Alterar Status:</span>
-                    <div className="flex items-center gap-1">
-                      {(['disponivel', 'em_uso', 'em_campo', 'manutencao'] as const).map(st => (
-                        <button
-                          key={st}
-                          onClick={() => updateEquipmentStatus(eq.id, st)}
-                          className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
-                            eq.status === st
-                              ? 'bg-slate-900 text-white shadow'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          {st === 'disponivel' ? 'Livre' : st === 'em_uso' ? 'Em Uso' : st === 'em_campo' ? 'Campo' : 'Manutenção'}
-                        </button>
-                      ))}
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-[11px] font-semibold text-slate-400">Alterar Status:</span>
+                      <div className="flex items-center gap-1">
+                        {(['disponivel', 'em_uso', 'em_campo', 'manutencao'] as const).map(st => (
+                          <button
+                            key={st}
+                            onClick={() => updateEquipmentStatus(eq.id, st)}
+                            className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                              eq.status === st
+                                ? 'bg-slate-900 text-white shadow'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {st === 'disponivel' ? 'Livre' : st === 'em_uso' ? 'Em Uso' : st === 'em_campo' ? 'Campo' : 'Manut. Interna'}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+
+                    {/* Botão de Manutenção Externa com 1 Clique */}
+                    {canUserManageMovements() && (
+                      <button
+                        type="button"
+                        onClick={() => setExternalModalEq(eq)}
+                        className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
+                          eq.status === 'manutencao_externa'
+                            ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-700 shadow-xs'
+                            : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200'
+                        }`}
+                      >
+                        <Truck className="w-3.5 h-3.5" />
+                        <span>{eq.status === 'manutencao_externa' ? 'Ver / Editar Manutenção Externa' : '📦 Enviar p/ Manutenção Externa'}</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-100 italic">
@@ -571,6 +613,13 @@ export const EquipmentManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Manutenção Externa Integrada */}
+      <ExternalMaintenanceModal 
+        isOpen={!!externalModalEq} 
+        onClose={() => setExternalModalEq(null)} 
+        equipment={externalModalEq} 
+      />
 
     </div>
   );

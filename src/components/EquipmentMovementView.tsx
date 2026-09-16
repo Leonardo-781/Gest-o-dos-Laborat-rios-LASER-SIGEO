@@ -23,10 +23,13 @@ import {
   ArrowRight,
   ShieldCheck,
   ShieldAlert,
-  ChevronRight
+  ChevronRight,
+  Truck,
+  Building2,
+  Package
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { EquipmentMovement, LabId } from '../types';
+import { EquipmentMovement, LabId, MovementType } from '../types';
 import { formatDateTimeBR } from '../utils/dateHelpers';
 
 export const EquipmentMovementView: React.FC = () => {
@@ -45,7 +48,7 @@ export const EquipmentMovementView: React.FC = () => {
 
   // Estados de Busca e Filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'todos' | 'em_transito' | 'concluido' | 'remanejado'>('todos');
+  const [statusFilter, setStatusFilter] = useState<'todos' | 'em_transito' | 'manutencao_externa' | 'concluido' | 'remanejado'>('todos');
   const [labFilter, setLabFilter] = useState<'todos' | 'ltgeo' | 'laser' | 'sigeo'>('todos');
 
   // Estados dos Modais
@@ -56,6 +59,7 @@ export const EquipmentMovementView: React.FC = () => {
   const [returnModalMovement, setReturnModalMovement] = useState<EquipmentMovement | null>(null);
   const [returnNotes, setReturnNotes] = useState('');
   const [returnReceiver, setReturnReceiver] = useState('');
+  const [defectResolved, setDefectResolved] = useState(true);
 
   // Formulário Principal
   const [formData, setFormData] = useState<{
@@ -63,6 +67,7 @@ export const EquipmentMovementView: React.FC = () => {
     patrimonio: string;
     equipmentName: string;
     labId?: LabId;
+    movementType: MovementType;
     date: string;
     originLocation: string;
     destinationLocation: string;
@@ -70,12 +75,17 @@ export const EquipmentMovementView: React.FC = () => {
     purpose: string;
     generalNotes: string;
     status: 'em_transito' | 'concluido' | 'remanejado';
+    serviceOrder?: string;
+    companyName?: string;
+    accessories?: string;
+    expectedReturnDate?: string;
     updateEquipStatus: boolean;
   }>({
     equipmentId: '',
     patrimonio: '',
     equipmentName: '',
     labId: 'ltgeo',
+    movementType: 'campo',
     date: new Date().toISOString().slice(0, 16),
     originLocation: 'LTGEO - Sala 1B210',
     destinationLocation: '',
@@ -83,6 +93,10 @@ export const EquipmentMovementView: React.FC = () => {
     purpose: '',
     generalNotes: '',
     status: 'em_transito',
+    serviceOrder: '',
+    companyName: '',
+    accessories: '',
+    expectedReturnDate: '',
     updateEquipStatus: true
   });
 
@@ -90,7 +104,8 @@ export const EquipmentMovementView: React.FC = () => {
 
   // Estatísticas
   const totalMovements = movements.length;
-  const inTransitCount = movements.filter(m => m.status === 'em_transito').length;
+  const inTransitCount = movements.filter(m => m.status === 'em_transito' && m.movementType !== 'manutencao_externa' && !m.destinationLocation.toLowerCase().includes('manutenção externa')).length;
+  const externalMaintenanceCount = movements.filter(m => m.status === 'em_transito' && (m.movementType === 'manutencao_externa' || m.destinationLocation.toLowerCase().includes('manutenção externa'))).length;
   const completedCount = movements.filter(m => m.status === 'concluido').length;
   const relocatedCount = movements.filter(m => m.status === 'remanejado').length;
 
@@ -104,9 +119,20 @@ export const EquipmentMovementView: React.FC = () => {
       m.originLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.destinationLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.purpose.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.companyName && m.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (m.serviceOrder && m.serviceOrder.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (m.generalNotes && m.generalNotes.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesStatus = statusFilter === 'todos' || m.status === statusFilter;
+    const isExt = m.movementType === 'manutencao_externa' || m.destinationLocation.toLowerCase().includes('manutenção externa');
+    const matchesStatus = 
+      statusFilter === 'todos' 
+        ? true 
+        : statusFilter === 'manutencao_externa'
+        ? isExt && m.status === 'em_transito'
+        : statusFilter === 'em_transito'
+        ? m.status === 'em_transito' && !isExt
+        : m.status === statusFilter;
+
     const matchesLab = labFilter === 'todos' || m.labId === labFilter;
 
     return matchesSearch && matchesStatus && matchesLab;
@@ -120,6 +146,7 @@ export const EquipmentMovementView: React.FC = () => {
       patrimonio: '',
       equipmentName: '',
       labId: 'ltgeo',
+      movementType: 'campo',
       date: new Date().toISOString().slice(0, 16),
       originLocation: 'LTGEO - Sala 1B210',
       destinationLocation: '',
@@ -127,6 +154,10 @@ export const EquipmentMovementView: React.FC = () => {
       purpose: '',
       generalNotes: '',
       status: 'em_transito',
+      serviceOrder: '',
+      companyName: '',
+      accessories: '',
+      expectedReturnDate: '',
       updateEquipStatus: true
     });
     setIsModalOpen(true);
@@ -140,6 +171,7 @@ export const EquipmentMovementView: React.FC = () => {
       patrimonio: mov.patrimonio,
       equipmentName: mov.equipmentName,
       labId: mov.labId,
+      movementType: mov.movementType || (mov.destinationLocation.toLowerCase().includes('manutenção externa') ? 'manutencao_externa' : 'campo'),
       date: mov.date,
       originLocation: mov.originLocation,
       destinationLocation: mov.destinationLocation,
@@ -147,6 +179,10 @@ export const EquipmentMovementView: React.FC = () => {
       purpose: mov.purpose,
       generalNotes: mov.generalNotes || '',
       status: mov.status,
+      serviceOrder: mov.serviceOrder || '',
+      companyName: mov.companyName || '',
+      accessories: mov.accessories || '',
+      expectedReturnDate: mov.expectedReturnDate || '',
       updateEquipStatus: false
     });
     setIsModalOpen(true);
@@ -179,7 +215,13 @@ export const EquipmentMovementView: React.FC = () => {
       patrimonio: eq.patrimonio || eq.code,
       equipmentName: eq.name,
       labId: eq.labId,
-      originLocation: defaultOrigin
+      originLocation: defaultOrigin,
+      purpose: eq.status === 'manutencao' || eq.status === 'manutencao_externa' 
+        ? (eq.maintenanceReason ? `Reparo: ${eq.maintenanceReason}` : prev.purpose)
+        : prev.purpose,
+      movementType: eq.status === 'manutencao' || eq.status === 'manutencao_externa'
+        ? 'manutencao_externa'
+        : prev.movementType
     }));
   };
 
@@ -217,19 +259,28 @@ export const EquipmentMovementView: React.FC = () => {
       return;
     }
 
+    const destLoc = formData.movementType === 'manutencao_externa' && formData.companyName
+      ? `Manutenção Externa: ${formData.companyName.trim()}`
+      : formData.destinationLocation.trim();
+
     if (editingMovement) {
       updateMovement(editingMovement.id, {
         equipmentId: formData.equipmentId || undefined,
         patrimonio: formData.patrimonio.trim(),
         equipmentName: formData.equipmentName.trim(),
         labId: formData.labId,
+        movementType: formData.movementType,
         date: formData.date,
         originLocation: formData.originLocation.trim(),
-        destinationLocation: formData.destinationLocation.trim(),
+        destinationLocation: destLoc,
         responsibleTechnician: formData.responsibleTechnician.trim(),
         purpose: formData.purpose.trim(),
         generalNotes: formData.generalNotes.trim() || undefined,
-        status: formData.status
+        status: formData.status,
+        serviceOrder: formData.serviceOrder?.trim() || undefined,
+        companyName: formData.companyName?.trim() || undefined,
+        accessories: formData.accessories?.trim() || undefined,
+        expectedReturnDate: formData.expectedReturnDate || undefined
       });
     } else {
       addMovement({
@@ -237,13 +288,18 @@ export const EquipmentMovementView: React.FC = () => {
         patrimonio: formData.patrimonio.trim(),
         equipmentName: formData.equipmentName.trim(),
         labId: formData.labId,
+        movementType: formData.movementType,
         date: formData.date,
         originLocation: formData.originLocation.trim(),
-        destinationLocation: formData.destinationLocation.trim(),
+        destinationLocation: destLoc,
         responsibleTechnician: formData.responsibleTechnician.trim(),
         purpose: formData.purpose.trim(),
         generalNotes: formData.generalNotes.trim() || undefined,
-        status: formData.status
+        status: formData.status,
+        serviceOrder: formData.serviceOrder?.trim() || undefined,
+        companyName: formData.companyName?.trim() || undefined,
+        accessories: formData.accessories?.trim() || undefined,
+        expectedReturnDate: formData.expectedReturnDate || undefined
       });
     }
 
@@ -258,12 +314,14 @@ export const EquipmentMovementView: React.FC = () => {
     markMovementReturned(
       returnModalMovement.id, 
       returnNotes.trim() || 'Devolvido ao laboratório de origem sem avarias registradas.',
-      returnReceiver.trim() || currentUser?.name || 'Técnico Responsável'
+      returnReceiver.trim() || currentUser?.name || 'Técnico Responsável',
+      defectResolved
     );
 
     setReturnModalMovement(null);
     setReturnNotes('');
     setReturnReceiver('');
+    setDefectResolved(true);
   };
 
   // Exclusão com confirmação
@@ -356,7 +414,7 @@ export const EquipmentMovementView: React.FC = () => {
         </div>
 
         {/* Cards de Resumo & Indicadores Rápidos */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
           <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
             <div>
               <div className="text-[11px] font-semibold text-slate-500">Total de Registros</div>
@@ -367,13 +425,24 @@ export const EquipmentMovementView: React.FC = () => {
 
           <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-semibold text-amber-700">Em Campo / Trânsito</div>
+              <div className="text-[11px] font-semibold text-amber-700">Em Campo / Aulas</div>
               <div className="text-lg font-black text-amber-900 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                 {inTransitCount}
               </div>
             </div>
             <Clock className="w-5 h-5 text-amber-500" />
+          </div>
+
+          <div className="p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-semibold text-purple-700">Manutenção Externa</div>
+              <div className="text-lg font-black text-purple-900 flex items-center gap-1.5">
+                <Truck className="w-4 h-4 text-purple-600" />
+                {externalMaintenanceCount}
+              </div>
+            </div>
+            <Package className="w-5 h-5 text-purple-400" />
           </div>
 
           <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
@@ -427,6 +496,17 @@ export const EquipmentMovementView: React.FC = () => {
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
               <span>Em Campo ({inTransitCount})</span>
+            </button>
+            <button
+              onClick={() => setStatusFilter('manutencao_externa')}
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                statusFilter === 'manutencao_externa' 
+                  ? 'bg-purple-600 text-white shadow-xs' 
+                  : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+              }`}
+            >
+              <Truck className="w-3 h-3 text-purple-600" />
+              <span>Manutenção Externa ({externalMaintenanceCount})</span>
             </button>
             <button
               onClick={() => setStatusFilter('concluido')}
@@ -485,7 +565,9 @@ export const EquipmentMovementView: React.FC = () => {
                 key={mov.id}
                 className={`bg-white rounded-2xl border p-5 shadow-xs transition-all space-y-3.5 ${
                   mov.status === 'em_transito' 
-                    ? 'border-amber-300/80 bg-gradient-to-r from-amber-50/20 via-white to-white hover:border-amber-400' 
+                    ? (mov.movementType === 'manutencao_externa' || mov.destinationLocation.toLowerCase().includes('manutenção externa'))
+                      ? 'border-purple-300/80 bg-gradient-to-r from-purple-50/20 via-white to-white hover:border-purple-400'
+                      : 'border-amber-300/80 bg-gradient-to-r from-amber-50/20 via-white to-white hover:border-amber-400' 
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
@@ -494,10 +576,17 @@ export const EquipmentMovementView: React.FC = () => {
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Status Badge */}
                     {mov.status === 'em_transito' && (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500 text-white flex items-center gap-1.5 shadow-2xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                        <span>Em Campo / Trânsito</span>
-                      </span>
+                      (mov.movementType === 'manutencao_externa' || mov.destinationLocation.toLowerCase().includes('manutenção externa')) ? (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-purple-700 text-white flex items-center gap-1.5 shadow-2xs">
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>Em Manutenção Externa</span>
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500 text-white flex items-center gap-1.5 shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                          <span>Em Campo / Trânsito</span>
+                        </span>
+                      )
                     )}
                     {mov.status === 'concluido' && (
                       <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
@@ -610,6 +699,38 @@ export const EquipmentMovementView: React.FC = () => {
                         <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>
                       </div>
                     </div>
+
+                    {/* Dados Específicos de Manutenção Externa */}
+                    {(mov.companyName || mov.serviceOrder || mov.expectedReturnDate || mov.accessories) && (
+                      <div className="p-3 bg-purple-50/80 border border-purple-200 rounded-xl text-xs text-purple-950 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          {mov.companyName && (
+                            <div>
+                              <span className="text-[10px] font-bold text-purple-700 uppercase block">Assistência / Empresa:</span>
+                              <span className="font-bold text-purple-950">{mov.companyName}</span>
+                            </div>
+                          )}
+                          {mov.serviceOrder && (
+                            <div>
+                              <span className="text-[10px] font-bold text-purple-700 uppercase block">O.S. / Guia:</span>
+                              <span className="font-mono font-bold text-purple-900 bg-white px-2 py-0.5 rounded border border-purple-300">{mov.serviceOrder}</span>
+                            </div>
+                          )}
+                          {mov.expectedReturnDate && (
+                            <div>
+                              <span className="text-[10px] font-bold text-purple-700 uppercase block">Previsão:</span>
+                              <span className="font-medium text-purple-900">{mov.expectedReturnDate.split('-').reverse().join('/')}</span>
+                            </div>
+                          )}
+                        </div>
+                        {mov.accessories && (
+                          <div className="text-[11px] text-purple-900 pt-1 border-t border-purple-200/60">
+                            <span className="font-semibold text-purple-700">Acessórios Enviados: </span>
+                            <span>{mov.accessories}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Técnico, Motivo e Observações */}
@@ -692,6 +813,64 @@ export const EquipmentMovementView: React.FC = () => {
 
             {/* Formulário */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+              {/* Tipo / Finalidade da Movimentação */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Finalidade / Tipo de Movimentação *
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      movementType: 'campo',
+                      destinationLocation: prev.destinationLocation.includes('Manutenção Externa') ? '' : prev.destinationLocation
+                    }))}
+                    className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1 ${
+                      formData.movementType === 'campo'
+                        ? 'bg-blue-50 border-blue-400 text-blue-900 font-bold ring-2 ring-blue-500/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-base">🏕️</span>
+                    <span className="text-xs">Saída de Campo</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      movementType: 'manutencao_externa',
+                      destinationLocation: prev.destinationLocation && prev.destinationLocation.includes('Manutenção Externa') ? prev.destinationLocation : 'Manutenção Externa Autorizada'
+                    }))}
+                    className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1 ${
+                      formData.movementType === 'manutencao_externa'
+                        ? 'bg-purple-50 border-purple-400 text-purple-900 font-bold ring-2 ring-purple-500/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-base">🔧</span>
+                    <span className="text-xs">Manutenção Externa</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      movementType: 'transferencia'
+                    }))}
+                    className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1 ${
+                      formData.movementType === 'transferencia'
+                        ? 'bg-amber-50 border-amber-400 text-amber-900 font-bold ring-2 ring-amber-500/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-base">🔄</span>
+                    <span className="text-xs">Transferência</span>
+                  </button>
+                </div>
+              </div>
               
               {/* Seleção Rápida de Equipamento do Acervo */}
               <div>
@@ -844,6 +1023,86 @@ export const EquipmentMovementView: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Detalhes Específicos para Manutenção Externa */}
+              {formData.movementType === 'manutencao_externa' && (
+                <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-purple-700" />
+                    <span className="text-xs font-bold text-purple-950">Dados da Assistência Técnica & Ordem de Serviço</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-purple-900">
+                          Empresa / Assistência *
+                        </label>
+                        <span className="text-[10px] text-purple-700 font-semibold">Atalhos:</span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Ex: Leica Geosystems, Trimble, DTI..."
+                        value={formData.companyName || ''}
+                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        className="w-full text-xs bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-purple-500"
+                      />
+                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                        {['Leica Geosystems', 'Trimble', 'DTI UFU', 'Topcon'].map(c => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, companyName: c })}
+                            className="px-1.5 py-0.2 text-[9px] bg-white hover:bg-purple-100 text-purple-800 border border-purple-200 rounded transition cursor-pointer"
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-purple-900 mb-1">
+                        Nº da O.S. / Guia de Remessa
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: OS-2026/890 ou NF-e 1243"
+                        value={formData.serviceOrder || ''}
+                        onChange={(e) => setFormData({ ...formData, serviceOrder: e.target.value })}
+                        className="w-full text-xs font-mono font-bold bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-purple-900 mb-1">
+                        Previsão de Retorno Estimada
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.expectedReturnDate || ''}
+                        onChange={(e) => setFormData({ ...formData, expectedReturnDate: e.target.value })}
+                        className="w-full text-xs bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-purple-900 mb-1">
+                        Acessórios Acompanhantes Enviados
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Estojo, 2 baterias, carregador, cabo USB..."
+                        value={formData.accessories || ''}
+                        onChange={(e) => setFormData({ ...formData, accessories: e.target.value })}
+                        className="w-full text-xs bg-white border border-purple-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Motivação de Uso */}
               <div>
@@ -1011,6 +1270,29 @@ export const EquipmentMovementView: React.FC = () => {
                   className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 resize-none"
                 />
               </div>
+
+              {(returnModalMovement.movementType === 'manutencao_externa' || returnModalMovement.destinationLocation.toLowerCase().includes('manutenção externa')) && (
+                <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-xl space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
+                    <span className="text-xs font-bold text-purple-950">Retorno de Manutenção Externa</span>
+                  </div>
+                  <label className="flex items-start gap-2.5 text-xs text-purple-950 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={defectResolved}
+                      onChange={(e) => setDefectResolved(e.target.checked)}
+                      className="w-4 h-4 text-purple-600 rounded mt-0.5"
+                    />
+                    <div>
+                      <span className="font-bold block">Defeito solucionado / Equipamento reparado e testado?</span>
+                      <span className="text-[11px] text-purple-700 block">
+                        Ao confirmar, o equipamento voltará imediatamente ao status <strong>DISPONÍVEL</strong> no inventário do laboratório.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              )}
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
