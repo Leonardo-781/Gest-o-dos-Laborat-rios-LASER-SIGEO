@@ -84,10 +84,10 @@ export const EquipmentMovementView: React.FC = () => {
     equipmentId: '',
     patrimonio: '',
     equipmentName: '',
-    labId: 'ltgeo',
+    labId: 'laser',
     movementType: 'campo',
     date: new Date().toISOString().slice(0, 16),
-    originLocation: 'LTGEO - Sala 1B210',
+    originLocation: 'LASER - Sala 1B309',
     destinationLocation: '',
     responsibleTechnician: currentUser?.name || 'Leonardo Cardoso',
     purpose: '',
@@ -140,15 +140,22 @@ export const EquipmentMovementView: React.FC = () => {
 
   // Abrir Modal de Criação
   const handleOpenCreateModal = () => {
+    const initialLab: LabId = (labFilter !== 'todos' ? labFilter : (currentUser?.assignedLabs?.[0] || 'laser'));
+    const defaultOrigin = initialLab === 'laser' 
+      ? 'LASER - Sala 1B309' 
+      : initialLab === 'sigeo' 
+      ? 'SIGEO - Sala 1B307' 
+      : 'LTGEO - Sala 1B210';
+
     setEditingMovement(null);
     setFormData({
       equipmentId: '',
       patrimonio: '',
       equipmentName: '',
-      labId: 'ltgeo',
+      labId: initialLab,
       movementType: 'campo',
       date: new Date().toISOString().slice(0, 16),
-      originLocation: 'LTGEO - Sala 1B210',
+      originLocation: defaultOrigin,
       destinationLocation: '',
       responsibleTechnician: currentUser?.name || 'Leonardo Cardoso',
       purpose: '',
@@ -170,7 +177,7 @@ export const EquipmentMovementView: React.FC = () => {
       equipmentId: mov.equipmentId || '',
       patrimonio: mov.patrimonio,
       equipmentName: mov.equipmentName,
-      labId: mov.labId,
+      labId: mov.labId || 'laser',
       movementType: mov.movementType || (mov.destinationLocation.toLowerCase().includes('manutenção externa') ? 'manutencao_externa' : 'campo'),
       date: mov.date,
       originLocation: mov.originLocation,
@@ -885,6 +892,86 @@ export const EquipmentMovementView: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Seletor de Laboratório Pertencente */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Laboratório Pertencente *</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      Unidade responsável pelo equipamento
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        labId: 'laser',
+                        originLocation: (!prev.originLocation || prev.originLocation.includes('LTGEO') || prev.originLocation.includes('SIGEO'))
+                          ? 'LASER - Sala 1B309'
+                          : prev.originLocation
+                      }))}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                        formData.labId === 'laser'
+                          ? 'bg-blue-50/90 border-blue-500 text-blue-900 ring-2 ring-blue-500/20 shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                        <span>LAB LASER</span>
+                      </div>
+                      <span className="text-[10px] font-normal text-slate-500">Salas 1B309 / 1B308</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        labId: 'sigeo',
+                        originLocation: (!prev.originLocation || prev.originLocation.includes('LTGEO') || prev.originLocation.includes('LASER'))
+                          ? 'SIGEO - Sala 1B307'
+                          : prev.originLocation
+                      }))}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                        formData.labId === 'sigeo'
+                          ? 'bg-emerald-50/90 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20 shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                        <span>LAB SIGEO</span>
+                      </div>
+                      <span className="text-[10px] font-normal text-slate-500">Sala 1B307</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        labId: 'ltgeo',
+                        originLocation: (!prev.originLocation || prev.originLocation.includes('LASER') || prev.originLocation.includes('SIGEO'))
+                          ? 'LTGEO - Sala 1B210'
+                          : prev.originLocation
+                      }))}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                        formData.labId === 'ltgeo'
+                          ? 'bg-orange-50/90 border-orange-500 text-orange-900 ring-2 ring-orange-500/20 shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-orange-600"></span>
+                        <span>LAB LTGEO</span>
+                      </div>
+                      <span className="text-[10px] font-normal text-slate-500">Sala 1B210</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Seleção do Equipamento */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1009,7 +1096,14 @@ export const EquipmentMovementView: React.FC = () => {
                               <button
                                 key={abbr}
                                 type="button"
-                                onClick={() => setFormData({ ...formData, originLocation: full })}
+                                onClick={() => {
+                                  const inferredLab: LabId | undefined = (abbr === 'LASER' || abbr === '1B308') ? 'laser' : abbr === 'LTGEO' ? 'ltgeo' : abbr === 'SIGEO' ? 'sigeo' : undefined;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    originLocation: full,
+                                    labId: (!prev.equipmentId && inferredLab) ? inferredLab : (prev.labId || inferredLab)
+                                  }));
+                                }}
                                 className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition cursor-pointer"
                               >
                                 {abbr}
@@ -1022,16 +1116,30 @@ export const EquipmentMovementView: React.FC = () => {
                         type="text"
                         list="origin-locations"
                         required
-                        placeholder="Ex: LTGEO - Sala 1B210"
+                        placeholder="Ex: LASER - Sala 1B309"
                         value={formData.originLocation}
-                        onChange={(e) => setFormData({ ...formData, originLocation: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          let inferredLab = formData.labId;
+                          if (!formData.equipmentId) {
+                            const lower = val.toLowerCase();
+                            if (lower.includes('1b308') || lower.includes('laser') || lower.includes('técnico') || lower.includes('tecnico')) {
+                              inferredLab = 'laser';
+                            } else if (lower.includes('1b210') || lower.includes('ltgeo') || lower.includes('topografia')) {
+                              inferredLab = 'ltgeo';
+                            } else if (lower.includes('1b307') || lower.includes('sigeo')) {
+                              inferredLab = 'sigeo';
+                            }
+                          }
+                          setFormData(prev => ({ ...prev, originLocation: val, labId: inferredLab }));
+                        }}
                         className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
                       />
                       <datalist id="origin-locations">
-                        <option value="LTGEO - Sala 1B210" />
                         <option value="LASER - Sala 1B309" />
-                        <option value="SIGEO - Sala 1B307" />
                         <option value="Sala dos Técnicos 1B308" />
+                        <option value="LTGEO - Sala 1B210" />
+                        <option value="SIGEO - Sala 1B307" />
                         <option value="Almoxarifado" />
                       </datalist>
                     </div>
