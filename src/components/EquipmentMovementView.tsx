@@ -22,6 +22,7 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
+  ShieldAlert,
   ChevronRight
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
@@ -38,7 +39,8 @@ export const EquipmentMovementView: React.FC = () => {
     equipments, 
     currentUser, 
     labs, 
-    canUserManageLab 
+    canUserManageLab,
+    canUserManageMovements
   } = useLab();
 
   // Estados de Busca e Filtros
@@ -292,6 +294,24 @@ export const EquipmentMovementView: React.FC = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Verificação de permissão estrita: Apenas Leonardo Master e técnicos/coordenadores autorizados por ele
+  if (!canUserManageMovements()) {
+    return (
+      <div className="bg-white p-12 rounded-3xl border border-slate-200 shadow-xs text-center max-w-2xl mx-auto my-12 space-y-4 animate-fadeIn">
+        <div className="w-16 h-16 rounded-3xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto shadow-2xs">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900">Acesso Restrito: Módulo Interno de Movimentações</h3>
+        <p className="text-xs text-slate-600 leading-relaxed max-w-lg mx-auto">
+          O controle e histórico de saídas de campo, transferências e modificações de máquinas é de <strong>uso estritamente interno</strong>, acessível exclusivamente a técnicos e coordenadores com <strong>autorização concedida pelo Administrador Master Leonardo Cardoso</strong>.
+        </p>
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 font-mono inline-block">
+          Status: Usuário sem permissão ativa ({currentUser ? `${currentUser.name} • ${currentUser.role.toUpperCase()}` : 'Visitante Deslogado'})
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

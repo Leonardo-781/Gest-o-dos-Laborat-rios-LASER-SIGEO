@@ -114,6 +114,7 @@ export const INITIAL_USERS: UserAccount[] = [
       canManageEquipment: true,
       canManageSoftware: true,
       canViewAudit: true,
+      canManageMovements: true,
       assignedLabs: ['laser', 'sigeo', 'ltgeo'],
     },
     createdAt: '2026-01-01T08:00:00Z'

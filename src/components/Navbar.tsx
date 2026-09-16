@@ -39,7 +39,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     emails,
     unreadEmailsCount,
     setIsEmailModalOpen,
-    movements
+    movements,
+    canUserManageMovements
   } = useLab();
 
   const pendingRequests = getPendingRequestsCount();
@@ -247,21 +248,24 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 <span>Equipamentos</span>
               </button>
 
-              {/* 5.1 Movimentações de Máquinas & Equipamentos */}
-              <button
-                onClick={() => setActiveTab('movimentacoes')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
-                  activeTab === 'movimentacoes' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600" />
-                <span>Movimentações</span>
-                {inTransitCount > 0 && (
-                  <span className="flex h-4 px-1.5 min-w-[16px] items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white shadow-2xs">
-                    {inTransitCount}
-                  </span>
-                )}
-              </button>
+              {/* 5.1 Movimentações de Máquinas & Equipamentos (Uso Interno: Apenas Leonardo Master e autorizados) */}
+              {canUserManageMovements() && (
+                <button
+                  onClick={() => setActiveTab('movimentacoes')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
+                    activeTab === 'movimentacoes' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Controle Interno de Movimentações (Permissão Master Ativa)"
+                >
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Movimentações</span>
+                  {inTransitCount > 0 && (
+                    <span className="flex h-4 px-1.5 min-w-[16px] items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white shadow-2xs">
+                      {inTransitCount}
+                    </span>
+                  )}
+                </button>
+              )}
 
               {/* 6. ABAS RESTRITAS EXCLUSIVAS PARA COORDENADORES E TÉCNICOS */}
               {isManager && (

@@ -91,6 +91,7 @@ interface LabContextType {
   activeLabGroup: LabGroupId;
   setActiveLabGroup: (group: LabGroupId) => void;
   canUserManageLab: (labId: LabId) => boolean;
+  canUserManageMovements: () => boolean;
 
   // Autenticação & Usuário Ativo (Inicia SEMPRE deslogado como visitante)
   currentUser: UserAccount | null;
@@ -274,6 +275,14 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return allowed.includes(labId);
     }
     return false;
+  };
+
+  const canUserManageMovements = (): boolean => {
+    if (!currentUser) return false;
+    const isMaster = currentUser.id === 'usr-master' || currentUser.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+    if (isMaster) return true;
+    if (currentUser.role !== 'coordenador' && currentUser.role !== 'tecnico') return false;
+    return currentUser.permissions?.canManageMovements === true;
   };
 
   const [usersList, setUsersList] = useState<UserAccount[]>(() => {
@@ -761,6 +770,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             canManageEquipment: false,
             canManageSoftware: false,
             canViewAudit: false,
+            canManageMovements: false,
             ...u.permissions,
             ...newPermissions,
             assignedLabs: nextLabs
@@ -1949,8 +1959,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // MOVIMENTAÇÕES & MODIFICAÇÕES DE MÁQUINAS / EQUIPAMENTOS
   // --------------------------------------------------------------------------
   const addMovement = (data: Omit<EquipmentMovement, 'id' | 'createdAt'>): { success: boolean; id?: string } => {
-    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas a Coordenação e Técnicos podem registrar movimentações de equipamentos.');
+    if (!canUserManageMovements()) {
+      showToast('Acesso restrito. Apenas técnicos e coordenadores com permissão concedida pelo Master Leonardo Cardoso podem registrar movimentações.');
       return { success: false };
     }
 
@@ -1993,8 +2003,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateMovement = (id: string, updatedData: Partial<EquipmentMovement>): { success: boolean } => {
-    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas a Coordenação e Técnicos podem editar movimentações.');
+    if (!canUserManageMovements()) {
+      showToast('Acesso restrito. Apenas técnicos e coordenadores com permissão concedida pelo Master Leonardo Cardoso podem editar movimentações.');
       return { success: false };
     }
 
@@ -2033,8 +2043,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteMovement = (id: string): { success: boolean } => {
-    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas a Coordenação e Técnicos podem excluir registros de movimentação.');
+    if (!canUserManageMovements()) {
+      showToast('Acesso restrito. Apenas técnicos e coordenadores com permissão concedida pelo Master Leonardo Cardoso podem excluir registros de movimentação.');
       return { success: false };
     }
 
@@ -2067,8 +2077,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const markMovementReturned = (id: string, returnNotes?: string, returnedBy?: string): { success: boolean } => {
-    if (currentUser?.role !== 'coordenador' && currentUser?.role !== 'tecnico') {
-      showToast('Apenas a Coordenação e Técnicos podem registrar o retorno do equipamento.');
+    if (!canUserManageMovements()) {
+      showToast('Acesso restrito. Apenas técnicos e coordenadores com permissão concedida pelo Master Leonardo Cardoso podem registrar devolução de equipamentos.');
       return { success: false };
     }
 
@@ -2451,6 +2461,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeLabGroup,
         setActiveLabGroup,
         canUserManageLab,
+        canUserManageMovements,
         selectedLab,
         setSelectedLab,
         referenceDate,

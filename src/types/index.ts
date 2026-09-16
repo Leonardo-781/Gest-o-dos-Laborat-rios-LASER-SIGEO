@@ -42,6 +42,7 @@ export interface UserPermissions {
   canManageEquipment?: boolean;
   canManageSoftware?: boolean;
   canViewAudit?: boolean;
+  canManageMovements?: boolean; // Permissão concedida pelo Master para visualizar e gerenciar movimentações internas
   assignedLabs?: LabId[]; // Laboratórios que o técnico tem permissão para gerenciar
 }
 
