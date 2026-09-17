@@ -283,6 +283,8 @@ export type AuditActionType =
   | 'aula_removida'
   | 'usuario_aprovado'
   | 'usuario_recusado'
+  | 'usuario_alterado'
+  | 'usuario_removido'
   | 'pdf_importado'
   | 'equipamento_criado'
   | 'equipamento_alterado'

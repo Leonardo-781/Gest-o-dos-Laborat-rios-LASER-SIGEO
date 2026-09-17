@@ -32,10 +32,13 @@ import {
   Key,
   Repeat,
   Building2,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Unlock,
+  Search,
+  ShieldAlert
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
-import { LabId, FixedClass, FirebaseConfig, UserPermissions, UserAccount } from '../types';
+import { LabId, FixedClass, FirebaseConfig, UserPermissions, UserAccount, UserRole } from '../types';
 import { formatDateBR, formatDateTimeBR, getPurposeBadge } from '../utils/dateHelpers';
 import { testSupabaseConnection } from '../services/supabaseClient';
 import { testFirebaseConnection } from '../services/firebaseClient';
@@ -57,6 +60,8 @@ export const AdminPanel: React.FC = () => {
     approveUserAccount,
     rejectUserAccount,
     updateUserPermissions,
+    updateUserAccount,
+    deleteUserAccount,
     labs,
     equipments,
     currentUser,
@@ -127,6 +132,127 @@ export const AdminPanel: React.FC = () => {
       nextLabs = [...currentLabs, labId];
     }
     setPendingLabsMap(prev => ({ ...prev, [userId]: nextLabs }));
+  };
+
+  // Estados para Gestão Completa de Usuários pelo Master
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'todos' | UserRole>('todos');
+  const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
+  const [userFormData, setUserFormData] = useState<{
+    name: string;
+    email: string;
+    documentId: string;
+    department: string;
+    role: UserRole;
+    roleTitle: string;
+    status: 'ativo' | 'bloqueado' | 'pendente';
+    assignedLabs: LabId[];
+    permissions: UserPermissions;
+  }>({
+    name: '',
+    email: '',
+    documentId: '',
+    department: '',
+    role: 'aluno',
+    roleTitle: '',
+    status: 'ativo',
+    assignedLabs: ['laser', 'sigeo'],
+    permissions: {
+      canManageMovements: false,
+      canApproveBookings: false,
+      canManageEquipment: false,
+      canManageSoftware: false,
+      canViewAudit: false,
+      canViewEmails: false,
+      canManageTechnicians: false,
+    }
+  });
+
+  const filteredUsers = (usersList || []).filter((u: UserAccount) => {
+    const matchesSearch =
+      !userSearchTerm ||
+      u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      u.documentId.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      Boolean(u.roleTitle && u.roleTitle.toLowerCase().includes(userSearchTerm.toLowerCase()));
+
+    const matchesRole = userRoleFilter === 'todos' || u.role === userRoleFilter;
+
+    return matchesSearch && matchesRole;
+  });
+
+  const handleOpenUserModal = (u: UserAccount) => {
+    setEditingUser(u);
+    setUserFormData({
+      name: u.name,
+      email: u.email,
+      documentId: u.documentId,
+      department: u.department || '',
+      role: u.role,
+      roleTitle: u.roleTitle || '',
+      status: u.status,
+      assignedLabs: u.assignedLabs || (u.role === 'tecnico' ? ['laser', 'sigeo'] : []),
+      permissions: {
+        canManageMovements: u.permissions?.canManageMovements ?? (u.role === 'tecnico' && u.id === 'usr-master'),
+        canApproveBookings: u.permissions?.canApproveBookings ?? (u.role === 'tecnico' || u.role === 'coordenador'),
+        canManageEquipment: u.permissions?.canManageEquipment ?? (u.role === 'tecnico' || u.role === 'coordenador'),
+        canManageSoftware: u.permissions?.canManageSoftware ?? (u.role === 'tecnico' || u.role === 'coordenador'),
+        canViewAudit: u.permissions?.canViewAudit ?? (u.id === 'usr-master'),
+        canViewEmails: u.permissions?.canViewEmails ?? (u.id === 'usr-master'),
+        canManageTechnicians: u.permissions?.canManageTechnicians ?? (u.id === 'usr-master'),
+      }
+    });
+  };
+
+  const handleSaveUserModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    if (!userFormData.name.trim()) {
+      showToast('O nome do usuário é obrigatório.');
+      return;
+    }
+
+    if (!userFormData.email.trim()) {
+      showToast('O e-mail do usuário é obrigatório.');
+      return;
+    }
+
+    updateUserAccount(editingUser.id, {
+      name: userFormData.name.trim(),
+      email: userFormData.email.trim().toLowerCase(),
+      documentId: userFormData.documentId.trim(),
+      department: userFormData.department.trim(),
+      role: userFormData.role,
+      roleTitle: userFormData.roleTitle.trim() || undefined,
+      status: userFormData.status,
+      assignedLabs: userFormData.assignedLabs,
+      permissions: {
+        ...userFormData.permissions,
+        assignedLabs: userFormData.assignedLabs
+      }
+    });
+
+    setEditingUser(null);
+  };
+
+  const handleQuickToggleStatus = (u: UserAccount) => {
+    if (u.id === 'usr-master' || u.id === currentUser?.id) {
+      showToast('Não é possível bloquear a própria conta de Administrador Master.');
+      return;
+    }
+    const nextStatus = u.status === 'ativo' ? 'bloqueado' : 'ativo';
+    updateUserAccount(u.id, { status: nextStatus });
+  };
+
+  const handleDeleteUserClick = (u: UserAccount) => {
+    if (u.id === 'usr-master' || u.id === currentUser?.id) {
+      showToast('A conta do Administrador Master não pode ser excluída.');
+      return;
+    }
+    if (window.confirm(`Tem certeza que deseja remover o usuário "${u.name}" (${u.email}) do sistema? Esta ação é irreversível.`)) {
+      deleteUserAccount(u.id);
+    }
   };
 
   const handleConfirmReject = (e: React.FormEvent) => {
@@ -602,35 +728,64 @@ export const AdminPanel: React.FC = () => {
 
       {/* 3. ABA: GESTÃO DE USUÁRIOS E APROVAÇÃO DE CADASTROS */}
       {activeAdminTab === 'usuarios' && (
-        <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              <span>Controle de Contas e Confirmação de Acessos</span>
-            </h4>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Gerencie quem tem permissão para solicitar ou aprovar reservas no sistema.
-            </p>
+        <div className="space-y-5">
+          {/* Banner Superior de Governança do Master Leonardo */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 p-5 sm:p-6 rounded-3xl border border-slate-700 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="p-3 bg-amber-500 text-slate-950 rounded-2xl font-black shadow-md shrink-0">
+                <Crown className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-base sm:text-lg font-bold">Gestão de Usuários & Controle de Permissões</h4>
+                  <span className="px-2.5 py-0.5 bg-amber-400 text-slate-950 text-[10px] font-black rounded-full uppercase tracking-wider">
+                    {isMaster ? 'Modo Master Leonardo Cardoso' : 'Acesso de Gestão'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                  <strong>Política de Acesso Institucional:</strong> Alunos e Professores possuem acesso padrão restrito a reservas e consultas. 
+                  Como Técnico Master, você define a quais laboratórios cada técnico pertence e quais permissões de movimentações, equipamentos e horários cada um pode operar.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
+              <div className="bg-white/10 backdrop-blur-xs border border-white/10 px-3.5 py-2 rounded-2xl text-center">
+                <span className="text-[10px] text-slate-300 block uppercase font-bold">Cadastros</span>
+                <span className="text-base font-black text-amber-300">{usersList.length} usuários</span>
+              </div>
+              {pendingUsers.length > 0 && (
+                <div className="bg-amber-500/20 border border-amber-400/40 px-3.5 py-2 rounded-2xl text-center animate-pulse">
+                  <span className="text-[10px] text-amber-200 block uppercase font-bold">Pendentes</span>
+                  <span className="text-base font-black text-amber-300">{pendingUsers.length} aguardando</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Usuários Pendentes de Confirmação */}
-          {pendingUsers.length > 0 && (
-            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span>Cadastros Aguardando Confirmação ({pendingUsers.length}):</span>
+          {pendingUsers.length > 0 ? (
+            <div className="bg-amber-50/70 border border-amber-200 rounded-3xl p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <span>Cadastros Aguardando Confirmação do Master ({pendingUsers.length}):</span>
+                </div>
+                <span className="text-[11px] text-amber-800">
+                  Defina os laboratórios autorizados antes de aprovar
+                </span>
               </div>
 
-              <div className="divide-y divide-amber-200/60 bg-white rounded-xl border border-amber-200 overflow-hidden">
+              <div className="divide-y divide-amber-200/60 bg-white rounded-2xl border border-amber-200 overflow-hidden shadow-2xs">
                 {pendingUsers.map(u => {
-                  const isTech = u.role === 'tecnico';
+                  const isTech = u.role === 'tecnico' || u.role === 'coordenador';
                   const selectedLabs = isTech ? getSelectedLabsForPending(u) : [];
 
                   return (
                     <div key={u.id} className="p-4 space-y-3 text-xs">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-slate-900 text-sm">{u.name}</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                               u.role === 'coordenador' 
@@ -641,9 +796,12 @@ export const AdminPanel: React.FC = () => {
                             }`}>
                               {u.role === 'tecnico' ? 'Técnico de Laboratório' : u.role}
                             </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
+                              Aguardando Master
+                            </span>
                           </div>
                           <div className="text-[11px] text-slate-500 mt-0.5">
-                            {u.email} • Matrícula/SIAPE: {u.documentId}
+                            {u.email} • Matrícula/SIAPE: <strong className="text-slate-700 font-mono">{u.documentId}</strong> {u.department && `• ${u.department}`}
                           </div>
                         </div>
 
@@ -654,6 +812,13 @@ export const AdminPanel: React.FC = () => {
                             className="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-xl font-bold hover:bg-rose-100 transition cursor-pointer border border-rose-200 flex items-center gap-1.5"
                           >
                             <UserX className="w-3.5 h-3.5" /> Recusar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenUserModal(u)}
+                            className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition cursor-pointer border border-blue-200 flex items-center gap-1.5"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" /> Personalizar
                           </button>
                           <button
                             type="button"
@@ -683,7 +848,7 @@ export const AdminPanel: React.FC = () => {
                               const isGranted = selectedLabs.includes(labId);
                               const wasRequested = u.requestedLabs ? u.requestedLabs.includes(labId) : false;
                               const labInfo = {
-                                laser: { name: 'LASER', room: '1B309', activeBg: 'bg-blue-600 border-blue-700 text-white' },
+                                laser: { name: 'LASER', room: '1B309 & 1B308', activeBg: 'bg-blue-600 border-blue-700 text-white' },
                                 sigeo: { name: 'SIGEO', room: '1B307', activeBg: 'bg-emerald-600 border-emerald-700 text-white' },
                                 ltgeo: { name: 'LTGEO', room: '1B210', activeBg: 'bg-orange-600 border-orange-700 text-white' },
                               }[labId];
@@ -736,68 +901,237 @@ export const AdminPanel: React.FC = () => {
                 })}
               </div>
             </div>
+          ) : (
+            <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-emerald-900">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <div>
+                  <span className="font-bold block">Todos os cadastros estão validados</span>
+                  <span className="text-emerald-700 text-[11px]">Nenhuma solicitação de conta pendente no momento. Novos cadastros como Técnico ou Coordenador aguardarão sua aprovação aqui.</span>
+                </div>
+              </div>
+            </div>
           )}
 
-          {/* Lista de Contas Ativas */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="p-3.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-700">
-              Usuários Registrados no Sistema ({usersList.length})
+          {/* Lista de Usuários Cadastrados */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden space-y-0">
+            {/* Header da Tabela com Filtros e Busca */}
+            <div className="p-4 sm:p-5 bg-slate-50/80 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <span>Usuários Registrados no Sistema ({usersList.length})</span>
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Gerencie cargos, ative/bloqueie acessos e personalize permissões individualmente
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Campo de Busca */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar nome, e-mail..."
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 sm:w-52"
+                  />
+                  {userSearchTerm && (
+                    <button
+                      onClick={() => setUserSearchTerm('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtro de Papel */}
+                <div className="flex items-center bg-white border border-slate-300 rounded-xl p-0.5 text-[11px] font-bold text-slate-600">
+                  {(['todos', 'tecnico', 'coordenador', 'professor', 'aluno'] as const).map(roleOption => (
+                    <button
+                      key={roleOption}
+                      onClick={() => setUserRoleFilter(roleOption)}
+                      className={`px-2 py-1 rounded-lg transition capitalize cursor-pointer ${
+                        userRoleFilter === roleOption ? 'bg-slate-900 text-white shadow-2xs' : 'hover:text-slate-900'
+                      }`}
+                    >
+                      {roleOption === 'todos' ? 'Todos' : roleOption}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             
+            {/* Lista com Ações Interativas */}
             <div className="divide-y divide-slate-100 text-xs">
-              {usersList.map(u => (
-                <div key={u.id} className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs">
-                      {u.avatarInitials || u.name[0]}
-                    </div>
-                    <div>
-                      <span className="font-bold text-slate-900 block">{u.name}</span>
-                      <span className="text-[11px] text-slate-500 block">{u.email} • {u.documentId}</span>
-                      {u.role === 'tecnico' && (
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-[10px] text-slate-400 font-medium">Laboratórios:</span>
-                          {(u.assignedLabs && u.assignedLabs.length > 0 ? u.assignedLabs : ['laser', 'sigeo']).map(l => (
-                            <span 
-                              key={l} 
-                              className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
-                                l === 'laser' ? 'bg-blue-100 text-blue-800' :
-                                l === 'sigeo' ? 'bg-emerald-100 text-emerald-800' :
-                                'bg-orange-100 text-orange-800'
-                              }`}
-                            >
-                              {l}
+              {filteredUsers.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 space-y-1">
+                  <Users className="w-8 h-8 mx-auto text-slate-300" />
+                  <p className="font-bold text-xs">Nenhum usuário encontrado com os filtros atuais.</p>
+                </div>
+              ) : (
+                filteredUsers.map(u => (
+                  <div key={u.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/80 transition-all">
+                    <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                      <div className={`w-10 h-10 rounded-2xl font-bold flex items-center justify-center text-xs shrink-0 shadow-xs ${
+                        u.id === 'usr-master' || u.email.toLowerCase() === 'leonardo.cardoso@ufu.br'
+                          ? 'bg-gradient-to-tr from-amber-500 to-amber-600 text-slate-950 ring-2 ring-amber-400/50'
+                          : u.role === 'coordenador'
+                          ? 'bg-emerald-600 text-white'
+                          : u.role === 'tecnico'
+                          ? 'bg-blue-600 text-white'
+                          : u.role === 'professor'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-slate-700 text-white'
+                      }`}>
+                        {u.id === 'usr-master' || u.email.toLowerCase() === 'leonardo.cardoso@ufu.br' ? (
+                          <Crown className="w-5 h-5 text-slate-950" />
+                        ) : (
+                          u.avatarInitials || u.name[0]
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-slate-900 text-sm">{u.name}</span>
+                          {u.roleTitle && (
+                            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                              {u.roleTitle}
                             </span>
-                          ))}
+                          )}
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
+                            u.role === 'coordenador' 
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                              : u.role === 'tecnico'
+                              ? 'bg-blue-50 text-blue-800 border-blue-200'
+                              : u.role === 'professor'
+                              ? 'bg-purple-50 text-purple-800 border-purple-200'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            {u.role}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                            u.status === 'ativo' 
+                              ? 'bg-emerald-100 text-emerald-800' 
+                              : u.status === 'bloqueado'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {u.status}
+                          </span>
                         </div>
+
+                        <div className="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+                          <span>{u.email}</span>
+                          <span>•</span>
+                          <span className="font-mono text-slate-600">Doc: {u.documentId}</span>
+                          {u.department && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-xs">{u.department}</span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Laboratórios Concedidos e Permissões Ativas */}
+                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                          {(u.role === 'tecnico' || u.role === 'coordenador') && (
+                            <div className="flex items-center gap-1 mr-1">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Labs:</span>
+                              {(u.assignedLabs && u.assignedLabs.length > 0 ? u.assignedLabs : (['laser', 'sigeo'] as LabId[])).map((l: LabId) => (
+                                <span 
+                                  key={l} 
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${
+                                    l === 'laser' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                    l === 'sigeo' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                    'bg-orange-100 text-orange-800 border-orange-200'
+                                  }`}
+                                >
+                                  {l}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Badges de Privilégios Concedidos */}
+                          {u.permissions?.canManageMovements && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200" title="Permissão concedida pelo Master para gerenciar movimentações internas">
+                              <ArrowLeftRight className="w-2.5 h-2.5" /> Movimentações
+                            </span>
+                          )}
+                          {u.permissions?.canApproveBookings && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Permissão para aprovar e recusar agendamentos">
+                              <Calendar className="w-2.5 h-2.5" /> Aprovações
+                            </span>
+                          )}
+                          {u.permissions?.canManageEquipment && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200" title="Permissão para gerenciar patrimônio e equipamentos">
+                              <Cpu className="w-2.5 h-2.5" /> Máquinas
+                            </span>
+                          )}
+                          {u.permissions?.canManageSoftware && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Permissão para homologar softwares">
+                              <Layers className="w-2.5 h-2.5" /> Softwares
+                            </span>
+                          )}
+                          {u.permissions?.canViewAudit && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="Permissão para inspecionar auditoria">
+                              <ShieldCheck className="w-2.5 h-2.5" /> Auditoria
+                            </span>
+                          )}
+                          {u.permissions?.canViewEmails && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200" title="Permissão para ver e-mails">
+                              <Mail className="w-2.5 h-2.5" /> E-mails
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ações do Master Leonardo */}
+                    <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUserModal(u)}
+                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        title="Editar dados cadastrais, cargo, laboratórios e permissões"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Gerenciar & Permissões</span>
+                      </button>
+
+                      {u.id !== 'usr-master' && u.email.toLowerCase() !== 'leonardo.cardoso@ufu.br' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickToggleStatus(u)}
+                            className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                              u.status === 'ativo'
+                                ? 'bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border-slate-200 hover:border-rose-200'
+                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                            }`}
+                            title={u.status === 'ativo' ? 'Bloquear / Suspender acesso desta conta' : 'Reativar conta bloqueada'}
+                          >
+                            {u.status === 'ativo' ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUserClick(u)}
+                            className="p-2 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 border border-slate-200 hover:border-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                            title="Excluir conta permanentemente"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    {u.permissions?.canManageMovements && (
-                      <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
-                        <ArrowLeftRight className="w-2.5 h-2.5" /> Movimentações ✓
-                      </span>
-                    )}
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      u.role === 'coordenador' 
-                        ? 'bg-emerald-100 text-emerald-800' 
-                        : u.role === 'tecnico'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {u.role}
-                    </span>
-
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      u.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                    }`}>
-                      {u.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1557,6 +1891,477 @@ export const AdminPanel: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* MODAL DE GESTÃO COMPLETA DE USUÁRIO (EXCLUSIVO MASTER LEONARDO) */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden my-auto animate-scale-in">
+            {/* Header */}
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500 text-slate-950 rounded-2xl font-black shadow-xs">
+                  <Crown className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>Gerenciar Conta & Permissões</span>
+                    <span className="text-xs font-normal text-slate-400">({editingUser.name})</span>
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    Defina o papel no SILAB, laboratórios autorizados e matriz de privilégios operacionais
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSaveUserModal} className="flex flex-col flex-1 min-h-0">
+              <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5">
+                
+                {/* 1. Papel no SILAB */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Papel / Cargo no Sistema *
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'aluno', label: 'Aluno', icon: '🎓', desc: 'Acesso restrito a reservas' },
+                      { id: 'professor', label: 'Professor', icon: '👨‍🏫', desc: 'Aulas e projetos' },
+                      { id: 'tecnico', label: 'Técnico', icon: '🛠️', desc: 'Gestão operacional' },
+                      { id: 'coordenador', label: 'Coordenador', icon: '📋', desc: 'Coordenação total' },
+                    ].map(roleItem => (
+                      <button
+                        key={roleItem.id}
+                        type="button"
+                        onClick={() => setUserFormData(prev => ({
+                          ...prev,
+                          role: roleItem.id as UserRole,
+                          permissions: (roleItem.id === 'aluno' || roleItem.id === 'professor')
+                            ? {
+                                canManageMovements: false,
+                                canApproveBookings: false,
+                                canManageEquipment: false,
+                                canManageSoftware: false,
+                                canViewAudit: false,
+                                canViewEmails: false,
+                                canManageTechnicians: false
+                              }
+                            : prev.permissions
+                        }))}
+                        className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                          userFormData.role === roleItem.id
+                            ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500/20 text-blue-950 font-bold shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-base">{roleItem.icon}</span>
+                          <span className="text-xs">{roleItem.label}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-normal leading-tight">
+                          {roleItem.desc}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {(userFormData.role === 'aluno' || userFormData.role === 'professor') && (
+                    <p className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      ℹ️ <strong>Acesso Limitado:</strong> Alunos e Professores possuem acesso padrão restrito a consultar a grade e solicitar agendamentos de bancadas/aulas. Funções de administração são reservadas a Técnicos e Coordenadores autorizados pelo Master.
+                    </p>
+                  )}
+                </div>
+
+                {/* 2. Dados Cadastrais */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Nome Completo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={userFormData.name}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      E-mail Institucional (@ufu.br) *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={userFormData.email}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Matrícula / SIAPE
+                    </label>
+                    <input
+                      type="text"
+                      value={userFormData.documentId}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, documentId: e.target.value }))}
+                      className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Título da Função / Descrição
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Técnico Especialista LASER/SIGEO"
+                      value={userFormData.roleTitle}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, roleTitle: e.target.value }))}
+                      className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Departamento / Unidade Acadêmica
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Engenharia de Agrimensura e Cartografia (UFU)"
+                      value={userFormData.department}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, department: e.target.value }))}
+                      className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Status da Conta */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Status da Conta no Sistema *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'ativo', label: 'Ativo (Liberado)', color: 'bg-emerald-50 text-emerald-800 border-emerald-400' },
+                      { id: 'bloqueado', label: 'Bloqueado / Suspenso', color: 'bg-rose-50 text-rose-800 border-rose-400' },
+                      { id: 'pendente', label: 'Pendente de Aprovação', color: 'bg-amber-50 text-amber-800 border-amber-400' },
+                    ].map(st => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => setUserFormData(prev => ({ ...prev, status: st.id as any }))}
+                        className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          userFormData.status === st.id
+                            ? `${st.color} ring-2 ring-blue-500/20 shadow-xs font-black`
+                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>{st.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Jurisdição de Laboratórios */}
+                {(userFormData.role === 'tecnico' || userFormData.role === 'coordenador') && (
+                  <div className="space-y-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-blue-600" />
+                        <span>Jurisdição de Laboratórios Autorizados:</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400">Pelo menos 1 laboratório deve ser marcado</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                      {[
+                        { id: 'laser', name: 'LASER', room: '1B309 & 1B308', activeBg: 'bg-blue-50 border-blue-400 text-blue-950' },
+                        { id: 'sigeo', name: 'SIGEO', room: '1B307', activeBg: 'bg-emerald-50 border-emerald-400 text-emerald-950' },
+                        { id: 'ltgeo', name: 'LTGEO', room: '1B210', activeBg: 'bg-orange-50 border-orange-400 text-orange-950' },
+                      ].map(labItem => {
+                        const isChecked = userFormData.assignedLabs.includes(labItem.id as LabId);
+                        return (
+                          <button
+                            key={labItem.id}
+                            type="button"
+                            onClick={() => {
+                              const current = userFormData.assignedLabs;
+                              const next = isChecked
+                                ? current.filter(l => l !== labItem.id)
+                                : [...current, labItem.id as LabId];
+                              if (next.length === 0) {
+                                showToast('O usuário precisa ter jurisdição em ao menos um laboratório.');
+                                return;
+                              }
+                              setUserFormData(prev => ({ ...prev, assignedLabs: next }));
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between cursor-pointer ${
+                              isChecked
+                                ? `${labItem.activeBg} ring-2 ring-blue-500/20 font-bold shadow-xs`
+                                : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                            }`}
+                          >
+                            <div>
+                              <div className="text-xs font-bold">{labItem.name}</div>
+                              <div className="text-[10px] opacity-75 font-normal">{labItem.room}</div>
+                            </div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-black uppercase ${
+                              isChecked ? 'bg-white text-slate-900 border border-slate-200' : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {isChecked ? 'Autorizado ✓' : 'Inativo'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Matriz Modular de Permissões */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-amber-600" />
+                      <span>Matriz de Permissões Granulares (Definidas pelo Master):</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Ative ou desative conforme a confiança e função</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {/* Movimentações */}
+                    <button
+                      type="button"
+                      onClick={() => setUserFormData(prev => ({
+                        ...prev,
+                        permissions: { ...prev.permissions, canManageMovements: !prev.permissions.canManageMovements }
+                      }))}
+                      className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 cursor-pointer ${
+                        userFormData.permissions.canManageMovements
+                          ? 'bg-blue-50/80 border-blue-300 ring-2 ring-blue-500/20 text-blue-950'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
+                        userFormData.permissions.canManageMovements ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        <ArrowLeftRight className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold flex items-center justify-between">
+                          <span>Movimentações de Equipamentos</span>
+                          <span className={`text-[10px] font-black uppercase ${
+                            userFormData.permissions.canManageMovements ? 'text-blue-700' : 'text-slate-400'
+                          }`}>
+                            {userFormData.permissions.canManageMovements ? 'Liberado ✓' : 'Bloqueado'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                          Permite ver, cadastrar e registrar saídas a campo e manutenções externas.
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Aprovação de Reservas */}
+                    <button
+                      type="button"
+                      onClick={() => setUserFormData(prev => ({
+                        ...prev,
+                        permissions: { ...prev.permissions, canApproveBookings: !prev.permissions.canApproveBookings }
+                      }))}
+                      className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 cursor-pointer ${
+                        userFormData.permissions.canApproveBookings
+                          ? 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500/20 text-emerald-950'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
+                        userFormData.permissions.canApproveBookings ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold flex items-center justify-between">
+                          <span>Aprovar / Recusar Horários</span>
+                          <span className={`text-[10px] font-black uppercase ${
+                            userFormData.permissions.canApproveBookings ? 'text-emerald-700' : 'text-slate-400'
+                          }`}>
+                            {userFormData.permissions.canApproveBookings ? 'Liberado ✓' : 'Bloqueado'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                          Permite aceitar ou indeferir pedidos de reserva na fila dos laboratórios.
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Gestão de Máquinas */}
+                    <button
+                      type="button"
+                      onClick={() => setUserFormData(prev => ({
+                        ...prev,
+                        permissions: { ...prev.permissions, canManageEquipment: !prev.permissions.canManageEquipment }
+                      }))}
+                      className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 cursor-pointer ${
+                        userFormData.permissions.canManageEquipment
+                          ? 'bg-purple-50/80 border-purple-300 ring-2 ring-purple-500/20 text-purple-950'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
+                        userFormData.permissions.canManageEquipment ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        <Cpu className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold flex items-center justify-between">
+                          <span>Gestão de Máquinas & Acervo</span>
+                          <span className={`text-[10px] font-black uppercase ${
+                            userFormData.permissions.canManageEquipment ? 'text-purple-700' : 'text-slate-400'
+                          }`}>
+                            {userFormData.permissions.canManageEquipment ? 'Liberado ✓' : 'Bloqueado'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                          Permite criar novos equipamentos, editar patrimônio e alterar estados.
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Homologar Softwares */}
+                    <button
+                      type="button"
+                      onClick={() => setUserFormData(prev => ({
+                        ...prev,
+                        permissions: { ...prev.permissions, canManageSoftware: !prev.permissions.canManageSoftware }
+                      }))}
+                      className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 cursor-pointer ${
+                        userFormData.permissions.canManageSoftware
+                          ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-500/20 text-indigo-950'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
+                        userFormData.permissions.canManageSoftware ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        <Layers className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold flex items-center justify-between">
+                          <span>Homologação de Softwares</span>
+                          <span className={`text-[10px] font-black uppercase ${
+                            userFormData.permissions.canManageSoftware ? 'text-indigo-700' : 'text-slate-400'
+                          }`}>
+                            {userFormData.permissions.canManageSoftware ? 'Liberado ✓' : 'Bloqueado'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                          Permite registrar programas solicitados por docentes e discentes.
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Trilha de Auditoria */}
+                    <button
+                      type="button"
+                      onClick={() => setUserFormData(prev => ({
+                        ...prev,
+                        permissions: { ...prev.permissions, canViewAudit: !prev.permissions.canViewAudit }
+                      }))}
+                      className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 cursor-pointer ${
+                        userFormData.permissions.canViewAudit
+                          ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-500/20 text-amber-950'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
+                        userFormData.permissions.canViewAudit ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold flex items-center justify-between">
+                          <span>Trilha de Auditoria</span>
+                          <span className={`text-[10px] font-black uppercase ${
+                            userFormData.permissions.canViewAudit ? 'text-amber-700' : 'text-slate-400'
+                          }`}>
+                            {userFormData.permissions.canViewAudit ? 'Liberado ✓' : 'Bloqueado'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                          Permite inspecionar logs de ações administrativas de todos os usuários.
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Central de E-mails */}
+                    <button
+                      type="button"
+                      onClick={() => setUserFormData(prev => ({
+                        ...prev,
+                        permissions: { ...prev.permissions, canViewEmails: !prev.permissions.canViewEmails }
+                      }))}
+                      className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 cursor-pointer ${
+                        userFormData.permissions.canViewEmails
+                          ? 'bg-cyan-50/80 border-cyan-300 ring-2 ring-cyan-500/20 text-cyan-950'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
+                        userFormData.permissions.canViewEmails ? 'bg-cyan-600 text-white' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold flex items-center justify-between">
+                          <span>Central de E-mails</span>
+                          <span className={`text-[10px] font-black uppercase ${
+                            userFormData.permissions.canViewEmails ? 'text-cyan-700' : 'text-slate-400'
+                          }`}>
+                            {userFormData.permissions.canViewEmails ? 'Liberado ✓' : 'Bloqueado'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                          Permite ler notificações e protocolos institucionais disparados.
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/70 rounded-xl transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Salvar Configurações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

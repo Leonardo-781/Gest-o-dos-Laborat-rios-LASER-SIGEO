@@ -104,6 +104,8 @@ interface LabContextType {
   approveUserAccount: (userId: string, approvedLabs?: LabId[]) => void;
   rejectUserAccount: (userId: string) => void;
   updateUserPermissions: (userId: string, newPermissions: Partial<UserPermissions>, assignedLabs?: LabId[]) => void;
+  updateUserAccount: (userId: string, updatedData: Partial<UserAccount>) => { success: boolean };
+  deleteUserAccount: (userId: string) => { success: boolean };
 
   // Notificações por E-mail (Envios em tempo real)
   emails: EmailNotification[];
@@ -807,6 +809,99 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       showToast(`Permissões e laboratórios de ${targetUser.name} atualizados por Leonardo Cardoso!`);
     }
+  };
+
+  const updateUserAccount = (userId: string, updatedData: Partial<UserAccount>): { success: boolean } => {
+    const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+    const isCoord = currentUser?.role === 'coordenador';
+    if (!isMaster && !isCoord) {
+      showToast('Apenas o Administrador Master (Leonardo Cardoso) ou a Coordenação podem editar configurações de usuários.');
+      return { success: false };
+    }
+
+    let targetUser: UserAccount | undefined;
+
+    setUsersList(prev => {
+      const nextList = prev.map(u => {
+        if (u.id === userId) {
+          const merged: UserAccount = {
+            ...u,
+            ...updatedData,
+            permissions: {
+              ...u.permissions,
+              ...(updatedData.permissions || {}),
+              ...(updatedData.assignedLabs ? { assignedLabs: updatedData.assignedLabs } : {})
+            }
+          };
+          targetUser = merged;
+          if (currentUser?.id === userId) {
+            setCurrentUser(merged);
+          }
+          if (firebaseConfig.isConnected) {
+            syncDocToFirestore('usuarios', merged, firebaseConfig);
+          }
+          return merged;
+        }
+        return u;
+      });
+      localStorage.setItem(STORAGE_KEYS.USERS_LIST, JSON.stringify(nextList));
+      return nextList;
+    });
+
+    if (targetUser) {
+      logAudit(
+        'usuario_alterado',
+        targetUser.id,
+        'usuario',
+        `${targetUser.name} (${targetUser.role.toUpperCase()})`,
+        `Configurações, cargo/status e permissões de acesso atualizados pelo gestor ${currentUser?.name}.`
+      );
+      showToast(`Conta de ${targetUser.name} atualizada com sucesso!`);
+      return { success: true };
+    }
+
+    showToast('Usuário não encontrado.');
+    return { success: false };
+  };
+
+  const deleteUserAccount = (userId: string): { success: boolean } => {
+    const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
+    if (!isMaster) {
+      showToast('Apenas o Administrador Master (Leonardo Cardoso) pode excluir contas do sistema.');
+      return { success: false };
+    }
+
+    if (userId === 'usr-master' || userId === currentUser?.id) {
+      showToast('A conta do Administrador Master não pode ser excluída.');
+      return { success: false };
+    }
+
+    const target = usersList.find(u => u.id === userId);
+    if (!target) {
+      showToast('Usuário não encontrado.');
+      return { success: false };
+    }
+
+    setUsersList(prev => {
+      const nextList = prev.filter(u => u.id !== userId);
+      localStorage.setItem(STORAGE_KEYS.USERS_LIST, JSON.stringify(nextList));
+      return nextList;
+    });
+
+    if (firebaseConfig.isConnected) {
+      removeDocFromFirestore('usuarios', userId, firebaseConfig);
+    }
+
+    logAudit(
+      'usuario_removido',
+      target.id,
+      'usuario',
+      `${target.name} (${target.email})`,
+      `Conta de usuário excluída pelo Administrador Master Leonardo Cardoso.`
+    );
+
+    showToast(`Conta de ${target.name} removida do sistema.`);
+    return { success: true };
   };
 
   const logAudit = (
@@ -2621,6 +2716,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approveUserAccount,
         rejectUserAccount,
         updateUserPermissions,
+        updateUserAccount,
+        deleteUserAccount,
         emails,
         isEmailModalOpen,
         setIsEmailModalOpen,
