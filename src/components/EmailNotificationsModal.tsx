@@ -12,7 +12,8 @@ import {
   Trash2,
   Inbox,
   Send,
-  Eye
+  Eye,
+  BellRing
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { EmailNotification } from '../types';
@@ -91,6 +92,12 @@ export const EmailNotificationsModal: React.FC = () => {
             <Code className="w-3 h-3 text-indigo-600" /> Software
           </span>
         );
+      case 'cobranca_equipamento':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+            <BellRing className="w-3 h-3 text-rose-600" /> Cobrança Patrimonial
+          </span>
+        );
       default:
         return null;
     }
@@ -154,7 +161,8 @@ export const EmailNotificationsModal: React.FC = () => {
             { id: 'solicitacao_criada', label: 'Novas Solicitações' },
             { id: 'solicitacao_atualizada', label: 'Status de Horário' },
             { id: 'manutencao', label: 'Manutenções' },
-            { id: 'software', label: 'Softwares' }
+            { id: 'software', label: 'Softwares' },
+            { id: 'cobranca_equipamento', label: 'Cobranças' }
           ].map(f => (
             <button
               key={f.id}

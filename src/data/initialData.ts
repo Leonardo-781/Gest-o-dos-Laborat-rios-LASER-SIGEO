@@ -917,6 +917,7 @@ export const INITIAL_EQUIPMENT_MOVEMENTS: EquipmentMovement[] = [
     purpose: 'Aula prática de Topografia Aplicada à Agrimensura',
     generalNotes: 'Acompanha tripé de alumínio, estojo de transporte rígido, prisma com bastão e bateria reserva.',
     status: 'em_transito',
+    expectedReturnDate: '2026-09-15T18:00',
     createdAt: '2026-09-15T08:30:00Z'
   },
   {

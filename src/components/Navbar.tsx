@@ -53,6 +53,16 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
   const inTransitCount = movements.filter(m => m.status === 'em_transito').length;
 
+  const overdueMovementsCount = movements.filter(m => {
+    if (m.status !== 'em_transito') return false;
+    if (m.expectedReturnDate) {
+      const exp = new Date(m.expectedReturnDate.includes('T') ? m.expectedReturnDate : `${m.expectedReturnDate}T23:59:59`);
+      return new Date().getTime() > exp.getTime();
+    }
+    const dep = new Date(m.date.includes('T') ? m.date : `${m.date}T00:00:00`);
+    return (new Date().getTime() - dep.getTime()) > (2 * 24 * 60 * 60 * 1000);
+  }).length;
+
   // Apenas Coordenadores e Técnicos têm acesso privilegiado
   const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
   const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
@@ -260,8 +270,13 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                   <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600" />
                   <span>Movimentações</span>
                   {inTransitCount > 0 && (
-                    <span className="flex h-4 px-1.5 min-w-[16px] items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white shadow-2xs">
-                      {inTransitCount}
+                    <span 
+                      className={`flex h-4 px-1.5 min-w-[16px] items-center justify-center rounded-full text-[9px] font-bold text-white shadow-2xs ${
+                        overdueMovementsCount > 0 ? 'bg-rose-600 animate-pulse font-black' : 'bg-amber-500'
+                      }`}
+                      title={overdueMovementsCount > 0 ? `${overdueMovementsCount} devolução(ões) em atraso!` : `${inTransitCount} em trânsito`}
+                    >
+                      {overdueMovementsCount > 0 ? `! ${inTransitCount}` : inTransitCount}
                     </span>
                   )}
                 </button>

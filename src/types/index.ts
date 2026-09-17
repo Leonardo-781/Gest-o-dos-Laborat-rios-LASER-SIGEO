@@ -73,7 +73,7 @@ export interface EmailNotification {
   subject: string;
   preview: string;
   htmlBody: string;
-  category: 'login' | 'solicitacao_criada' | 'solicitacao_atualizada' | 'manutencao' | 'software' | 'verificacao_email';
+  category: 'login' | 'solicitacao_criada' | 'solicitacao_atualizada' | 'manutencao' | 'software' | 'verificacao_email' | 'cobranca_equipamento';
   sentAt: string;
   read: boolean;
   protocol?: string;
@@ -271,6 +271,8 @@ export interface EquipmentMovement {
   defectResolved?: boolean;
   createdAt: string;
   updatedAt?: string;
+  lastNotificationSentAt?: string;
+  notificationsCount?: number;
 }
 
 export type AuditActionType = 
@@ -295,7 +297,8 @@ export type AuditActionType =
   | 'software_atualizado'
   | 'movimentacao_registrada'
   | 'movimentacao_concluida'
-  | 'movimentacao_excluida';
+  | 'movimentacao_excluida'
+  | 'movimentacao_cobrada';
 
 export interface AuditLog {
   id: string;

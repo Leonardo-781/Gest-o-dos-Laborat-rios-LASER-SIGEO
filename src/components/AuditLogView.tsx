@@ -13,7 +13,8 @@ import {
   FileSpreadsheet,
   Calendar,
   Layers,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { AuditLog, AuditActionType } from '../types';
@@ -65,6 +66,8 @@ export const AuditLogView: React.FC = () => {
         return { label: 'Devolução / Retorno', bg: 'bg-emerald-50 text-emerald-800 border-emerald-200', icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> };
       case 'movimentacao_excluida':
         return { label: 'Movimentação Excluída', bg: 'bg-rose-50 text-rose-800 border-rose-200', icon: <XCircle className="w-3.5 h-3.5 text-rose-600" /> };
+      case 'movimentacao_cobrada':
+        return { label: 'Cobrança de Devolução', bg: 'bg-rose-50 text-rose-900 border-rose-300 font-bold', icon: <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> };
       default:
         return { label: 'Ação do Sistema', bg: 'bg-slate-100 text-slate-700 border-slate-200', icon: <ShieldCheck className="w-3.5 h-3.5 text-slate-500" /> };
     }

@@ -3,7 +3,7 @@
  * Dispara e-mails formatados e gerencia a caixa de saída em tempo real
  */
 
-import { EmailNotification, Reservation, MaintenanceRequest, SoftwareRequest } from '../types';
+import { EmailNotification, Reservation, MaintenanceRequest, SoftwareRequest, EquipmentMovement } from '../types';
 import { syncDocToFirestore, getFirestoreDB } from './firebaseClient';
 
 const STORAGE_EMAILS_KEY = 'silab_sent_emails_v3';
@@ -310,3 +310,52 @@ export async function sendSoftwareEmail(req: SoftwareRequest, isInstalled = fals
     protocol: req.protocol
   });
 }
+
+/**
+ * 6. E-mail de Cobrança / Notificação de Atraso de Devolução de Equipamento
+ */
+export async function sendOverdueEquipmentEmail(
+  mov: EquipmentMovement, 
+  daysOverdue: number, 
+  senderName: string,
+  targetEmail: string = 'responsavel.equipamento@ufu.br'
+): Promise<EmailNotification> {
+  const formattedExpected = mov.expectedReturnDate
+    ? (mov.expectedReturnDate.includes('T')
+        ? `${mov.expectedReturnDate.split('T')[0].split('-').reverse().join('/')} às ${mov.expectedReturnDate.split('T')[1]}`
+        : mov.expectedReturnDate.split('-').reverse().join('/'))
+    : 'Não informada';
+
+  const body = `
+    <p>Constatamos no sistema de gestão de laboratórios (SILAB) que o equipamento retirado sob sua responsabilidade ultrapassou o prazo estipulado de retorno.</p>
+    <div class="info-card" style="border-left: 4px solid #e11d48; background-color: #fff1f2;">
+      <p><strong>Equipamento:</strong> ${mov.equipmentName}</p>
+      <p><strong>Patrimônio UFU:</strong> ${mov.patrimonio}</p>
+      <p><strong>Local de Saída / Laboratório:</strong> ${mov.originLocation}</p>
+      <p><strong>Destino Informado:</strong> ${mov.destinationLocation}</p>
+      <p><strong>Finalidade:</strong> ${mov.purpose}</p>
+      <p><strong>Prazo Previsto de Retorno:</strong> ${formattedExpected}</p>
+      <p style="color: #b91c1c;"><strong>Situação:</strong> 🚨 Atrasado há ${daysOverdue > 0 ? `${daysOverdue} dias` : 'algumas horas'}</p>
+      <p><strong>Técnico Responsável pela Saída:</strong> ${mov.responsibleTechnician}</p>
+    </div>
+    <p>Solicitamos com brevidade o retorno do equipamento e seus acessórios ao laboratório de origem para conferência técnica de inventário e liberação aos demais alunos e docentes.</p>
+    <p><em>Notificação emitida por: <strong>${senderName}</strong>.</em></p>
+  `;
+
+  const html = buildHtmlEmailTemplate(
+    `Cobrança de Devolução - Pat. ${mov.patrimonio}`,
+    'Responsável pelo Empréstimo',
+    body
+  );
+
+  return dispatchEmail({
+    to: targetEmail,
+    recipientName: 'Responsável pelo Equipamento',
+    subject: `[SILAB] 🚨 URGENTE: Devolução Atrasada • ${mov.equipmentName} (Pat. ${mov.patrimonio})`,
+    preview: `Aviso de cobrança: o equipamento ${mov.equipmentName} (Pat. ${mov.patrimonio}) está em atraso de devolução.`,
+    htmlBody: html,
+    category: 'cobranca_equipamento',
+    protocol: `PAT-${mov.patrimonio}`
+  });
+}
+

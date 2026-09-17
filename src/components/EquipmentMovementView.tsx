@@ -26,11 +26,16 @@ import {
   ChevronRight,
   Truck,
   Building2,
-  Package
+  Package,
+  BellRing,
+  Send,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { EquipmentMovement, LabId, MovementType } from '../types';
 import { formatDateTimeBR } from '../utils/dateHelpers';
+import { sendOverdueEquipmentEmail } from '../services/emailService';
 
 export const EquipmentMovementView: React.FC = () => {
   const { 
@@ -43,12 +48,13 @@ export const EquipmentMovementView: React.FC = () => {
     currentUser, 
     labs, 
     canUserManageLab,
-    canUserManageMovements
+    canUserManageMovements,
+    showToast
   } = useLab();
 
   // Estados de Busca e Filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'todos' | 'em_transito' | 'manutencao_externa' | 'concluido' | 'remanejado'>('todos');
+  const [statusFilter, setStatusFilter] = useState<'todos' | 'em_transito' | 'atrasados' | 'manutencao_externa' | 'concluido' | 'remanejado'>('todos');
   const [labFilter, setLabFilter] = useState<'todos' | 'ltgeo' | 'laser' | 'sigeo'>('todos');
 
   // Estados dos Modais
@@ -60,6 +66,12 @@ export const EquipmentMovementView: React.FC = () => {
   const [returnNotes, setReturnNotes] = useState('');
   const [returnReceiver, setReturnReceiver] = useState('');
   const [defectResolved, setDefectResolved] = useState(true);
+
+  // Modal de Cobrança / Notificação de Atraso
+  const [chargingMovement, setChargingMovement] = useState<EquipmentMovement | null>(null);
+  const [copiedNotification, setCopiedNotification] = useState(false);
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
+  const [customRecipientEmail, setCustomRecipientEmail] = useState('');
 
   // Formulário Principal
   const [formData, setFormData] = useState<{
@@ -102,12 +114,55 @@ export const EquipmentMovementView: React.FC = () => {
 
   const isManager = currentUser?.role === 'coordenador' || currentUser?.role === 'tecnico';
 
+  // Função inteligente de cálculo de atraso patrimonial
+  const getOverdueInfo = (mov: EquipmentMovement) => {
+    if (mov.status !== 'em_transito') return null;
+
+    const now = new Date();
+    
+    if (mov.expectedReturnDate) {
+      const expected = new Date(mov.expectedReturnDate.includes('T') ? mov.expectedReturnDate : `${mov.expectedReturnDate}T23:59:59`);
+      if (now.getTime() > expected.getTime()) {
+        const diffMs = now.getTime() - expected.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        return {
+          isOverdue: true,
+          daysOverdue: diffDays,
+          hoursOverdue: Math.max(1, diffHours),
+          expectedStr: mov.expectedReturnDate.includes('T') 
+            ? `${mov.expectedReturnDate.split('T')[0].split('-').reverse().join('/')} às ${mov.expectedReturnDate.split('T')[1]}`
+            : mov.expectedReturnDate.split('-').reverse().join('/'),
+          severity: diffDays >= 2 ? ('critico' as const) : ('alerta' as const)
+        };
+      }
+    } else {
+      // Se não informou data prevista e está fora há mais de 2 dias (48 horas)
+      const departure = new Date(mov.date.includes('T') ? mov.date : `${mov.date}T00:00:00`);
+      const diffMs = now.getTime() - departure.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays >= 2) {
+        return {
+          isOverdue: true,
+          daysOverdue: diffDays,
+          hoursOverdue: Math.floor(diffMs / (1000 * 60 * 60)),
+          expectedStr: 'Sem prazo informado na saída',
+          severity: 'sem_previsao' as const
+        };
+      }
+    }
+
+    return null;
+  };
+
   // Estatísticas
   const totalMovements = movements.length;
   const inTransitCount = movements.filter(m => m.status === 'em_transito' && m.movementType !== 'manutencao_externa' && !m.destinationLocation.toLowerCase().includes('manutenção externa')).length;
   const externalMaintenanceCount = movements.filter(m => m.status === 'em_transito' && (m.movementType === 'manutencao_externa' || m.destinationLocation.toLowerCase().includes('manutenção externa'))).length;
   const completedCount = movements.filter(m => m.status === 'concluido').length;
   const relocatedCount = movements.filter(m => m.status === 'remanejado').length;
+  const overdueMovements = movements.filter(m => Boolean(getOverdueInfo(m)));
+  const overdueCount = overdueMovements.length;
 
   // Filtragem
   const filteredMovements = movements.filter(m => {
@@ -127,6 +182,8 @@ export const EquipmentMovementView: React.FC = () => {
     const matchesStatus = 
       statusFilter === 'todos' 
         ? true 
+        : statusFilter === 'atrasados'
+        ? Boolean(getOverdueInfo(m))
         : statusFilter === 'manutencao_externa'
         ? isExt && m.status === 'em_transito'
         : statusFilter === 'em_transito'
@@ -421,10 +478,10 @@ export const EquipmentMovementView: React.FC = () => {
         </div>
 
         {/* Cards de Resumo & Indicadores Rápidos */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
           <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-semibold text-slate-500">Total de Registros</div>
+              <div className="text-[11px] font-semibold text-slate-500">Total Registros</div>
               <div className="text-lg font-black text-slate-900">{totalMovements}</div>
             </div>
             <FileText className="w-5 h-5 text-slate-400" />
@@ -441,6 +498,28 @@ export const EquipmentMovementView: React.FC = () => {
             <Clock className="w-5 h-5 text-amber-500" />
           </div>
 
+          {/* NOVO CARD: DEVOLUÇÕES ATRASADAS */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter(statusFilter === 'atrasados' ? 'todos' : 'atrasados')}
+            className={`p-3.5 rounded-xl border text-left transition flex items-center justify-between cursor-pointer ${
+              overdueCount > 0
+                ? 'bg-rose-50 border-rose-300 hover:border-rose-400 ring-2 ring-rose-500/20'
+                : 'bg-slate-50 border-slate-200'
+            }`}
+          >
+            <div>
+              <div className={`text-[11px] font-bold ${overdueCount > 0 ? 'text-rose-700' : 'text-slate-500'}`}>
+                Devoluções Atrasadas
+              </div>
+              <div className={`text-lg font-black flex items-center gap-1.5 ${overdueCount > 0 ? 'text-rose-900' : 'text-slate-600'}`}>
+                {overdueCount > 0 && <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>}
+                {overdueCount} {overdueCount > 0 && <span className="text-[10px] uppercase font-bold text-rose-700">Atenção!</span>}
+              </div>
+            </div>
+            <BellRing className={`w-5 h-5 ${overdueCount > 0 ? 'text-rose-600 animate-bounce' : 'text-slate-400'}`} />
+          </button>
+
           <div className="p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between">
             <div>
               <div className="text-[11px] font-semibold text-purple-700">Manutenção Externa</div>
@@ -454,7 +533,7 @@ export const EquipmentMovementView: React.FC = () => {
 
           <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-semibold text-emerald-700">Devolvidos / Concluídos</div>
+              <div className="text-[11px] font-semibold text-emerald-700">Devolvidos</div>
               <div className="text-lg font-black text-emerald-900">{completedCount}</div>
             </div>
             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -462,12 +541,40 @@ export const EquipmentMovementView: React.FC = () => {
 
           <div className="p-3.5 bg-indigo-50 rounded-xl border border-indigo-200 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-semibold text-indigo-700">Remanejamentos</div>
+              <div className="text-[11px] font-semibold text-indigo-700">Remanejados</div>
               <div className="text-lg font-black text-indigo-900">{relocatedCount}</div>
             </div>
             <RefreshCw className="w-5 h-5 text-indigo-500" />
           </div>
         </div>
+
+        {/* Banner de Alerta Crítico: Devoluções Atrasadas */}
+        {overdueCount > 0 && (
+          <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-800 text-white p-4 rounded-2xl shadow-sm border border-rose-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-white/20 rounded-xl shrink-0">
+                <BellRing className="w-5 h-5 text-white animate-bounce" />
+              </div>
+              <div>
+                <div className="font-extrabold text-sm flex items-center gap-2">
+                  <span>🚨 Atenção Técnico Master: {overdueCount} {overdueCount === 1 ? 'equipamento com devolução atrasada' : 'equipamentos com devoluções atrasadas'}!</span>
+                </div>
+                <p className="text-xs text-rose-100 mt-0.5">
+                  O prazo estimado de retorno expirou. Utilize o botão <strong>"Cobrar Devolução"</strong> nos cards para notificar o responsável ou estender o prazo.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter('atrasados')}
+              className="px-3.5 py-2 bg-white text-rose-800 hover:bg-rose-50 text-xs font-black rounded-xl shadow-xs transition cursor-pointer self-end sm:self-auto whitespace-nowrap flex items-center gap-1.5"
+            >
+              <span>Filtrar Atrasados ({overdueCount})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Barra de Busca e Filtros */}
         <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
@@ -493,6 +600,22 @@ export const EquipmentMovementView: React.FC = () => {
             >
               Todos ({movements.length})
             </button>
+
+            {/* Filtro de Atrasados */}
+            <button
+              onClick={() => setStatusFilter('atrasados')}
+              className={`px-3 py-2 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                statusFilter === 'atrasados' 
+                  ? 'bg-rose-600 text-white shadow-xs font-black' 
+                  : overdueCount > 0
+                  ? 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-300 animate-pulse'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <BellRing className={`w-3.5 h-3.5 ${statusFilter === 'atrasados' ? 'text-white' : 'text-rose-600'}`} />
+              <span>Atrasados ({overdueCount})</span>
+            </button>
+
             <button
               onClick={() => setStatusFilter('em_transito')}
               className={`px-3 py-2 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap flex items-center gap-1 ${
@@ -566,12 +689,15 @@ export const EquipmentMovementView: React.FC = () => {
           {filteredMovements.map(mov => {
             const isCompleted = mov.status === 'concluido';
             const isRelocated = mov.status === 'remanejado';
+            const overdueInfo = getOverdueInfo(mov);
 
             return (
               <div 
                 key={mov.id}
                 className={`bg-white rounded-2xl border p-5 shadow-xs transition-all space-y-3.5 ${
-                  mov.status === 'em_transito' 
+                  overdueInfo
+                    ? 'border-rose-400 bg-gradient-to-r from-rose-50/50 via-white to-white ring-2 ring-rose-500/20 shadow-md'
+                    : mov.status === 'em_transito' 
                     ? (mov.movementType === 'manutencao_externa' || mov.destinationLocation.toLowerCase().includes('manutenção externa'))
                       ? 'border-purple-300/80 bg-gradient-to-r from-purple-50/20 via-white to-white hover:border-purple-400'
                       : 'border-amber-300/80 bg-gradient-to-r from-amber-50/20 via-white to-white hover:border-amber-400' 
@@ -581,8 +707,20 @@ export const EquipmentMovementView: React.FC = () => {
                 {/* Linha Superior: Badges, Patrimônio e Ações */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Alerta Destacado se Estiver Atrasado */}
+                    {overdueInfo && (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-black bg-rose-600 text-white flex items-center gap-1.5 shadow-2xs animate-pulse">
+                        <AlertTriangle className="w-3.5 h-3.5 text-white" />
+                        <span>
+                          {overdueInfo.daysOverdue > 0 
+                            ? `🚨 Atrasado há ${overdueInfo.daysOverdue} ${overdueInfo.daysOverdue === 1 ? 'dia' : 'dias'}` 
+                            : `🚨 Atrasado (${overdueInfo.hoursOverdue}h)`}
+                        </span>
+                      </span>
+                    )}
+
                     {/* Status Badge */}
-                    {mov.status === 'em_transito' && (
+                    {mov.status === 'em_transito' && !overdueInfo && (
                       (mov.movementType === 'manutencao_externa' || mov.destinationLocation.toLowerCase().includes('manutenção externa')) ? (
                         <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-purple-700 text-white flex items-center gap-1.5 shadow-2xs">
                           <Truck className="w-3.5 h-3.5" />
@@ -608,7 +746,7 @@ export const EquipmentMovementView: React.FC = () => {
                       </span>
                     )}
 
-                    {/* Tag de Patrimônio UFPR */}
+                    {/* Tag de Patrimônio UFU */}
                     <span className="font-mono text-xs font-black text-amber-950 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-lg shadow-2xs flex items-center gap-1">
                       <span className="text-[9px] uppercase tracking-wider text-amber-700 font-bold">Pat.</span>
                       {mov.patrimonio}
@@ -637,7 +775,35 @@ export const EquipmentMovementView: React.FC = () => {
                   </div>
 
                   {/* Ações Técnicas */}
-                  <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                  <div className="flex items-center gap-1.5 self-end sm:self-auto flex-wrap">
+                    {/* Botão de Cobrança Institucional de Atraso */}
+                    {mov.status === 'em_transito' && isManager && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChargingMovement(mov);
+                          setCopiedNotification(false);
+                          setCustomRecipientEmail('');
+                        }}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer ${
+                          overdueInfo
+                            ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                            : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                        }`}
+                        title="Cobrar devolução imediata do equipamento ou prorrogar prazo"
+                      >
+                        <BellRing className="w-3.5 h-3.5" />
+                        <span>Cobrar Devolução</span>
+                        {mov.notificationsCount ? (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                            overdueInfo ? 'bg-white text-rose-800' : 'bg-rose-200 text-rose-900'
+                          }`}>
+                            {mov.notificationsCount}x
+                          </span>
+                        ) : null}
+                      </button>
+                    )}
+
                     {mov.status === 'em_transito' && isManager && (
                       <button
                         onClick={() => {
@@ -707,8 +873,42 @@ export const EquipmentMovementView: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Prazo de Devolução e Status do Atraso */}
+                    {mov.status === 'em_transito' && (
+                      <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 flex-wrap ${
+                        overdueInfo
+                          ? 'bg-rose-50 border-rose-200 text-rose-950 font-medium'
+                          : 'bg-blue-50/70 border-blue-200 text-blue-950'
+                      }`}>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className={`w-3.5 h-3.5 ${overdueInfo ? 'text-rose-600' : 'text-blue-600'}`} />
+                          <span className="font-bold">Prazo de Devolução:</span>
+                          <span>
+                            {mov.expectedReturnDate 
+                              ? (mov.expectedReturnDate.includes('T')
+                                  ? `${mov.expectedReturnDate.split('T')[0].split('-').reverse().join('/')} às ${mov.expectedReturnDate.split('T')[1]}`
+                                  : mov.expectedReturnDate.split('-').reverse().join('/'))
+                              : 'Não estipulado no cadastro'}
+                          </span>
+                        </div>
+
+                        {overdueInfo && (
+                          <span className="text-[10px] font-black uppercase text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200">
+                            {overdueInfo.daysOverdue > 0 ? `Vencido há ${overdueInfo.daysOverdue}d` : `Vencido (${overdueInfo.hoursOverdue}h)`}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {mov.lastNotificationSentAt && (
+                      <div className="text-[10px] text-slate-500 flex items-center gap-1 pl-1">
+                        <BellRing className="w-3 h-3 text-rose-500" />
+                        <span>Última notificação de cobrança: {new Date(mov.lastNotificationSentAt).toLocaleString('pt-BR')} ({mov.notificationsCount}x)</span>
+                      </div>
+                    )}
+
                     {/* Dados Específicos de Manutenção Externa */}
-                    {(mov.companyName || mov.serviceOrder || mov.expectedReturnDate || mov.accessories) && (
+                    {(mov.companyName || mov.serviceOrder || mov.accessories) && (
                       <div className="p-3 bg-purple-50/80 border border-purple-200 rounded-xl text-xs text-purple-950 space-y-1.5">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           {mov.companyName && (
@@ -721,12 +921,6 @@ export const EquipmentMovementView: React.FC = () => {
                             <div>
                               <span className="text-[10px] font-bold text-purple-700 uppercase block">O.S. / Guia:</span>
                               <span className="font-mono font-bold text-purple-900 bg-white px-2 py-0.5 rounded border border-purple-300">{mov.serviceOrder}</span>
-                            </div>
-                          )}
-                          {mov.expectedReturnDate && (
-                            <div>
-                              <span className="text-[10px] font-bold text-purple-700 uppercase block">Previsão:</span>
-                              <span className="font-medium text-purple-900">{mov.expectedReturnDate.split('-').reverse().join('/')}</span>
                             </div>
                           )}
                         </div>
@@ -1215,6 +1409,46 @@ export const EquipmentMovementView: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Previsão / Prazo de Retorno ao Laboratório */}
+                    {formData.movementType !== 'manutencao_externa' && (
+                      <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Previsão / Prazo Limite de Devolução</span>
+                          </label>
+                          <span className="text-[10px] text-blue-700 font-semibold bg-blue-100/80 px-2 py-0.5 rounded-md">
+                            Gera alerta se atrasar
+                          </span>
+                        </div>
+                        <input
+                          type="datetime-local"
+                          value={formData.expectedReturnDate || ''}
+                          onChange={(e) => setFormData({ ...formData, expectedReturnDate: e.target.value })}
+                          className="w-full text-xs bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                          <span className="text-[10px] text-slate-500 font-medium">Atalhos:</span>
+                          {[
+                            { label: 'Hoje 18h', getVal: () => `${new Date().toISOString().slice(0, 10)}T18:00` },
+                            { label: 'Amanhã 18h', getVal: () => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.toISOString().slice(0, 10)}T18:00`; } },
+                            { label: '+3 dias', getVal: () => { const d = new Date(); d.setDate(d.getDate() + 3); return `${d.toISOString().slice(0, 10)}T18:00`; } },
+                            { label: '+1 semana', getVal: () => { const d = new Date(); d.setDate(d.getDate() + 7); return `${d.toISOString().slice(0, 10)}T18:00`; } },
+                            { label: '+15 dias', getVal: () => { const d = new Date(); d.setDate(d.getDate() + 15); return `${d.toISOString().slice(0, 10)}T18:00`; } },
+                          ].map(chip => (
+                            <button
+                              key={chip.label}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, expectedReturnDate: chip.getVal() })}
+                              className="px-2 py-0.5 text-[10px] font-semibold bg-white hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition cursor-pointer shadow-2xs"
+                            >
+                              {chip.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
                         Motivação de Uso / Finalidade *
@@ -1503,6 +1737,280 @@ export const EquipmentMovementView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Cobrança Institucional / Notificação de Atraso */}
+      {chargingMovement && (() => {
+        const overdueInfo = getOverdueInfo(chargingMovement);
+        const departureFormatted = chargingMovement.date.includes('T') 
+          ? `${chargingMovement.date.split('T')[0].split('-').reverse().join('/')} às ${chargingMovement.date.split('T')[1]}` 
+          : chargingMovement.date;
+        const expectedFormatted = chargingMovement.expectedReturnDate 
+          ? (chargingMovement.expectedReturnDate.includes('T')
+            ? `${chargingMovement.expectedReturnDate.split('T')[0].split('-').reverse().join('/')} às ${chargingMovement.expectedReturnDate.split('T')[1]}`
+            : chargingMovement.expectedReturnDate.split('-').reverse().join('/'))
+          : 'Não informado na saída';
+
+        const officialMessage = `[NOTIFICAÇÃO INSTITUCIONAL DE RETORNO PATRIMONIAL - UFU]
+Prezado(a) ${chargingMovement.responsibleTechnician},
+
+Informamos que o equipamento sob sua guarda e responsabilidade patrimonial:
+• Equipamento: ${chargingMovement.equipmentName} (Patrimônio: ${chargingMovement.patrimonio})
+• Finalidade de Uso: ${chargingMovement.purpose}
+• Destino / Local: ${chargingMovement.destinationLocation}
+• Data de Saída: ${departureFormatted}
+• Prazo Limite Previsto: ${expectedFormatted}
+
+${overdueInfo?.isOverdue 
+  ? `ATENÇÃO: O prazo estipulado encontra-se EXPIRADO há ${overdueInfo.daysOverdue > 0 ? `${overdueInfo.daysOverdue} dia(s)` : `${overdueInfo.hoursOverdue} hora(s)`}. Solicitamos o comparecimento urgente ao laboratório de origem para devolução do equipamento ou regularização formal da cautela.` 
+  : `Lembramos que a devolução deve ocorrer impreterivelmente dentro do prazo estipulado para viabilizar as aulas e pesquisas dos demais usuários.`}
+
+Em caso de dúvidas técnicas ou necessidade de prorrogação autorizada, favor entrar em contato imediatamente com a equipe técnica.
+
+Atenciosamente,
+${currentUser?.name || 'Leonardo Cardoso'}
+Equipe Técnica dos Laboratórios de Topografia e Geotecnologias (LTGEO / LASER / SIGEO)
+Faculdade de Engenharia Civil • Universidade Federal de Uberlândia (UFU)`;
+
+        const handleCopyChargeMessage = () => {
+          navigator.clipboard.writeText(officialMessage);
+          setCopiedNotification(true);
+          showToast('Mensagem oficial de cobrança copiada para a área de transferência!');
+          setTimeout(() => setCopiedNotification(false), 3000);
+        };
+
+        const handleSendEmailNotification = () => {
+          setIsSendingNotification(true);
+          try {
+            const targetEmail = customRecipientEmail.trim() || undefined;
+            sendOverdueEquipmentEmail(
+              chargingMovement,
+              overdueInfo?.daysOverdue || 0,
+              currentUser?.name || 'Leonardo Cardoso',
+              targetEmail
+            );
+
+            const nextCount = (chargingMovement.notificationsCount || 0) + 1;
+            const nowIso = new Date().toISOString();
+            updateMovement(chargingMovement.id, {
+              notificationsCount: nextCount,
+              lastNotificationSentAt: nowIso
+            });
+            setChargingMovement(prev => prev ? { ...prev, notificationsCount: nextCount, lastNotificationSentAt: nowIso } : null);
+            showToast(`Cobrança oficial enviada com sucesso! (${nextCount}ª notificação registrada)`);
+          } catch (err) {
+            console.error(err);
+            showToast('Erro ao disparar e-mail de notificação.');
+          } finally {
+            setIsSendingNotification(false);
+          }
+        };
+
+        const handleExtendDeadline = (days: number) => {
+          const baseDate = chargingMovement.expectedReturnDate
+            ? new Date(chargingMovement.expectedReturnDate.includes('T') ? chargingMovement.expectedReturnDate : `${chargingMovement.expectedReturnDate}T18:00`)
+            : new Date();
+          const effectiveDate = baseDate.getTime() < Date.now() ? new Date() : baseDate;
+          effectiveDate.setDate(effectiveDate.getDate() + days);
+          const newExpectedStr = `${effectiveDate.toISOString().slice(0, 10)}T18:00`;
+
+          updateMovement(chargingMovement.id, {
+            expectedReturnDate: newExpectedStr
+          });
+          setChargingMovement(prev => prev ? { ...prev, expectedReturnDate: newExpectedStr } : null);
+          showToast(`Prazo prorrogado com sucesso para ${effectiveDate.toLocaleDateString('pt-BR')} às 18:00!`);
+        };
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Cabeçalho */}
+              <div className="p-5 sm:p-6 border-b border-rose-100 bg-gradient-to-r from-rose-50 via-red-50 to-orange-50 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 bg-rose-600 text-white rounded-2xl shadow-md">
+                    <BellRing className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-rose-950 flex items-center gap-2">
+                      <span>Cobrança de Devolução & Notificação Institucional</span>
+                    </h3>
+                    <p className="text-xs text-rose-800/80 mt-0.5 font-medium">
+                      Notifique formalmente o responsável ou copie o termo para contato via WhatsApp/E-mail.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setChargingMovement(null)}
+                  className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-white/60 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Corpo */}
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
+                {/* Status de Atraso */}
+                {overdueInfo?.isOverdue ? (
+                  <div className="p-4 bg-rose-100/80 border-2 border-rose-300 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-3 h-3 rounded-full bg-rose-600 animate-ping" />
+                      <div>
+                        <span className="text-xs font-black text-rose-950 uppercase tracking-wide block">
+                          Atraso Crítico Detectado
+                        </span>
+                        <span className="text-xs text-rose-800 font-medium">
+                          Expirado há {overdueInfo.daysOverdue > 0 ? `${overdueInfo.daysOverdue} dia(s)` : `${overdueInfo.hoursOverdue} hora(s)`} além da data prevista ({overdueInfo.expectedStr}).
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-rose-600 text-white shadow-2xs whitespace-nowrap">
+                      Cobrança Ativa
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <Clock className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs text-blue-900 font-medium">
+                        Equipamento dentro do prazo estimado. Prazo estipulado: <strong>{expectedFormatted}</strong>.
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">
+                      Preventivo
+                    </span>
+                  </div>
+                )}
+
+                {/* Resumo do Registro */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Patrimônio / Item</span>
+                    <span className="font-mono font-bold text-amber-900 block">{chargingMovement.patrimonio}</span>
+                    <span className="font-bold text-slate-800 text-[11px] truncate block">{chargingMovement.equipmentName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Responsável</span>
+                    <span className="font-bold text-slate-800 block">{chargingMovement.responsibleTechnician}</span>
+                    <span className="text-[10px] text-slate-500 block truncate">{chargingMovement.destinationLocation}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Saída / Prazo</span>
+                    <span className="font-medium text-slate-700 block text-[11px]">{departureFormatted}</span>
+                    <span className="font-bold text-rose-700 block text-[11px]">{expectedFormatted}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Histórico de Cobrança</span>
+                    <span className="font-bold text-slate-900 block">
+                      {chargingMovement.notificationsCount ? `${chargingMovement.notificationsCount} cobrança(s)` : 'Nenhuma notificação'}
+                    </span>
+                    {chargingMovement.lastNotificationSentAt && (
+                      <span className="text-[10px] text-slate-400 block">
+                        Última: {formatDateTimeBR(chargingMovement.lastNotificationSentAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Prorrogação Rápida com 1 clique */}
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Prorrogar Prazo Imediatamente</span>
+                    </span>
+                    <span className="text-[10px] text-amber-700">Responsável pediu mais prazo?</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { label: '+1 dia', days: 1 },
+                      { label: '+3 dias', days: 3 },
+                      { label: '+1 semana', days: 7 },
+                      { label: '+15 dias', days: 15 },
+                    ].map(opt => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => handleExtendDeadline(opt.days)}
+                        className="px-2.5 py-1 text-xs font-bold bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl transition cursor-pointer shadow-2xs flex items-center gap-1"
+                      >
+                        <span>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Destinatário Personalizado para E-mail */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    E-mail do Destinatário para Notificação SILAB (Opcional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      placeholder="Ex: docente@ufu.br ou discente@ufu.br (Se vazio, envia para fila de alertas)"
+                      value={customRecipientEmail}
+                      onChange={(e) => setCustomRecipientEmail(e.target.value)}
+                      className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl pl-8 pr-3 py-2 text-slate-900 font-medium focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Send className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  </div>
+                </div>
+
+                {/* Texto da Mensagem Institucional */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Texto da Notificação Oficial (Padrão UFU)</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Pronta para envio ou cópia</span>
+                  </div>
+                  <textarea
+                    rows={7}
+                    readOnly
+                    value={officialMessage}
+                    className="w-full text-[11px] font-mono leading-relaxed bg-slate-900 text-slate-100 rounded-2xl p-3.5 focus:outline-none resize-none border border-slate-800 shadow-inner select-all"
+                  />
+                </div>
+              </div>
+
+              {/* Rodapé com Ações */}
+              <div className="px-5 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                <button
+                  type="button"
+                  onClick={() => setChargingMovement(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+                >
+                  Fechar
+                </button>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCopyChargeMessage}
+                    className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                      copiedNotification
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                        : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                    }`}
+                  >
+                    {copiedNotification ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedNotification ? 'Copiado!' : 'Copiar Texto (WhatsApp)'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendEmailNotification}
+                    disabled={isSendingNotification}
+                    className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{isSendingNotification ? 'Enviando...' : 'Disparar Notificação'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
