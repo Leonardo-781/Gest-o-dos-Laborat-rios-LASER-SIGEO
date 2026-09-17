@@ -122,10 +122,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
     ? officialTimeSlots.slice(lunchSlotIndex + 1)
     : [];
 
-  const isDualLab = activeLabGroup === 'laser_sigeo' && selectedLab === 'all';
+  const isDualLab = selectedLab === 'all' && activeLabGroup !== 'ltgeo';
   const targetLabs: LabId[] = isDualLab 
     ? ['laser', 'sigeo'] 
-    : (activeLabGroup === 'ltgeo' ? ['ltgeo'] : [selectedLab === 'all' ? 'laser' : selectedLab]);
+    : (activeLabGroup === 'ltgeo' || selectedLab === 'ltgeo' ? ['ltgeo'] : (selectedLab === 'all' ? ['laser', 'sigeo'] : [selectedLab]));
 
   // Exportar CSV
   const handleExportCSV = () => {

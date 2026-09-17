@@ -258,7 +258,7 @@ const STORAGE_KEYS = {
 
 export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [labs] = useState<Record<LabId, LabInfo>>(LABS_INFO);
-  const [activeLabGroup, setActiveLabGroupState] = useState<LabGroupId>('portal');
+  const [activeLabGroup, setActiveLabGroupState] = useState<LabGroupId>('laser_sigeo');
   const [selectedLab, setSelectedLab] = useState<'all' | LabId>('all');
   const [referenceDate, setReferenceDate] = useState<Date>(new Date());
   
