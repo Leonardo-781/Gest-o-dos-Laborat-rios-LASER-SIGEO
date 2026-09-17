@@ -286,19 +286,23 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     )}
                   </button>
 
-                  {/* Painel da Coordenação & Gestão de Usuários */}
+                  {/* Painel da Coordenação & Gestão Master */}
                   <button
                     onClick={() => setActiveTab('admin')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer relative whitespace-nowrap ${
                       activeTab === 'admin' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
                     }`}
-                    title="Coordenação Geral, Aprovação de Usuários e Permissões Master"
+                    title={isMaster ? "Painel Master: Coordenação, Gestão de Usuários, Banco de Dados e Permissões" : "Painel da Coordenação: Fila de Reservas e Aulas"}
                   >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Coordenação & Usuários</span>
-                    {totalPendingCoord > 0 && (
+                    {isMaster ? (
+                      <Crown className="w-3.5 h-3.5 text-amber-500" />
+                    ) : (
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    )}
+                    <span>{isMaster ? 'Painel Master & Coordenação' : 'Coordenação'}</span>
+                    {(isMaster ? totalPendingCoord : pendingRequests) > 0 && (
                       <span className="flex h-4 px-1 min-w-[16px] items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
-                        {totalPendingCoord}
+                        {isMaster ? totalPendingCoord : pendingRequests}
                       </span>
                     )}
                   </button>

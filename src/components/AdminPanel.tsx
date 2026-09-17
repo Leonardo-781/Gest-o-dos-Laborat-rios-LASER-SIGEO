@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   Check, 
@@ -78,6 +78,13 @@ export const AdminPanel: React.FC = () => {
   const isMaster = currentUser?.id === 'usr-master' || currentUser?.email?.toLowerCase() === 'leonardo.cardoso@ufu.br';
   const [activeAdminTab, setActiveAdminTab] = useState<'fila' | 'aulas' | 'usuarios' | 'nuvem' | 'historico' | 'permissoes'>('fila');
   
+  // Restringir abas de Gestão de Usuários, Banco de Dados e Permissões EXCLUSIVAMENTE ao Técnico Master Leonardo
+  useEffect(() => {
+    if (!isMaster && (activeAdminTab === 'usuarios' || activeAdminTab === 'nuvem' || activeAdminTab === 'permissoes')) {
+      setActiveAdminTab('fila');
+    }
+  }, [isMaster, activeAdminTab]);
+
   // Modal de rejeição
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState<string>('');
@@ -362,18 +369,29 @@ export const AdminPanel: React.FC = () => {
       {/* Header do Painel */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-xs">
-            <ShieldCheck className="w-6 h-6" />
+          <div className={`p-3 rounded-2xl shadow-xs ${
+            isMaster ? 'bg-gradient-to-tr from-amber-500 to-amber-600 text-slate-950 font-black' : 'bg-blue-600 text-white'
+          }`}>
+            {isMaster ? <Crown className="w-6 h-6 text-slate-950" /> : <ShieldCheck className="w-6 h-6" />}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight">Painel de Gestão & Coordenação</h3>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">
-                Logado como: {currentUser?.name} ({currentUser?.role.toUpperCase()})
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                {isMaster ? 'Painel Master de Governança & Coordenação' : 'Painel de Gestão & Coordenação'}
+              </h3>
+              <span className={`text-[10px] px-2.5 py-0.5 rounded-lg font-bold border flex items-center gap-1 ${
+                isMaster 
+                  ? 'bg-amber-100 text-amber-950 border-amber-300 font-black shadow-2xs' 
+                  : 'bg-blue-50 text-blue-700 border-blue-200'
+              }`}>
+                {isMaster && <Crown className="w-3 h-3 text-amber-700" />}
+                Logado como: {currentUser?.name} {isMaster ? '(Técnico Master)' : `(${currentUser?.role.toUpperCase()})`}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Aprovação de reservas, modificação de horários de aulas e confirmação de usuários
+              {isMaster
+                ? 'Governança Master: Gestão de usuários, banco de dados em nuvem, permissões e aprovação de reservas'
+                : 'Aprovação de reservas de horários e moderação de aulas dos laboratórios autorizados'}
             </p>
           </div>
         </div>
@@ -405,34 +423,6 @@ export const AdminPanel: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveAdminTab('usuarios')}
-            className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-              activeAdminTab === 'usuarios' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Usuários</span>
-            {pendingUsers.length > 0 && (
-              <span className="h-4 px-1.5 bg-amber-500 text-white text-[9px] font-bold rounded-full">
-                {pendingUsers.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveAdminTab('nuvem')}
-            className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-              activeAdminTab === 'nuvem' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600'
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5 text-amber-500" />
-            <span>Banco Online (Firebase)</span>
-            {firebaseConfig.isConnected && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Firebase Conectado"></span>
-            )}
-          </button>
-
-          <button
             onClick={() => setActiveAdminTab('historico')}
             className={`px-3 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap ${
               activeAdminTab === 'historico' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600'
@@ -441,19 +431,52 @@ export const AdminPanel: React.FC = () => {
             Histórico ({processedRequests.length})
           </button>
 
-          {/* Aba Exclusiva do Master Leonardo Cardoso */}
+          {/* Abas EXCLUSIVAS do Técnico Master Leonardo Cardoso: Gestão de Usuários, Banco de Dados e Permissões */}
           {isMaster && (
-            <button
-              onClick={() => setActiveAdminTab('permissoes')}
-              className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeAdminTab === 'permissoes'
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-xs'
-                  : 'text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold border border-amber-200'
-              }`}
-            >
-              <Crown className="w-3.5 h-3.5 text-amber-700" />
-              <span>Permissões Técnicas (Master)</span>
-            </button>
+            <>
+              <button
+                onClick={() => setActiveAdminTab('usuarios')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  activeAdminTab === 'usuarios' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600'
+                }`}
+                title="Área exclusiva do Técnico Master Leonardo: Gestão de usuários, cargos e aprovação de cadastros"
+              >
+                <Users className="w-3.5 h-3.5 text-blue-600" />
+                <span>Gestão de Usuários</span>
+                {pendingUsers.length > 0 && (
+                  <span className="h-4 px-1.5 bg-amber-500 text-white text-[9px] font-bold rounded-full">
+                    {pendingUsers.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveAdminTab('nuvem')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  activeAdminTab === 'nuvem' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600'
+                }`}
+                title="Área exclusiva do Técnico Master Leonardo: Configuração e sincronização do Banco de Dados"
+              >
+                <Database className="w-3.5 h-3.5 text-amber-500" />
+                <span>Banco de Dados</span>
+                {firebaseConfig.isConnected && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Banco de Dados Conectado"></span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveAdminTab('permissoes')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  activeAdminTab === 'permissoes'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-xs'
+                    : 'text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold border border-amber-200'
+                }`}
+                title="Área exclusiva do Técnico Master Leonardo: Matriz de permissões técnicas"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-700" />
+                <span>Permissões Técnicas</span>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -726,8 +749,8 @@ export const AdminPanel: React.FC = () => {
         </div>
       )}
 
-      {/* 3. ABA: GESTÃO DE USUÁRIOS E APROVAÇÃO DE CADASTROS */}
-      {activeAdminTab === 'usuarios' && (
+      {/* 3. ABA: GESTÃO DE USUÁRIOS E APROVAÇÃO DE CADASTROS (EXCLUSIVO MASTER) */}
+      {isMaster && activeAdminTab === 'usuarios' && (
         <div className="space-y-5">
           {/* Banner Superior de Governança do Master Leonardo */}
           <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 p-5 sm:p-6 rounded-3xl border border-slate-700 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1137,8 +1160,8 @@ export const AdminPanel: React.FC = () => {
         </div>
       )}
 
-      {/* 4. ABA: BANCO ONLINE (FIREBASE & SUPABASE) */}
-      {activeAdminTab === 'nuvem' && (
+      {/* 4. ABA: BANCO ONLINE (FIREBASE & SUPABASE) (EXCLUSIVO MASTER) */}
+      {isMaster && activeAdminTab === 'nuvem' && (
         <div className="space-y-6 max-w-3xl">
           
           {/* CARD PRINCIPAL: GOOGLE FIREBASE FIRESTORE */}
@@ -1893,7 +1916,7 @@ export const AdminPanel: React.FC = () => {
       })()}
 
       {/* MODAL DE GESTÃO COMPLETA DE USUÁRIO (EXCLUSIVO MASTER LEONARDO) */}
-      {editingUser && (
+      {isMaster && editingUser && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden my-auto animate-scale-in">
             {/* Header */}
