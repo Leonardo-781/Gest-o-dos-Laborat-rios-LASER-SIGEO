@@ -52,6 +52,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
   } = useLab();
 
   const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [slotMode, setSlotMode] = useState<'blocks' | 'periods'>('blocks');
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [searchFilter, setSearchFilter] = useState('');
 
@@ -83,22 +84,35 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
     setReferenceDate(new Date());
   };
 
-  // Faixas oficiais de aula extraídas das fotos da planilha
-  const officialTimeSlots = [
-    { label: '07:10', start: '07:10', end: '08:00' },
-    { label: '08:00', start: '08:00', end: '08:50' },
-    { label: '08:50', start: '08:50', end: '09:40' },
-    { label: '09:50', start: '09:50', end: '10:40' },
-    { label: '10:40', start: '10:40', end: '11:30' },
-    { label: '11:30', start: '11:30', end: '12:20' },
-    // Intervalo de Almoço
-    { label: '13:10', start: '13:10', end: '14:00' },
-    { label: '14:00', start: '14:00', end: '14:50' },
-    { label: '14:50', start: '14:50', end: '15:40' },
-    { label: '16:00', start: '16:00', end: '16:50' },
-    { label: '16:50', start: '16:50', end: '17:40' },
-    { label: '17:40', start: '17:40', end: '18:30' }
+  // 1. Faixas oficiais em Blocos de Aula (Padrão Acadêmico UFU - sem lacunas vazias)
+  const blockTimeSlots = [
+    { label: '07:10-08:50', start: '07:10', end: '08:50', period: '1º e 2º Tempos', isLunchBreakAfter: false },
+    { label: '08:50-10:40', start: '08:50', end: '10:40', period: '3º e 4º Tempos', isLunchBreakAfter: false },
+    { label: '10:40-12:20', start: '10:40', end: '12:20', period: '5º e 6º Tempos', isLunchBreakAfter: true },
+    // Intervalo de Almoço (12:20 às 13:10)
+    { label: '13:10-14:50', start: '13:10', end: '14:50', period: '7º e 8º Tempos', isLunchBreakAfter: false },
+    { label: '14:50-16:50', start: '14:50', end: '16:50', period: '9º e 10º Tempos', isLunchBreakAfter: false },
+    { label: '16:50-18:30', start: '16:50', end: '18:30', period: '11º e 12º Tempos', isLunchBreakAfter: false }
   ];
+
+  // 2. Faixas detalhadas de 50 minutos (detalhamento tempo a tempo)
+  const periodTimeSlots = [
+    { label: '07:10-08:00', start: '07:10', end: '08:00', period: '1º Tempo', isLunchBreakAfter: false },
+    { label: '08:00-08:50', start: '08:00', end: '08:50', period: '2º Tempo', isLunchBreakAfter: false },
+    { label: '08:50-09:40', start: '08:50', end: '09:40', period: '3º Tempo', isLunchBreakAfter: false },
+    { label: '09:50-10:40', start: '09:50', end: '10:40', period: '4º Tempo', isLunchBreakAfter: false },
+    { label: '10:40-11:30', start: '10:40', end: '11:30', period: '5º Tempo', isLunchBreakAfter: false },
+    { label: '11:30-12:20', start: '11:30', end: '12:20', period: '6º Tempo', isLunchBreakAfter: true },
+    // Intervalo de Almoço (12:20 às 13:10)
+    { label: '13:10-14:00', start: '13:10', end: '14:00', period: '7º Tempo', isLunchBreakAfter: false },
+    { label: '14:00-14:50', start: '14:00', end: '14:50', period: '8º Tempo', isLunchBreakAfter: false },
+    { label: '14:50-15:40', start: '14:50', end: '15:40', period: '9º Tempo', isLunchBreakAfter: false },
+    { label: '16:00-16:50', start: '16:00', end: '16:50', period: '10º Tempo', isLunchBreakAfter: false },
+    { label: '16:50-17:40', start: '16:50', end: '17:40', period: '11º Tempo', isLunchBreakAfter: false },
+    { label: '17:40-18:30', start: '17:40', end: '18:30', period: '12º Tempo', isLunchBreakAfter: false }
+  ];
+
+  const officialTimeSlots = slotMode === 'blocks' ? blockTimeSlots : periodTimeSlots;
 
   // Exportar CSV
   const handleExportCSV = () => {
@@ -465,7 +479,34 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Seletor de Formato de Horários (Blocos Oficiais UFU vs Tempos Detalhados) */}
+            {viewMode === 'week' && (
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setSlotMode('blocks')}
+                  className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
+                    slotMode === 'blocks' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Horários agrupados por blocos de aula oficiais da UFU (sem faixas vazias)"
+                >
+                  <Clock className="w-3 h-3 text-blue-600" />
+                  <span>Blocos de Aula</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSlotMode('periods')}
+                  className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
+                    slotMode === 'periods' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Detalhamento tempo a tempo de 50 minutos"
+                >
+                  <span>Tempos de 50m</span>
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
               <button
                 onClick={() => setViewMode('week')}
@@ -543,40 +584,46 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                 const slotStartMin = timeToMinutes(slot.start);
                 const slotEndMin = timeToMinutes(slot.end);
 
-                // Linha de intervalo após 11:30 (almoço)
-                const isLunchBreak = slot.label === '11:30';
-
                 return (
                   <React.Fragment key={slot.label}>
                     <div className="grid grid-cols-7 min-h-[50px] hover:bg-slate-50/40 transition-colors">
                       
                       {/* Coluna do Horário */}
-                      <div className="p-1 border-r border-slate-200 bg-slate-50/50 text-[11px] font-mono text-slate-600 flex items-center justify-center font-bold">
-                        {slot.start}-{slot.end}
+                      <div className="p-1.5 border-r border-slate-200 bg-slate-50/60 text-center flex flex-col items-center justify-center">
+                        <span className="text-[11px] font-mono font-bold text-slate-800 leading-tight">
+                          {slot.start}-{slot.end}
+                        </span>
+                        {slot.period && (
+                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-tight mt-0.5">
+                            {slot.period}
+                          </span>
+                        )}
                       </div>
 
                       {/* 6 Dias da Semana */}
                       {days.map((day) => {
                         const dayEvents = getEventsForDate(day.dateStr, selectedLab);
 
-                        // Eventos que iniciam nesta faixa (para renderizar o card de cabeçalho)
-                        const startingEvents = dayEvents.filter((ev) => {
+                        // Eventos que ocupam esta faixa de horário (iniciam ou continuam durante este slot)
+                        const activeEventsInSlot = dayEvents.filter((ev) => {
                           const evStartMin = timeToMinutes(ev.startTime);
-                          return evStartMin >= slotStartMin && evStartMin < slotEndMin;
+                          const evEndMin = timeToMinutes(ev.endTime);
+                          return Math.max(evStartMin, slotStartMin) < Math.min(evEndMin, slotEndMin);
+                        });
+
+                        // Ordenação: LASER, SIGEO, LTGEO, seguido por horário de início
+                        activeEventsInSlot.sort((a, b) => {
+                          const labOrder = { laser: 0, sigeo: 1, ltgeo: 2 };
+                          const orderA = labOrder[a.labId] ?? 3;
+                          const orderB = labOrder[b.labId] ?? 3;
+                          if (orderA !== orderB) return orderA - orderB;
+                          return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
                         });
 
                         // Checa ocupação real de cada laboratório nesta faixa de horário
-                        const isLaserOccupied = dayEvents.some((ev) => {
-                          const evStartMin = timeToMinutes(ev.startTime);
-                          const evEndMin = timeToMinutes(ev.endTime);
-                          return ev.labId === 'laser' && Math.max(evStartMin, slotStartMin) < Math.min(evEndMin, slotEndMin);
-                        });
-
-                        const isSigeoOccupied = dayEvents.some((ev) => {
-                          const evStartMin = timeToMinutes(ev.startTime);
-                          const evEndMin = timeToMinutes(ev.endTime);
-                          return ev.labId === 'sigeo' && Math.max(evStartMin, slotStartMin) < Math.min(evEndMin, slotEndMin);
-                        });
+                        const isLaserOccupied = activeEventsInSlot.some(ev => ev.labId === 'laser');
+                        const isSigeoOccupied = activeEventsInSlot.some(ev => ev.labId === 'sigeo');
+                        const isLtgeoOccupied = activeEventsInSlot.some(ev => ev.labId === 'ltgeo');
 
                         // Determina qual laboratório pré-selecionar ao clicar em área livre
                         let labToPreselect: LabId = 'laser';
@@ -592,11 +639,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                           labToPreselect = 'laser';
                         }
 
+                        const isAllOccupied = 
+                          (selectedLab === 'all' && isLaserOccupied && isSigeoOccupied) ||
+                          (selectedLab === 'laser' && isLaserOccupied) ||
+                          (selectedLab === 'sigeo' && isSigeoOccupied) ||
+                          (selectedLab === 'ltgeo' && isLtgeoOccupied);
+
                         return (
                           <div
                             key={day.dateStr}
                             onClick={(e) => {
-                              if (e.target === e.currentTarget) {
+                              if (e.target === e.currentTarget && !isAllOccupied) {
                                 openBookingWithPreselection(
                                   labToPreselect,
                                   day.dateStr,
@@ -608,10 +661,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                             className={`p-1 border-r last:border-r-0 border-slate-100 relative cursor-pointer hover:bg-blue-50/20 transition-all group ${
                               day.isToday ? 'bg-blue-50/10' : ''
                             }`}
-                            title="Clique para solicitar horário ou apoio técnico"
+                            title={isAllOccupied ? 'Laboratórios em uso neste horário' : 'Clique para solicitar horário ou apoio técnico'}
                           >
-                            {/* Renderizar cartões de eventos que iniciam neste horário */}
-                            {startingEvents.map((ev) => {
+                            {/* Renderizar cartões de eventos (início e continuação) */}
+                            {activeEventsInSlot.map((ev) => {
+                              const evStartMin = timeToMinutes(ev.startTime);
+                              const isStart = evStartMin >= slotStartMin && evStartMin < slotEndMin;
                               const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
                               const isExternal = !isEnded && (ev.isExternal !== undefined
                                 ? Boolean(ev.isExternal)
@@ -620,74 +675,135 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                               const isBlue = !isEnded && !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
                               const isGreen = !isEnded && !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
 
+                              if (isStart) {
+                                return (
+                                  <div
+                                    key={ev.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedEventDetail(ev);
+                                    }}
+                                    className={`p-1.5 rounded-lg border text-left mb-1 transition-all duration-150 hover:shadow-xs cursor-pointer ${
+                                      isEnded
+                                        ? 'bg-slate-100/90 border-slate-300/90 text-slate-700 hover:border-slate-400 hover:bg-slate-200/60 opacity-80'
+                                        : isExternal
+                                        ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
+                                        : isOrange
+                                        ? 'bg-orange-50 border-orange-200 text-orange-950 hover:border-orange-300'
+                                        : isBlue
+                                        ? 'bg-blue-50 border-blue-200 text-blue-950 hover:border-blue-300'
+                                        : 'bg-emerald-50 border-emerald-200 text-emerald-950 hover:border-emerald-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between gap-1 text-[9px] font-bold">
+                                      <span 
+                                        className={`px-1 rounded ${
+                                          isEnded
+                                            ? 'bg-slate-500 text-white'
+                                            : isExternal 
+                                            ? 'bg-rose-700 text-white' 
+                                            : isOrange
+                                            ? 'bg-orange-600 text-white'
+                                            : isBlue 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-emerald-600 text-white'
+                                        }`}
+                                        title={isEnded ? 'Solicitação encerrada (Histórico de uso)' : undefined}
+                                      >
+                                        {isEnded ? `${ev.labId.toUpperCase()} • FIM` : isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
+                                      </span>
+                                      <div className="flex items-center gap-1 font-mono text-slate-600 font-semibold">
+                                        {ev.isRecurring && (
+                                          <span title={`Série Recorrente (${ev.recurrenceWeekIndex || 1}/${ev.recurrenceTotalWeeks || '?'})`}>
+                                            <Repeat className="w-2.5 h-2.5 text-indigo-600 inline flex-shrink-0" />
+                                          </span>
+                                        )}
+                                        <span>{ev.startTime}-{ev.endTime}</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-[11px] font-bold leading-tight mt-0.5 line-clamp-1">
+                                      {ev.title}
+                                    </div>
+
+                                    {ev.responsible ? (
+                                      <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                                        {ev.responsible}
+                                      </div>
+                                    ) : ev.subtitle ? (
+                                      <div className="text-[10px] text-slate-400 font-medium line-clamp-1 mt-0.5">
+                                        {ev.subtitle}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              }
+
+                              // Card de Continuação de Horário em Andamento
                               return (
                                 <div
-                                  key={ev.id}
+                                  key={`${ev.id}-cont-${slot.start}`}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedEventDetail(ev);
                                   }}
                                   className={`p-1.5 rounded-lg border text-left mb-1 transition-all duration-150 hover:shadow-xs cursor-pointer ${
                                     isEnded
-                                      ? 'bg-slate-100/90 border-slate-300/90 text-slate-700 hover:border-slate-400 hover:bg-slate-200/60 opacity-80'
+                                      ? 'bg-slate-50/80 border-dashed border-slate-300 text-slate-600'
                                       : isExternal
-                                      ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
+                                      ? 'bg-rose-50/90 border-dashed border-rose-300 text-rose-900'
                                       : isOrange
-                                      ? 'bg-orange-50 border-orange-200 text-orange-950 hover:border-orange-300'
+                                      ? 'bg-orange-50/80 border-dashed border-orange-300 text-orange-950'
                                       : isBlue
-                                      ? 'bg-blue-50 border-blue-200 text-blue-950 hover:border-blue-300'
-                                      : 'bg-emerald-50 border-emerald-200 text-emerald-950 hover:border-emerald-300'
+                                      ? 'bg-blue-50/80 border-dashed border-blue-300 text-blue-950'
+                                      : 'bg-emerald-50/80 border-dashed border-emerald-300 text-emerald-950'
                                   }`}
+                                  title={`${ev.title} (Iniciado às ${ev.startTime}, estende-se até ${ev.endTime})`}
                                 >
-                                  <div className="flex items-center justify-between gap-1 text-[9px] font-bold">
-                                    <span 
-                                      className={`px-1 rounded ${
-                                        isEnded
-                                          ? 'bg-slate-500 text-white'
-                                          : isExternal 
-                                          ? 'bg-rose-700 text-white' 
-                                          : isOrange
-                                          ? 'bg-orange-600 text-white'
-                                          : isBlue 
-                                          ? 'bg-blue-600 text-white' 
-                                          : 'bg-emerald-600 text-white'
-                                      }`}
-                                      title={isEnded ? 'Solicitação encerrada (Histórico de uso)' : undefined}
-                                    >
-                                      {isEnded ? `${ev.labId.toUpperCase()} • FIM` : isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
-                                    </span>
-                                    <div className="flex items-center gap-1 font-mono text-slate-600 font-semibold">
-                                      {ev.isRecurring && (
-                                        <span title={`Série Recorrente (${ev.recurrenceWeekIndex || 1}/${ev.recurrenceTotalWeeks || '?'})`}>
-                                          <Repeat className="w-2.5 h-2.5 text-indigo-600 inline flex-shrink-0" />
-                                        </span>
-                                      )}
-                                      <span>{ev.startTime}-{ev.endTime}</span>
+                                  <div className="flex items-center justify-between gap-1 text-[9px]">
+                                    <div className="flex items-center gap-1">
+                                      <span 
+                                        className={`px-1 rounded font-bold text-white ${
+                                          isEnded
+                                            ? 'bg-slate-500'
+                                            : isExternal 
+                                            ? 'bg-rose-600' 
+                                            : isOrange
+                                            ? 'bg-orange-500'
+                                            : isBlue 
+                                            ? 'bg-blue-500' 
+                                            : 'bg-emerald-500'
+                                        }`}
+                                      >
+                                        {ev.labId.toUpperCase()}
+                                      </span>
+                                      <span className="text-[8.5px] font-bold text-slate-500 bg-white/80 px-1 py-0.2 rounded border border-slate-200">
+                                        ↳ Em andamento
+                                      </span>
                                     </div>
+                                    <span className="font-mono text-[9px] text-slate-500 font-semibold">
+                                      até {ev.endTime}
+                                    </span>
                                   </div>
 
-                                  <div className="text-[11px] font-bold leading-tight mt-0.5 line-clamp-1">
+                                  <div className="text-[11px] font-bold leading-tight mt-0.5 line-clamp-1 text-slate-800">
                                     {ev.title}
                                   </div>
 
-                                  {ev.responsible ? (
-                                    <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
-                                      {ev.responsible}
-                                    </div>
-                                  ) : ev.subtitle ? (
-                                    <div className="text-[10px] text-slate-400 font-medium line-clamp-1 mt-0.5">
-                                      {ev.subtitle}
-                                    </div>
-                                  ) : null}
+                                  <div className="text-[9.5px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                    <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                    <span>Início às {ev.startTime} • Ocupa este horário</span>
+                                  </div>
                                 </div>
                               );
                             })}
 
-                            {/* Indicador discreto apenas ao passar o mouse em células sem eventos */}
-                            {startingEvents.length === 0 && (
-                              <div className="h-full min-h-[38px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            {/* Indicador apenas quando há vaga livre para solicitar horário */}
+                            {!isAllOccupied && (
+                              <div className="h-full min-h-[40px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <span className="text-[10px] font-semibold text-blue-600 flex items-center gap-1 bg-white/90 px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-                                  <Plus className="w-2.5 h-2.5 text-blue-600" /> Reservar
+                                  <Plus className="w-2.5 h-2.5 text-blue-600" /> 
+                                  {activeEventsInSlot.length > 0 ? `Reservar ${labToPreselect.toUpperCase()}` : 'Reservar'}
                                 </span>
                               </div>
                             )}
@@ -698,9 +814,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                     </div>
 
                     {/* Barra de Intervalo de Almoço */}
-                    {isLunchBreak && (
-                      <div className="grid grid-cols-7 bg-slate-200/70 border-y border-slate-300 text-center py-1 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                    {slot.isLunchBreakAfter && (
+                      <div className="grid grid-cols-7 bg-slate-200/70 border-y border-slate-300 text-center py-1.5 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
                         <div className="col-span-7 flex items-center justify-center gap-2">
+                          <Clock className="w-3.5 h-3.5 text-slate-500" />
                           <span>Intervalo de Almoço (12:20 às 13:10)</span>
                         </div>
                       </div>
