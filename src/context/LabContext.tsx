@@ -2595,6 +2595,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           isExternal,
           customColor,
           highlightColor,
+          notes: fc.notes,
           rawItem: fc
         });
       });
@@ -2643,6 +2644,7 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           highlightColor,
           isEnded,
           status: res.status,
+          notes: res.description,
           isRecurring: res.isRecurring,
           recurrenceWeekIndex: res.recurrenceWeekIndex,
           recurrenceTotalWeeks: res.recurrenceTotalWeeks,

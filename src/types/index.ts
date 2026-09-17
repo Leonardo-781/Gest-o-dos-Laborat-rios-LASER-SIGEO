@@ -242,6 +242,7 @@ export interface ScheduleEvent {
   isExternal?: boolean;
   customColor?: 'padrao' | 'azul' | 'verde' | 'laranja' | 'vermelho';
   isEnded?: boolean; // True se a solicitação/reserva já terminou em relação ao momento atual (histórico)
+  notes?: string;
   rawItem: FixedClass | Reservation;
 }
 

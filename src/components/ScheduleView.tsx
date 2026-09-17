@@ -114,6 +114,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
 
   const officialTimeSlots = slotMode === 'blocks' ? blockTimeSlots : periodTimeSlots;
 
+  const lunchSlotIndex = officialTimeSlots.findIndex(s => s.isLunchBreakAfter);
+  const morningSlots = lunchSlotIndex !== -1 
+    ? officialTimeSlots.slice(0, lunchSlotIndex + 1)
+    : officialTimeSlots;
+  const afternoonSlots = lunchSlotIndex !== -1 
+    ? officialTimeSlots.slice(lunchSlotIndex + 1)
+    : [];
+
+  const isDualLab = activeLabGroup === 'laser_sigeo' && selectedLab === 'all';
+  const targetLabs: LabId[] = isDualLab 
+    ? ['laser', 'sigeo'] 
+    : (activeLabGroup === 'ltgeo' ? ['ltgeo'] : [selectedLab === 'all' ? 'laser' : selectedLab]);
+
   // Exportar CSV
   const handleExportCSV = () => {
     const allEvents: { dia: string; data: string; lab: string; horario: string; titulo: string; responsavel: string; tipo: string }[] = [];
@@ -552,167 +565,253 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
 
         </div>
 
-        {/* 1. VISUALIZAÇÃO: GRADE SEMANAL OFICIAL */}
+        {/* 1. VISUALIZAÇÃO: GRADE SEMANAL OFICIAL (BLOCO CONTÍNUO ESTILO ROWSPAN) */}
         {viewMode === 'week' && (
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-            
-            {/* Cabeçalho dos 6 Dias */}
-            <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs">
-              <div className="py-2.5 px-1 font-bold text-slate-400 uppercase text-[10px] border-r border-slate-200 flex items-center justify-center">
-                Horário
-              </div>
-              {days.map((d) => (
-                <div
-                  key={d.dateStr}
-                  className={`py-2 px-1 border-r last:border-r-0 border-slate-200 ${
-                    d.isToday ? 'bg-blue-50/70 border-b-2 border-b-blue-600' : ''
-                  }`}
+            <div className="overflow-x-auto">
+              <div className="min-w-[960px] xl:min-w-full">
+                
+                {/* Cabeçalho dos 6 Dias com Subcolunas de Laboratório */}
+                <div 
+                  className="grid border-b border-slate-200 bg-slate-50 text-center text-xs"
+                  style={{
+                    gridTemplateColumns: 'minmax(96px, 110px) repeat(6, minmax(0, 1fr))'
+                  }}
                 >
-                  <div className="font-semibold text-slate-500 text-[10px] uppercase">
-                    {d.dayName.slice(0, 3)}
+                  <div className="py-2.5 px-1 font-bold text-slate-400 uppercase text-[10px] border-r border-slate-200 flex items-center justify-center">
+                    Horário
                   </div>
-                  <div className={`text-xs font-bold ${d.isToday ? 'text-blue-600' : 'text-slate-800'}`}>
-                    {d.formattedShort}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Linhas da Grade de Horários Oficiais - Página Única Sem Scroll Interno */}
-            <div className="divide-y divide-slate-100">
-              {officialTimeSlots.map((slot, sIdx) => {
-                const slotStartMin = timeToMinutes(slot.start);
-                const slotEndMin = timeToMinutes(slot.end);
-
-                return (
-                  <React.Fragment key={slot.label}>
-                    <div className="grid grid-cols-7 min-h-[50px] hover:bg-slate-50/40 transition-colors">
-                      
-                      {/* Coluna do Horário */}
-                      <div className="p-1.5 border-r border-slate-200 bg-slate-50/60 text-center flex flex-col items-center justify-center">
-                        <span className="text-[11px] font-mono font-bold text-slate-800 leading-tight">
-                          {slot.start}-{slot.end}
-                        </span>
-                        {slot.period && (
-                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-tight mt-0.5">
-                            {slot.period}
-                          </span>
-                        )}
+                  {days.map((d) => (
+                    <div
+                      key={d.dateStr}
+                      className={`border-r last:border-r-0 border-slate-200 flex flex-col justify-between ${
+                        d.isToday ? 'bg-blue-50/70 border-b-2 border-b-blue-600' : ''
+                      }`}
+                    >
+                      <div className="py-1.5 px-1">
+                        <div className="font-semibold text-slate-500 text-[10px] uppercase">
+                          {d.dayName.slice(0, 3)}
+                        </div>
+                        <div className={`text-xs font-bold ${d.isToday ? 'text-blue-600' : 'text-slate-800'}`}>
+                          {d.formattedShort}
+                        </div>
                       </div>
 
-                      {/* 6 Dias da Semana */}
+                      {/* Sub-header de laboratórios quando em Visão Geral (LASER e SIGEO simultâneos) */}
+                      {isDualLab && (
+                        <div className="grid grid-cols-2 text-[9px] font-extrabold border-t border-slate-200/90 text-center uppercase tracking-tight">
+                          <div className="py-0.5 border-r border-slate-200/90 text-blue-700 bg-blue-50/70">
+                            LASER
+                          </div>
+                          <div className="py-0.5 text-emerald-700 bg-emerald-50/70">
+                            SIGEO
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* TURNO MATUTINO (MANHÃ) */}
+                {(() => {
+                  const sectionSlots = morningSlots;
+                  const slotMinHeight = slotMode === 'blocks' ? 84 : 48;
+
+                  return (
+                    <div 
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: 'minmax(96px, 110px) repeat(6, minmax(0, 1fr))',
+                      }}
+                    >
+                      {/* Coluna de Horários (Manhã) */}
+                      <div className="border-r border-slate-200 bg-slate-50/60 flex flex-col divide-y divide-slate-100">
+                        {sectionSlots.map((slot) => (
+                          <div 
+                            key={slot.label} 
+                            className="p-1.5 flex flex-col items-center justify-center text-center flex-1"
+                            style={{ minHeight: `${slotMinHeight}px` }}
+                          >
+                            <span className="text-[11px] font-mono font-bold text-slate-800 leading-tight">
+                              {slot.start}-{slot.end}
+                            </span>
+                            {slot.period && (
+                              <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-tight mt-0.5">
+                                {slot.period}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 6 Dias da Semana (Manhã) */}
                       {days.map((day) => {
                         const dayEvents = getEventsForDate(day.dateStr, selectedLab);
 
-                        // Eventos que ocupam esta faixa de horário (iniciam ou continuam durante este slot)
-                        const activeEventsInSlot = dayEvents.filter((ev) => {
-                          const evStartMin = timeToMinutes(ev.startTime);
-                          const evEndMin = timeToMinutes(ev.endTime);
-                          return Math.max(evStartMin, slotStartMin) < Math.min(evEndMin, slotEndMin);
+                        const occupiedSlotsByLab: Record<string, Set<number>> = {};
+                        targetLabs.forEach(labId => {
+                          occupiedSlotsByLab[labId] = new Set<number>();
                         });
 
-                        // Ordenação: LASER, SIGEO, LTGEO, seguido por horário de início
-                        activeEventsInSlot.sort((a, b) => {
-                          const labOrder = { laser: 0, sigeo: 1, ltgeo: 2 };
-                          const orderA = labOrder[a.labId] ?? 3;
-                          const orderB = labOrder[b.labId] ?? 3;
-                          if (orderA !== orderB) return orderA - orderB;
-                          return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
-                        });
-
-                        // Checa ocupação real de cada laboratório nesta faixa de horário
-                        const isLaserOccupied = activeEventsInSlot.some(ev => ev.labId === 'laser');
-                        const isSigeoOccupied = activeEventsInSlot.some(ev => ev.labId === 'sigeo');
-                        const isLtgeoOccupied = activeEventsInSlot.some(ev => ev.labId === 'ltgeo');
-
-                        // Determina qual laboratório pré-selecionar ao clicar em área livre
-                        let labToPreselect: LabId = 'laser';
-                        if (activeLabGroup === 'ltgeo' || selectedLab === 'ltgeo') {
-                          labToPreselect = 'ltgeo';
-                        } else if (selectedLab !== 'all') {
-                          labToPreselect = selectedLab;
-                        } else if (!isLaserOccupied && isSigeoOccupied) {
-                          labToPreselect = 'laser';
-                        } else if (isLaserOccupied && !isSigeoOccupied) {
-                          labToPreselect = 'sigeo';
-                        } else {
-                          labToPreselect = 'laser';
+                        interface EventLayoutItem {
+                          event: ScheduleEvent;
+                          startSlotIdx: number;
+                          endSlotIdx: number;
+                          span: number;
+                          colNum: number;
                         }
 
-                        const isAllOccupied = 
-                          (selectedLab === 'all' && isLaserOccupied && isSigeoOccupied) ||
-                          (selectedLab === 'laser' && isLaserOccupied) ||
-                          (selectedLab === 'sigeo' && isSigeoOccupied) ||
-                          (selectedLab === 'ltgeo' && isLtgeoOccupied);
+                        const eventsToRender: EventLayoutItem[] = [];
+
+                        targetLabs.forEach((labId, labColIdx) => {
+                          const colNum = labColIdx + 1;
+                          const labEvents = dayEvents.filter(ev => ev.labId === labId);
+
+                          labEvents.forEach(ev => {
+                            const evStartMin = timeToMinutes(ev.startTime);
+                            const evEndMin = timeToMinutes(ev.endTime);
+
+                            let startSlotIdx = -1;
+                            let endSlotIdx = -1;
+
+                            for (let i = 0; i < sectionSlots.length; i++) {
+                              const slot = sectionSlots[i];
+                              const sStart = timeToMinutes(slot.start);
+                              const sEnd = timeToMinutes(slot.end);
+
+                              if (Math.max(evStartMin, sStart) < Math.min(evEndMin, sEnd)) {
+                                if (startSlotIdx === -1) {
+                                  startSlotIdx = i;
+                                }
+                                endSlotIdx = i;
+                              }
+                            }
+
+                            if (startSlotIdx !== -1) {
+                              const span = Math.max(1, (endSlotIdx - startSlotIdx) + 1);
+                              eventsToRender.push({
+                                event: ev,
+                                startSlotIdx,
+                                endSlotIdx,
+                                span,
+                                colNum
+                              });
+
+                              for (let s = startSlotIdx; s <= endSlotIdx; s++) {
+                                occupiedSlotsByLab[labId].add(s);
+                              }
+                            }
+                          });
+                        });
 
                         return (
                           <div
                             key={day.dateStr}
-                            onClick={(e) => {
-                              if (e.target === e.currentTarget && !isAllOccupied) {
-                                openBookingWithPreselection(
-                                  labToPreselect,
-                                  day.dateStr,
-                                  slot.start,
-                                  slot.end
-                                );
-                              }
-                            }}
-                            className={`p-1 border-r last:border-r-0 border-slate-100 relative cursor-pointer hover:bg-blue-50/20 transition-all group ${
-                              day.isToday ? 'bg-blue-50/10' : ''
+                            className={`border-r last:border-r-0 border-slate-200 relative ${
+                              day.isToday ? 'bg-blue-50/15' : ''
                             }`}
-                            title={isAllOccupied ? 'Laboratórios em uso neste horário' : 'Clique para solicitar horário ou apoio técnico'}
                           >
-                            {/* Renderizar cartões de eventos (início e continuação) */}
-                            {activeEventsInSlot.map((ev) => {
-                              const evStartMin = timeToMinutes(ev.startTime);
-                              const isStart = evStartMin >= slotStartMin && evStartMin < slotEndMin;
-                              const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
-                              const isExternal = !isEnded && (ev.isExternal !== undefined
-                                ? Boolean(ev.isExternal)
-                                : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose')));
-                              const isOrange = !isEnded && !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
-                              const isBlue = !isEnded && !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
-                              const isGreen = !isEnded && !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
+                            <div
+                              className="grid h-full w-full"
+                              style={{
+                                gridTemplateRows: `repeat(${sectionSlots.length}, minmax(${slotMinHeight}px, 1fr))`,
+                                gridTemplateColumns: isDualLab ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+                              }}
+                            >
+                              {/* Células de slots livres */}
+                              {targetLabs.map((labId, labColIdx) => {
+                                const colNum = labColIdx + 1;
+                                return sectionSlots.map((slot, sIdx) => {
+                                  const isOccupied = occupiedSlotsByLab[labId].has(sIdx);
+                                  if (isOccupied) return null;
 
-                              if (isStart) {
+                                  return (
+                                    <div
+                                      key={`free-m-${labId}-${sIdx}`}
+                                      style={{
+                                        gridRow: `${sIdx + 1} / span 1`,
+                                        gridColumn: colNum,
+                                      }}
+                                      onClick={() => openBookingWithPreselection(labId, day.dateStr, slot.start, slot.end)}
+                                      className={`p-1 border-b last:border-b-0 ${
+                                        isDualLab && labColIdx === 0 ? 'border-r border-slate-100' : ''
+                                      } border-slate-100 hover:bg-blue-50/30 transition-colors cursor-pointer group flex items-center justify-center`}
+                                      title={`Horário livre no ${labId.toUpperCase()} (${slot.start} às ${slot.end}). Clique para solicitar.`}
+                                    >
+                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-bold text-blue-600 bg-white/95 px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs flex items-center gap-1">
+                                        <Plus className="w-2.5 h-2.5 shrink-0" />
+                                        <span>{isDualLab ? labId.toUpperCase() : 'Reservar'}</span>
+                                      </span>
+                                    </div>
+                                  );
+                                });
+                              })}
+
+                              {/* Cartões contínuos em bloco único */}
+                              {eventsToRender.map((item) => {
+                                const ev = item.event;
+                                const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
+                                const isExternal = !isEnded && (ev.isExternal !== undefined
+                                  ? Boolean(ev.isExternal)
+                                  : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose')));
+                                const isOrange = !isEnded && !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
+                                const isBlue = !isEnded && !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
+                                const isGreen = !isEnded && !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
+
+                                const durationMins = timeToMinutes(ev.endTime) - timeToMinutes(ev.startTime);
+                                const numTempos = Math.round(durationMins / 50);
+                                const temposLabel = numTempos > 1 ? `${numTempos} Tempos` : '1 Tempo';
+
                                 return (
                                   <div
                                     key={ev.id}
+                                    style={{
+                                      gridRow: `${item.startSlotIdx + 1} / span ${item.span}`,
+                                      gridColumn: item.colNum,
+                                    }}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setSelectedEventDetail(ev);
                                     }}
-                                    className={`p-1.5 rounded-lg border text-left mb-1 transition-all duration-150 hover:shadow-xs cursor-pointer ${
+                                    className={`m-1 p-2 rounded-xl border text-left flex flex-col justify-between transition-all duration-150 hover:shadow-md cursor-pointer relative z-10 ${
                                       isEnded
-                                        ? 'bg-slate-100/90 border-slate-300/90 text-slate-700 hover:border-slate-400 hover:bg-slate-200/60 opacity-80'
+                                        ? 'bg-slate-100/95 border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-200/70 opacity-85'
                                         : isExternal
-                                        ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
+                                        ? 'bg-rose-50 border-rose-200 text-rose-950 hover:border-rose-300 hover:bg-rose-100/80 border-l-4 border-l-rose-600'
                                         : isOrange
-                                        ? 'bg-orange-50 border-orange-200 text-orange-950 hover:border-orange-300'
+                                        ? 'bg-orange-50/90 border-orange-200 text-orange-950 hover:border-orange-300 hover:bg-orange-100/80 border-l-4 border-l-orange-500'
                                         : isBlue
-                                        ? 'bg-blue-50 border-blue-200 text-blue-950 hover:border-blue-300'
-                                        : 'bg-emerald-50 border-emerald-200 text-emerald-950 hover:border-emerald-300'
+                                        ? 'bg-blue-50/90 border-blue-200 text-blue-950 hover:border-blue-300 hover:bg-blue-100/80 border-l-4 border-l-blue-600'
+                                        : 'bg-emerald-50/90 border-emerald-200 text-emerald-950 hover:border-emerald-300 hover:bg-emerald-100/80 border-l-4 border-l-emerald-600'
                                     }`}
                                   >
                                     <div className="flex items-center justify-between gap-1 text-[9px] font-bold">
-                                      <span 
-                                        className={`px-1 rounded ${
-                                          isEnded
-                                            ? 'bg-slate-500 text-white'
-                                            : isExternal 
-                                            ? 'bg-rose-700 text-white' 
-                                            : isOrange
-                                            ? 'bg-orange-600 text-white'
-                                            : isBlue 
-                                            ? 'bg-blue-600 text-white' 
-                                            : 'bg-emerald-600 text-white'
-                                        }`}
-                                        title={isEnded ? 'Solicitação encerrada (Histórico de uso)' : undefined}
-                                      >
-                                        {isEnded ? `${ev.labId.toUpperCase()} • FIM` : isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
-                                      </span>
-                                      <div className="flex items-center gap-1 font-mono text-slate-600 font-semibold">
+                                      <div className="flex items-center gap-1 flex-wrap">
+                                        <span 
+                                          className={`px-1.5 py-0.2 rounded font-extrabold ${
+                                            isEnded
+                                              ? 'bg-slate-500 text-white'
+                                              : isExternal 
+                                              ? 'bg-rose-700 text-white' 
+                                              : isOrange
+                                              ? 'bg-orange-600 text-white'
+                                              : isBlue 
+                                              ? 'bg-blue-600 text-white' 
+                                              : 'bg-emerald-600 text-white'
+                                          }`}
+                                          title={isEnded ? 'Solicitação encerrada (Histórico de uso)' : undefined}
+                                        >
+                                          {isEnded ? `${ev.labId.toUpperCase()} • FIM` : isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
+                                        </span>
+
+                                        {item.span >= 2 && (
+                                          <span className="px-1.5 py-0.2 rounded-full text-[8px] font-extrabold bg-white/95 text-slate-700 border border-slate-200/90 shadow-2xs">
+                                            {temposLabel}
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div className="flex items-center gap-1 font-mono text-slate-600 font-semibold text-[9px]">
                                         {ev.isRecurring && (
                                           <span title={`Série Recorrente (${ev.recurrenceWeekIndex || 1}/${ev.recurrenceTotalWeeks || '?'})`}>
                                             <Repeat className="w-2.5 h-2.5 text-indigo-600 inline flex-shrink-0" />
@@ -722,111 +821,309 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ onBackToHub }) => {
                                       </div>
                                     </div>
 
-                                    <div className="text-[11px] font-bold leading-tight mt-0.5 line-clamp-1">
-                                      {ev.title}
+                                    <div className="my-auto py-1">
+                                      <div className={`font-bold text-slate-900 leading-tight ${item.span >= 2 ? 'text-xs line-clamp-2' : 'text-[11px] line-clamp-1'}`}>
+                                        {ev.title}
+                                      </div>
+
+                                      {ev.responsible ? (
+                                        <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                                          {ev.responsible}
+                                        </div>
+                                      ) : ev.subtitle ? (
+                                        <div className="text-[10px] text-slate-400 font-medium line-clamp-1 mt-0.5">
+                                          {ev.subtitle}
+                                        </div>
+                                      ) : null}
+
+                                      {item.span >= 2 && ev.notes && (
+                                        <div className="text-[9.5px] text-slate-500/90 line-clamp-2 mt-1 italic leading-tight">
+                                          {ev.notes}
+                                        </div>
+                                      )}
                                     </div>
 
-                                    {ev.responsible ? (
-                                      <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
-                                        {ev.responsible}
+                                    {item.span >= 2 && (
+                                      <div className="pt-1 border-t border-slate-200/60 flex items-center justify-between text-[8.5px] text-slate-400 font-medium mt-auto">
+                                        <span className="flex items-center gap-1">
+                                          <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                          Bloco contínuo
+                                        </span>
+                                        <span className="font-mono text-slate-500 font-semibold">{temposLabel}</span>
                                       </div>
-                                    ) : ev.subtitle ? (
-                                      <div className="text-[10px] text-slate-400 font-medium line-clamp-1 mt-0.5">
-                                        {ev.subtitle}
-                                      </div>
-                                    ) : null}
+                                    )}
                                   </div>
                                 );
-                              }
-
-                              // Card de Continuação de Horário em Andamento
-                              return (
-                                <div
-                                  key={`${ev.id}-cont-${slot.start}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedEventDetail(ev);
-                                  }}
-                                  className={`p-1.5 rounded-lg border text-left mb-1 transition-all duration-150 hover:shadow-xs cursor-pointer ${
-                                    isEnded
-                                      ? 'bg-slate-50/80 border-dashed border-slate-300 text-slate-600'
-                                      : isExternal
-                                      ? 'bg-rose-50/90 border-dashed border-rose-300 text-rose-900'
-                                      : isOrange
-                                      ? 'bg-orange-50/80 border-dashed border-orange-300 text-orange-950'
-                                      : isBlue
-                                      ? 'bg-blue-50/80 border-dashed border-blue-300 text-blue-950'
-                                      : 'bg-emerald-50/80 border-dashed border-emerald-300 text-emerald-950'
-                                  }`}
-                                  title={`${ev.title} (Iniciado às ${ev.startTime}, estende-se até ${ev.endTime})`}
-                                >
-                                  <div className="flex items-center justify-between gap-1 text-[9px]">
-                                    <div className="flex items-center gap-1">
-                                      <span 
-                                        className={`px-1 rounded font-bold text-white ${
-                                          isEnded
-                                            ? 'bg-slate-500'
-                                            : isExternal 
-                                            ? 'bg-rose-600' 
-                                            : isOrange
-                                            ? 'bg-orange-500'
-                                            : isBlue 
-                                            ? 'bg-blue-500' 
-                                            : 'bg-emerald-500'
-                                        }`}
-                                      >
-                                        {ev.labId.toUpperCase()}
-                                      </span>
-                                      <span className="text-[8.5px] font-bold text-slate-500 bg-white/80 px-1 py-0.2 rounded border border-slate-200">
-                                        ↳ Em andamento
-                                      </span>
-                                    </div>
-                                    <span className="font-mono text-[9px] text-slate-500 font-semibold">
-                                      até {ev.endTime}
-                                    </span>
-                                  </div>
-
-                                  <div className="text-[11px] font-bold leading-tight mt-0.5 line-clamp-1 text-slate-800">
-                                    {ev.title}
-                                  </div>
-
-                                  <div className="text-[9.5px] text-slate-500 flex items-center gap-1 mt-0.5">
-                                    <Clock className="w-2.5 h-2.5 text-slate-400" />
-                                    <span>Início às {ev.startTime} • Ocupa este horário</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-
-                            {/* Indicador apenas quando há vaga livre para solicitar horário */}
-                            {!isAllOccupied && (
-                              <div className="h-full min-h-[40px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[10px] font-semibold text-blue-600 flex items-center gap-1 bg-white/90 px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-                                  <Plus className="w-2.5 h-2.5 text-blue-600" /> 
-                                  {activeEventsInSlot.length > 0 ? `Reservar ${labToPreselect.toUpperCase()}` : 'Reservar'}
-                                </span>
-                              </div>
-                            )}
+                              })}
+                            </div>
                           </div>
                         );
                       })}
-
                     </div>
+                  );
+                })()}
 
-                    {/* Barra de Intervalo de Almoço */}
-                    {slot.isLunchBreakAfter && (
-                      <div className="grid grid-cols-7 bg-slate-200/70 border-y border-slate-300 text-center py-1.5 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                        <div className="col-span-7 flex items-center justify-center gap-2">
-                          <Clock className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Intervalo de Almoço (12:20 às 13:10)</span>
-                        </div>
+                {/* FAIXA DO INTERVALO DE ALMOÇO (12:20 ÀS 13:10) */}
+                <div className="bg-slate-100/95 border-y border-slate-200/90 text-center py-2 text-[10.5px] font-bold text-slate-600 uppercase tracking-widest no-print">
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Intervalo de Almoço Acadêmico (12:20 às 13:10)</span>
+                  </div>
+                </div>
+
+                {/* TURNO VESPERTINO (TARDE) */}
+                {(() => {
+                  const sectionSlots = afternoonSlots;
+                  const slotMinHeight = slotMode === 'blocks' ? 84 : 48;
+
+                  return (
+                    <div 
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: 'minmax(96px, 110px) repeat(6, minmax(0, 1fr))',
+                      }}
+                    >
+                      {/* Coluna de Horários (Tarde) */}
+                      <div className="border-r border-slate-200 bg-slate-50/60 flex flex-col divide-y divide-slate-100">
+                        {sectionSlots.map((slot) => (
+                          <div 
+                            key={slot.label} 
+                            className="p-1.5 flex flex-col items-center justify-center text-center flex-1"
+                            style={{ minHeight: `${slotMinHeight}px` }}
+                          >
+                            <span className="text-[11px] font-mono font-bold text-slate-800 leading-tight">
+                              {slot.start}-{slot.end}
+                            </span>
+                            {slot.period && (
+                              <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-tight mt-0.5">
+                                {slot.period}
+                              </span>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </div>
 
+                      {/* 6 Dias da Semana (Tarde) */}
+                      {days.map((day) => {
+                        const dayEvents = getEventsForDate(day.dateStr, selectedLab);
+
+                        const occupiedSlotsByLab: Record<string, Set<number>> = {};
+                        targetLabs.forEach(labId => {
+                          occupiedSlotsByLab[labId] = new Set<number>();
+                        });
+
+                        interface EventLayoutItem {
+                          event: ScheduleEvent;
+                          startSlotIdx: number;
+                          endSlotIdx: number;
+                          span: number;
+                          colNum: number;
+                        }
+
+                        const eventsToRender: EventLayoutItem[] = [];
+
+                        targetLabs.forEach((labId, labColIdx) => {
+                          const colNum = labColIdx + 1;
+                          const labEvents = dayEvents.filter(ev => ev.labId === labId);
+
+                          labEvents.forEach(ev => {
+                            const evStartMin = timeToMinutes(ev.startTime);
+                            const evEndMin = timeToMinutes(ev.endTime);
+
+                            let startSlotIdx = -1;
+                            let endSlotIdx = -1;
+
+                            for (let i = 0; i < sectionSlots.length; i++) {
+                              const slot = sectionSlots[i];
+                              const sStart = timeToMinutes(slot.start);
+                              const sEnd = timeToMinutes(slot.end);
+
+                              if (Math.max(evStartMin, sStart) < Math.min(evEndMin, sEnd)) {
+                                if (startSlotIdx === -1) {
+                                  startSlotIdx = i;
+                                }
+                                endSlotIdx = i;
+                              }
+                            }
+
+                            if (startSlotIdx !== -1) {
+                              const span = Math.max(1, (endSlotIdx - startSlotIdx) + 1);
+                              eventsToRender.push({
+                                event: ev,
+                                startSlotIdx,
+                                endSlotIdx,
+                                span,
+                                colNum
+                              });
+
+                              for (let s = startSlotIdx; s <= endSlotIdx; s++) {
+                                occupiedSlotsByLab[labId].add(s);
+                              }
+                            }
+                          });
+                        });
+
+                        return (
+                          <div
+                            key={day.dateStr}
+                            className={`border-r last:border-r-0 border-slate-200 relative ${
+                              day.isToday ? 'bg-blue-50/15' : ''
+                            }`}
+                          >
+                            <div
+                              className="grid h-full w-full"
+                              style={{
+                                gridTemplateRows: `repeat(${sectionSlots.length}, minmax(${slotMinHeight}px, 1fr))`,
+                                gridTemplateColumns: isDualLab ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+                              }}
+                            >
+                              {/* Células de slots livres */}
+                              {targetLabs.map((labId, labColIdx) => {
+                                const colNum = labColIdx + 1;
+                                return sectionSlots.map((slot, sIdx) => {
+                                  const isOccupied = occupiedSlotsByLab[labId].has(sIdx);
+                                  if (isOccupied) return null;
+
+                                  return (
+                                    <div
+                                      key={`free-a-${labId}-${sIdx}`}
+                                      style={{
+                                        gridRow: `${sIdx + 1} / span 1`,
+                                        gridColumn: colNum,
+                                      }}
+                                      onClick={() => openBookingWithPreselection(labId, day.dateStr, slot.start, slot.end)}
+                                      className={`p-1 border-b last:border-b-0 ${
+                                        isDualLab && labColIdx === 0 ? 'border-r border-slate-100' : ''
+                                      } border-slate-100 hover:bg-blue-50/30 transition-colors cursor-pointer group flex items-center justify-center`}
+                                      title={`Horário livre no ${labId.toUpperCase()} (${slot.start} às ${slot.end}). Clique para solicitar.`}
+                                    >
+                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-bold text-blue-600 bg-white/95 px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs flex items-center gap-1">
+                                        <Plus className="w-2.5 h-2.5 shrink-0" />
+                                        <span>{isDualLab ? labId.toUpperCase() : 'Reservar'}</span>
+                                      </span>
+                                    </div>
+                                  );
+                                });
+                              })}
+
+                              {/* Cartões contínuos em bloco único */}
+                              {eventsToRender.map((item) => {
+                                const ev = item.event;
+                                const isEnded = Boolean(ev.isEnded || (ev.originType === 'reservation' && ev.date && isEventEnded(ev.date, ev.endTime)));
+                                const isExternal = !isEnded && (ev.isExternal !== undefined
+                                  ? Boolean(ev.isExternal)
+                                  : Boolean(ev.customColor === 'vermelho' || ev.highlightColor?.includes('rose')));
+                                const isOrange = !isEnded && !isExternal && (ev.customColor === 'laranja' || ev.labId === 'ltgeo');
+                                const isBlue = !isEnded && !isExternal && (ev.customColor === 'azul' || ev.labId === 'laser');
+                                const isGreen = !isEnded && !isExternal && (ev.customColor === 'verde' || ev.labId === 'sigeo');
+
+                                const durationMins = timeToMinutes(ev.endTime) - timeToMinutes(ev.startTime);
+                                const numTempos = Math.round(durationMins / 50);
+                                const temposLabel = numTempos > 1 ? `${numTempos} Tempos` : '1 Tempo';
+
+                                return (
+                                  <div
+                                    key={ev.id}
+                                    style={{
+                                      gridRow: `${item.startSlotIdx + 1} / span ${item.span}`,
+                                      gridColumn: item.colNum,
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedEventDetail(ev);
+                                    }}
+                                    className={`m-1 p-2 rounded-xl border text-left flex flex-col justify-between transition-all duration-150 hover:shadow-md cursor-pointer relative z-10 ${
+                                      isEnded
+                                        ? 'bg-slate-100/95 border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-200/70 opacity-85'
+                                        : isExternal
+                                        ? 'bg-rose-50 border-rose-200 text-rose-950 hover:border-rose-300 hover:bg-rose-100/80 border-l-4 border-l-rose-600'
+                                        : isOrange
+                                        ? 'bg-orange-50/90 border-orange-200 text-orange-950 hover:border-orange-300 hover:bg-orange-100/80 border-l-4 border-l-orange-500'
+                                        : isBlue
+                                        ? 'bg-blue-50/90 border-blue-200 text-blue-950 hover:border-blue-300 hover:bg-blue-100/80 border-l-4 border-l-blue-600'
+                                        : 'bg-emerald-50/90 border-emerald-200 text-emerald-950 hover:border-emerald-300 hover:bg-emerald-100/80 border-l-4 border-l-emerald-600'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between gap-1 text-[9px] font-bold">
+                                      <div className="flex items-center gap-1 flex-wrap">
+                                        <span 
+                                          className={`px-1.5 py-0.2 rounded font-extrabold ${
+                                            isEnded
+                                              ? 'bg-slate-500 text-white'
+                                              : isExternal 
+                                              ? 'bg-rose-700 text-white' 
+                                              : isOrange
+                                              ? 'bg-orange-600 text-white'
+                                              : isBlue 
+                                              ? 'bg-blue-600 text-white' 
+                                              : 'bg-emerald-600 text-white'
+                                          }`}
+                                          title={isEnded ? 'Solicitação encerrada (Histórico de uso)' : undefined}
+                                        >
+                                          {isEnded ? `${ev.labId.toUpperCase()} • FIM` : isExternal ? `${ev.labId.toUpperCase()} • EXT` : ev.labId.toUpperCase()}
+                                        </span>
+
+                                        {item.span >= 2 && (
+                                          <span className="px-1.5 py-0.2 rounded-full text-[8px] font-extrabold bg-white/95 text-slate-700 border border-slate-200/90 shadow-2xs">
+                                            {temposLabel}
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div className="flex items-center gap-1 font-mono text-slate-600 font-semibold text-[9px]">
+                                        {ev.isRecurring && (
+                                          <span title={`Série Recorrente (${ev.recurrenceWeekIndex || 1}/${ev.recurrenceTotalWeeks || '?'})`}>
+                                            <Repeat className="w-2.5 h-2.5 text-indigo-600 inline flex-shrink-0" />
+                                          </span>
+                                        )}
+                                        <span>{ev.startTime}-{ev.endTime}</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="my-auto py-1">
+                                      <div className={`font-bold text-slate-900 leading-tight ${item.span >= 2 ? 'text-xs line-clamp-2' : 'text-[11px] line-clamp-1'}`}>
+                                        {ev.title}
+                                      </div>
+
+                                      {ev.responsible ? (
+                                        <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                                          {ev.responsible}
+                                        </div>
+                                      ) : ev.subtitle ? (
+                                        <div className="text-[10px] text-slate-400 font-medium line-clamp-1 mt-0.5">
+                                          {ev.subtitle}
+                                        </div>
+                                      ) : null}
+
+                                      {item.span >= 2 && ev.notes && (
+                                        <div className="text-[9.5px] text-slate-500/90 line-clamp-2 mt-1 italic leading-tight">
+                                          {ev.notes}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {item.span >= 2 && (
+                                      <div className="pt-1 border-t border-slate-200/60 flex items-center justify-between text-[8.5px] text-slate-400 font-medium mt-auto">
+                                        <span className="flex items-center gap-1">
+                                          <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                          Bloco contínuo
+                                        </span>
+                                        <span className="font-mono text-slate-500 font-semibold">{temposLabel}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+              </div>
+            </div>
           </div>
         )}
 
