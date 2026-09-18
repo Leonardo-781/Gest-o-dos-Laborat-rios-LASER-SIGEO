@@ -25,7 +25,8 @@ import {
   Edit3,
   Printer,
   FileText,
-  Building2
+  Building2,
+  Download
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, formatDateTimeBR } from '../utils/dateHelpers';
@@ -67,6 +68,7 @@ export const MaintenanceManagementView: React.FC = () => {
 
   // Modal de Memorando Coletivo DIMAN
   const [isDimanBatchModalOpen, setIsDimanBatchModalOpen] = useState(false);
+  const [copiedDiman, setCopiedDiman] = useState(false);
 
   // Filtros de Máquinas em Manutenção
   const [maintLabFilter, setMaintLabFilter] = useState<'todos' | 'ltgeo' | 'laser' | 'sigeo'>('todos');
@@ -108,6 +110,78 @@ export const MaintenanceManagementView: React.FC = () => {
   };
   const pendingMaintenanceReports = maintenanceRequests.filter(m => m.status === 'pendente' || m.status === 'em_averiguacao');
   const pendingSoftwareRequests = softwareRequests.filter(s => s.status === 'pendente' || s.status === 'em_analise' || s.status === 'em_instalacao');
+
+  const handleDownloadDimanCsv = () => {
+    // Cabeçalho CSV formatado para Excel no Brasil (separador ponto-e-vírgula e UTF-8 com BOM)
+    const headers = [
+      'Item',
+      'Patrimônio',
+      'Equipamento',
+      'Laboratório / Sala',
+      'Defeito Diagnosticado',
+      'Situação Atual',
+      'Ordem de Serviço / Protocolo',
+      'Técnico Responsável',
+      'Data de Entrada'
+    ];
+
+    const rows = dimanMachines.map((eq, idx) => {
+      const isAlreadySent = eq.status === 'manutencao_externa';
+      const statusText = isAlreadySent ? 'Já Encaminhado à DIMAN' : 'Aguardando Coleta / Envio';
+      const labName = eq.labId === 'laser' 
+        ? 'LASER (Sala 1B309)' 
+        : eq.labId === 'sigeo' 
+        ? 'SIGEO (Sala 1B307)' 
+        : 'LTGEO (Sala 1B305)';
+      const reasonClean = (eq.maintenanceReason || '')
+        .replace('Aguardando envio à DIMAN: ', '')
+        .replace(' - Encaminhado à DIMAN', '')
+        .replace(/"/g, '""');
+
+      return [
+        `"${idx + 1}"`,
+        `"${eq.patrimonio || 'S/N'}"`,
+        `"${eq.name.replace(/"/g, '""')}"`,
+        `"${labName}"`,
+        `"${reasonClean}"`,
+        `"${statusText}"`,
+        `"${eq.externalServiceOrder || 'Aguardando emissão'}"`,
+        `"${eq.assignedTechnician || 'Leonardo Cardoso'}"`,
+        `"${eq.maintenanceSince ? formatDateBR(eq.maintenanceSince) : formatDateBR(new Date().toISOString())}"`
+      ].join(';');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `relatorio-envio-diman-laser-16-workstations-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyDimanTable = () => {
+    const tableHeader = 'ITEM\tPATRIMÔNIO\tEQUIPAMENTO\tLOCALIZAÇÃO\tDEFEITO DIAGNOSTICADO\tSITUAÇÃO\tO.S. / PROTOCOLO\n';
+    const tableRows = dimanMachines.map((eq, idx) => {
+      const isAlreadySent = eq.status === 'manutencao_externa';
+      const statusText = isAlreadySent ? 'Já Encaminhado à DIMAN' : 'Aguardando Coleta';
+      const labName = eq.labId === 'laser' ? 'LASER (Sala 1B309)' : eq.labId === 'sigeo' ? 'SIGEO (Sala 1B307)' : 'LTGEO (Sala 1B305)';
+      const reasonClean = (eq.maintenanceReason || '')
+        .replace('Aguardando envio à DIMAN: ', '')
+        .replace(' - Encaminhado à DIMAN', '');
+      return `${idx + 1}\t${eq.patrimonio || 'S/N'}\t${eq.name}\t${labName}\t${reasonClean}\t${statusText}\t${eq.externalServiceOrder || 'Aguardando emissão'}`;
+    }).join('\n');
+
+    const textToCopy = `UNIVERSIDADE FEDERAL DE UBERLÂNDIA - FECIV\nCURSO DE ENGENHARIA DE AGRIMENSURA E CARTOGRÁFICA\nMEMORANDO OFICIAL DIMAN - RELAÇÃO DE WORKSTATIONS DO LASER (SALA 1B309)\nData: ${formatDateBR(new Date().toISOString())}\n\n` + tableHeader + tableRows;
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setCopiedDiman(true);
+      setTimeout(() => setCopiedDiman(false), 2500);
+    });
+  };
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,6 +355,16 @@ export const MaintenanceManagementView: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleDownloadDimanCsv}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+                title="Baixar planilha e relatório oficial em CSV (compatível com Excel) para envio à DIMAN"
+              >
+                <Download className="w-4 h-4" />
+                <span>Baixar Relatório para Envio</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsDimanBatchModalOpen(true)}
@@ -1076,113 +1160,115 @@ export const MaintenanceManagementView: React.FC = () => {
 
       {/* Modal de Impressão de Ficha / Guia de Encaminhamento */}
       {printFichaEq && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs p-3 sm:p-6 flex items-center justify-center min-h-screen">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 sm:p-8 space-y-6 my-auto animate-scale-up text-slate-900">
-            {/* Cabeçalho da Ficha Timbrada */}
-            <div className="border-b-2 border-slate-900 pb-4 flex items-start justify-between gap-4">
-              <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
-                  Universidade Federal de Uberlândia • UFU
-                </span>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                  FICHA DE CONTROLE E ENCAMINHAMENTO DE MANUTENÇÃO
-                </h3>
-                <span className="text-xs text-slate-600 block">
-                  Instituto de Geografia • Laboratórios Integrados (LTGEO / LASER / SIGEO)
-                </span>
-              </div>
-              <button 
-                onClick={() => setPrintFichaEq(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl transition cursor-pointer print:hidden"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Dados do Equipamento */}
-            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <div>
-                <span className="text-slate-400 font-bold uppercase text-[10px] block">Equipamento / Modelo:</span>
-                <span className="font-bold text-slate-900 text-sm">{printFichaEq.name}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 font-bold uppercase text-[10px] block">Laboratório de Origem:</span>
-                <span className="font-bold text-slate-800">{printFichaEq.labId.toUpperCase()} ({labs[printFichaEq.labId]?.location})</span>
-              </div>
-              <div>
-                <span className="text-slate-400 font-bold uppercase text-[10px] block">Nº de Patrimônio UFU:</span>
-                <span className="font-mono font-bold text-amber-900 text-sm">
-                  {printFichaEq.patrimonio ? `Pat. ${printFichaEq.patrimonio}` : 'Não Tombado / Avulso'}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 font-bold uppercase text-[10px] block">Código Interno:</span>
-                <span className="font-mono font-bold text-slate-800">{printFichaEq.code}</span>
-              </div>
-            </div>
-
-            {/* Informações da Ocorrência */}
-            <div className="space-y-3 text-xs">
-              <div>
-                <span className="font-bold text-slate-700 block mb-1">Defeito Identificado / Parecer Inicial:</span>
-                <div className="p-3 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 leading-relaxed min-h-[60px]">
-                  {printFichaEq.maintenanceReason || 'Aferição periódica e calibração de rotina.'}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-xs p-3 sm:p-6 print:p-0 print:bg-white print:static">
+          <div className="min-h-full flex items-start justify-center py-4 sm:py-8 print:p-0">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 sm:p-8 space-y-6 print:border-none print:shadow-none print:p-0 print:my-0 text-slate-900">
+              {/* Cabeçalho da Ficha Timbrada */}
+              <div className="border-b-2 border-slate-900 pb-4 flex items-start justify-between gap-4">
                 <div>
-                  <span className="font-bold text-slate-700 block mb-1">Técnico Responsável:</span>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium">
-                    {printFichaEq.assignedTechnician || currentUser?.name || 'Leonardo Cardoso'}
-                  </div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
+                    Universidade Federal de Uberlândia • UFU
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                    FICHA DE CONTROLE E ENCAMINHAMENTO DE MANUTENÇÃO
+                  </h3>
+                  <span className="text-xs text-slate-600 block">
+                    Instituto de Geografia • Laboratórios Integrados (LTGEO / LASER / SIGEO)
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setPrintFichaEq(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl transition cursor-pointer print:hidden"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Dados do Equipamento */}
+              <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="text-slate-400 font-bold uppercase text-[10px] block">Equipamento / Modelo:</span>
+                  <span className="font-bold text-slate-900 text-sm">{printFichaEq.name}</span>
                 </div>
                 <div>
-                  <span className="font-bold text-slate-700 block mb-1">Data de Entrada:</span>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium">
-                    {printFichaEq.maintenanceSince ? formatDateTimeBR(printFichaEq.maintenanceSince) : formatDateBR(new Date().toISOString())}
+                  <span className="text-slate-400 font-bold uppercase text-[10px] block">Laboratório de Origem:</span>
+                  <span className="font-bold text-slate-800">{printFichaEq.labId.toUpperCase()} ({labs[printFichaEq.labId]?.location})</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold uppercase text-[10px] block">Nº de Patrimônio UFU:</span>
+                  <span className="font-mono font-bold text-amber-900 text-sm">
+                    {printFichaEq.patrimonio ? `Pat. ${printFichaEq.patrimonio}` : 'Não Tombado / Avulso'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold uppercase text-[10px] block">Código Interno:</span>
+                  <span className="font-mono font-bold text-slate-800">{printFichaEq.code}</span>
+                </div>
+              </div>
+
+              {/* Informações da Ocorrência */}
+              <div className="space-y-3 text-xs">
+                <div>
+                  <span className="font-bold text-slate-700 block mb-1">Defeito Identificado / Parecer Inicial:</span>
+                  <div className="p-3 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 leading-relaxed min-h-[60px]">
+                    {printFichaEq.maintenanceReason || 'Aferição periódica e calibração de rotina.'}
                   </div>
                 </div>
-              </div>
 
-              {printFichaEq.status === 'manutencao_externa' && (
-                <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl space-y-1 text-purple-950">
-                  <div className="font-bold">Assistência / Destino: {printFichaEq.externalCompany || 'Assistência Técnica'}</div>
-                  {printFichaEq.externalServiceOrder && <div>Ordem de Serviço (O.S.): <strong className="font-mono">{printFichaEq.externalServiceOrder}</strong></div>}
-                  {printFichaEq.externalExpectedReturn && <div>Previsão de Retorno: {formatDateBR(printFichaEq.externalExpectedReturn)}</div>}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="font-bold text-slate-700 block mb-1">Técnico Responsável:</span>
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium">
+                      {printFichaEq.assignedTechnician || currentUser?.name || 'Leonardo Cardoso'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-700 block mb-1">Data de Entrada:</span>
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium">
+                      {printFichaEq.maintenanceSince ? formatDateTimeBR(printFichaEq.maintenanceSince) : formatDateBR(new Date().toISOString())}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* Campo de Assinatura */}
-            <div className="pt-6 border-t border-slate-300 grid grid-cols-2 gap-8 text-center text-[11px] text-slate-500">
-              <div>
-                <div className="border-b border-slate-400 pb-1 mb-1.5 h-8"></div>
-                <span>Assinatura do Técnico Encarregado</span>
+                {printFichaEq.status === 'manutencao_externa' && (
+                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl space-y-1 text-purple-950">
+                    <div className="font-bold">Assistência / Destino: {printFichaEq.externalCompany || 'Assistência Técnica'}</div>
+                    {printFichaEq.externalServiceOrder && <div>Ordem de Serviço (O.S.): <strong className="font-mono">{printFichaEq.externalServiceOrder}</strong></div>}
+                    {printFichaEq.externalExpectedReturn && <div>Previsão de Retorno: {formatDateBR(printFichaEq.externalExpectedReturn)}</div>}
+                  </div>
+                )}
               </div>
-              <div>
-                <div className="border-b border-slate-400 pb-1 mb-1.5 h-8"></div>
-                <span>Recebedor / Assistência Técnica</span>
-              </div>
-            </div>
 
-            {/* Ações */}
-            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 print:hidden">
-              <button
-                type="button"
-                onClick={() => setPrintFichaEq(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
-              >
-                Fechar
-              </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-md transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Imprimir Ficha (PDF / A4)</span>
-              </button>
+              {/* Campo de Assinatura */}
+              <div className="pt-6 border-t border-slate-300 grid grid-cols-2 gap-8 text-center text-[11px] text-slate-500">
+                <div>
+                  <div className="border-b border-slate-400 pb-1 mb-1.5 h-8"></div>
+                  <span>Assinatura do Técnico Encarregado</span>
+                </div>
+                <div>
+                  <div className="border-b border-slate-400 pb-1 mb-1.5 h-8"></div>
+                  <span>Recebedor / Assistência Técnica</span>
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => setPrintFichaEq(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-md transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Imprimir Ficha (PDF / A4)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1190,129 +1276,226 @@ export const MaintenanceManagementView: React.FC = () => {
 
       {/* 5. MODAL DE MEMORANDO COLETIVO DE REMESSA À DIMAN (A4 / PDF) */}
       {isDimanBatchModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full border border-slate-200 shadow-2xl space-y-5 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
-            {/* Cabeçalho Oficial UFU */}
-            <div className="border-b-2 border-slate-800 pb-4 flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <span className="text-[11px] font-black tracking-wider text-slate-500 uppercase block">
-                  Universidade Federal de Uberlândia • Faculdade de Engenharia Civil
-                </span>
-                <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                  Curso de Engenharia de Agrimensura e Cartográfica
-                </h3>
-                <p className="text-xs font-semibold text-indigo-700">
-                  Laboratório de Geoprocessamento e SIG (SIGEO - Sala 1B307)
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-xs p-3 sm:p-6 print:p-0 print:bg-white print:static">
+          <div className="min-h-full flex items-start justify-center py-4 sm:py-8 print:p-0">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full border border-slate-200 shadow-2xl space-y-5 print:border-none print:shadow-none print:p-0 print:my-0 text-slate-900">
+              {/* Barra de Ações Rápidas Superior (Print:hidden) */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 print:hidden flex-wrap gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                      Memorando & Relatório Oficial de Envio à DIMAN
+                    </h4>
+                    <span className="text-[11px] text-slate-500">
+                      {dimanMachines.length} computadores do LASER (Sala 1B309)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleDownloadDimanCsv}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    title="Baixar planilha/relatório em CSV formatado com UTF-8 para Excel"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Baixar Relatório para Envio</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyDimanTable}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer"
+                    title="Copiar dados tabulados para colar no SEI ou em e-mail institucional"
+                  >
+                    {copiedDiman ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedDiman ? 'Copiado!' : 'Copiar Tabela (SEI)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Imprimir / PDF</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsDimanBatchModalOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer ml-1"
+                    title="Fechar modal"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Cabeçalho Oficial UFU */}
+              <div className="border-b-2 border-slate-800 pb-4 flex items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-[11px] font-black tracking-wider text-slate-500 uppercase block">
+                    Universidade Federal de Uberlândia • Faculdade de Engenharia Civil
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                    Curso de Engenharia de Agrimensura e Cartográfica
+                  </h3>
+                  <p className="text-xs font-semibold text-indigo-700">
+                    Laboratório de Sensoriamento Remoto (LASER - Sala 1B309)
+                  </p>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg text-xs font-mono font-bold block">
+                    MEMO-DIMAN 04/2026 - LASER
+                  </span>
+                  <span className="text-[11px] text-slate-500 mt-1 block">
+                    Data: {formatDateBR(new Date().toISOString())}
+                  </span>
+                </div>
+              </div>
+
+              {/* Metadados da Solicitação */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-1.5 leading-relaxed">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <strong className="text-slate-700">Para:</strong> DIMAN - Diretoria de Manutenção (UFU)
+                  </div>
+                  <div>
+                    <strong className="text-slate-700">De:</strong> Leonardo Cardoso (Corpo Técnico / Laboratórios - Sala 1B308)
+                  </div>
+                </div>
+                <div>
+                  <strong className="text-slate-700">Assunto:</strong> Solicitação de Manutenção Externa, Reparo Elétrico e Troca de Componentes para 16 Workstations do LASER (Sala 1B309).
+                </div>
+                <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-200">
+                  Encaminhamos a V. Sa. a relação oficial das 16 (dezesseis) estações de trabalho Workstation pertencentes ao Laboratório de Sensoriamento Remoto (LASER - Sala 1B309) que apresentam ocorrências técnicas críticas constatadas em diagnóstico de bancada (falhas de fontes de alimentação, erros de leitura/escrita em HDD, ausência de saída de vídeo e máquinas lacradas). Solicitamos o reparo corretivo, substituição dos componentes avariados ou emissão de parecer técnico pela DIMAN.
                 </p>
               </div>
 
-              <div className="text-right shrink-0">
-                <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg text-xs font-mono font-bold block">
-                  MEMO-DIMAN 04/2026
-                </span>
-                <span className="text-[11px] text-slate-500 mt-1 block">
-                  Data: {formatDateBR(new Date().toISOString())}
-                </span>
+              {/* Indicadores Resumo */}
+              <div className="grid grid-cols-3 gap-3 print:hidden">
+                <div className="bg-slate-100/70 p-2.5 rounded-xl border border-slate-200 text-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">Total de Máquinas</span>
+                  <span className="text-base font-black text-slate-800">{dimanMachines.length} Workstations</span>
+                </div>
+                <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 text-center">
+                  <span className="text-[10px] uppercase font-bold text-indigo-700 block">Já Encaminhadas à DIMAN</span>
+                  <span className="text-base font-black text-indigo-900">
+                    {dimanMachines.filter(m => m.status === 'manutencao_externa').length} Máquinas
+                  </span>
+                </div>
+                <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-center">
+                  <span className="text-[10px] uppercase font-bold text-amber-700 block">Aguardando Envio / Coleta</span>
+                  <span className="text-base font-black text-amber-900">
+                    {dimanMachines.filter(m => m.status !== 'manutencao_externa').length} Máquinas
+                  </span>
+                </div>
               </div>
-            </div>
 
-            {/* Metadados da Solicitação */}
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-1.5 leading-relaxed">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Tabela de Equipamentos */}
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                      <th className="py-2.5 px-3 w-10 text-center">#</th>
+                      <th className="py-2.5 px-3">Patrimônio</th>
+                      <th className="py-2.5 px-3">Identificação / Equipamento</th>
+                      <th className="py-2.5 px-3">Localização</th>
+                      <th className="py-2.5 px-3">Defeito Diagnosticado</th>
+                      <th className="py-2.5 px-3 text-center">Situação / Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {dimanMachines.map((eq, index) => {
+                      const isAlreadySent = eq.status === 'manutencao_externa';
+
+                      return (
+                        <tr key={eq.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                          <td className="py-2 px-3 font-mono font-bold text-slate-400 text-center text-[11px]">
+                            {String(index + 1).padStart(2, '0')}
+                          </td>
+                          <td className="py-2 px-3 font-mono font-bold text-amber-900 whitespace-nowrap">
+                            {eq.patrimonio || 'S/N'}
+                          </td>
+                          <td className="py-2 px-3 font-semibold text-slate-800 whitespace-nowrap">
+                            {eq.name}
+                          </td>
+                          <td className="py-2 px-3 text-slate-600 text-[11px] whitespace-nowrap">
+                            LASER (Sala 1B309)
+                          </td>
+                          <td className="py-2 px-3 text-slate-600 text-[11px] leading-tight">
+                            {eq.maintenanceReason?.replace('Aguardando envio à DIMAN: ', '').replace(' - Encaminhado à DIMAN', '')}
+                          </td>
+                          <td className="py-2 px-3 text-center whitespace-nowrap">
+                            {isAlreadySent ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-900 border border-indigo-200 inline-flex items-center gap-1">
+                                <Truck className="w-3 h-3" />
+                                Já na DIMAN
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                Aguardando Coleta
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Campo Formal de Assinaturas */}
+              <div className="pt-8 border-t-2 border-slate-300 grid grid-cols-2 gap-8 text-center text-xs text-slate-600">
                 <div>
-                  <strong className="text-slate-700">Para:</strong> DIMAN - Diretoria de Manutenção (UFU)
+                  <div className="border-b border-slate-400 pb-1 mb-2 h-10"></div>
+                  <strong className="block text-slate-900">Leonardo Cardoso</strong>
+                  <span className="text-[11px] text-slate-500">Técnico dos Laboratórios (Agrimensura / FECIV)</span>
                 </div>
                 <div>
-                  <strong className="text-slate-700">De:</strong> Leonardo Cardoso (Corpo Técnico - Sala 1B308)
+                  <div className="border-b border-slate-400 pb-1 mb-2 h-10"></div>
+                  <strong className="block text-slate-900">DIMAN - Diretoria de Manutenção (UFU)</strong>
+                  <span className="text-[11px] text-slate-500">Protocolo de Recebimento / Visto do Encarregado</span>
                 </div>
               </div>
-              <div>
-                <strong className="text-slate-700">Assunto:</strong> Solicitação de Manutenção Externa, Reparo Elétrico e Troca de Componentes para Workstations do SIGEO.
+
+              {/* Botões de Ação Inferiores */}
+              <div className="pt-3 flex items-center justify-between border-t border-slate-100 print:hidden flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadDimanCsv}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                  title="Baixar planilha/relatório em CSV formatado para Excel"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Baixar Relatório para Envio (.CSV)</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsDimanBatchModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Imprimir Memorando Oficial (PDF / A4)</span>
+                  </button>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-200">
-                Encaminhamos a V. Sa. a relação oficial dos microcomputadores da Sala 1B307 com defeitos críticos constatados em bancada (fontes inoperantes, defeitos em HDDs, falhas de saída de vídeo e gabinetes lacrados). Solicitamos o reparo ou fornecimento de peças sobressalentes.
-              </p>
-            </div>
-
-            {/* Tabela de Equipamentos */}
-            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                    <th className="py-2.5 px-3 w-12 text-center">#</th>
-                    <th className="py-2.5 px-3">Patrimônio</th>
-                    <th className="py-2.5 px-3">Identificação / Equipamento</th>
-                    <th className="py-2.5 px-3">Defeito Diagnosticado</th>
-                    <th className="py-2.5 px-3 text-center">Situação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {dimanMachines.map((eq, index) => {
-                    const isAlreadySent = eq.status === 'manutencao_externa';
-
-                    return (
-                      <tr key={eq.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                        <td className="py-2 px-3 font-mono font-bold text-slate-400 text-center text-[11px]">
-                          {String(index + 1).padStart(2, '0')}
-                        </td>
-                        <td className="py-2 px-3 font-mono font-bold text-amber-900 whitespace-nowrap">
-                          {eq.patrimonio || 'S/N'}
-                        </td>
-                        <td className="py-2 px-3 font-semibold text-slate-800 whitespace-nowrap">
-                          {eq.name}
-                        </td>
-                        <td className="py-2 px-3 text-slate-600 text-[11px] leading-tight">
-                          {eq.maintenanceReason?.replace('Aguardando envio à DIMAN: ', '').replace(' - Encaminhado à DIMAN', '')}
-                        </td>
-                        <td className="py-2 px-3 text-center whitespace-nowrap">
-                          {isAlreadySent ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-900 border border-indigo-200">
-                              Já Solicitado à DIMAN
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                              Aguardando Coleta
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Campo Formal de Assinaturas */}
-            <div className="pt-8 border-t-2 border-slate-300 grid grid-cols-2 gap-8 text-center text-xs text-slate-600">
-              <div>
-                <div className="border-b border-slate-400 pb-1 mb-2 h-10"></div>
-                <strong className="block text-slate-900">Leonardo Cardoso</strong>
-                <span className="text-[11px] text-slate-500">Técnico dos Laboratórios (Agrimensura / FECIV)</span>
-              </div>
-              <div>
-                <div className="border-b border-slate-400 pb-1 mb-2 h-10"></div>
-                <strong className="block text-slate-900">DIMAN - Diretoria de Manutenção (UFU)</strong>
-                <span className="text-[11px] text-slate-500">Protocolo de Recebimento / Visto do Encarregado</span>
-              </div>
-            </div>
-
-            {/* Botões de Ação */}
-            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 print:hidden">
-              <button
-                type="button"
-                onClick={() => setIsDimanBatchModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
-              >
-                Fechar
-              </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Imprimir Memorando Oficial (PDF / A4)</span>
-              </button>
             </div>
           </div>
         </div>

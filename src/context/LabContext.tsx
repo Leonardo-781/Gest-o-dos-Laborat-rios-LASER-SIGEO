@@ -347,6 +347,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (e.labId === 'ltgeo') {
           return initialLtgeoIds.has(e.id) && Boolean(e.patrimonio);
         }
+        // Limpa referências antigas de sigeo-ws para migrar 100% para o LASER
+        if (e.id.startsWith('eq-sigeo-ws-')) {
+          return false;
+        }
         return true;
       });
       const map = new Map<string, Equipment>(cleaned.map(e => [e.id, e]));
@@ -358,8 +362,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (!current.patrimonio && initE.patrimonio) {
             map.set(initE.id, { ...current, patrimonio: initE.patrimonio });
           }
-          // Garante que as 16 workstations e infraestrutura atualizadas entrem com seus defeitos e status DIMAN
-          if (initE.id.startsWith('eq-sigeo-ws-') || initE.id === 'eq-sigeo-01') {
+          // Garante que as 16 workstations do LASER e infraestrutura entrem com seus dados atualizados
+          if (initE.id.startsWith('eq-laser-ws-') || initE.id === 'eq-sigeo-01') {
             map.set(initE.id, initE);
           }
         }
@@ -382,9 +386,17 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!saved) return INITIAL_MAINTENANCE_REQUESTS;
     try {
       const parsed: MaintenanceRequest[] = JSON.parse(saved);
-      const map = new Map<string, MaintenanceRequest>(parsed.map(m => [m.id, m]));
+      const cleaned = parsed.filter(m => {
+        if (m.equipmentId?.startsWith('eq-sigeo-ws-') || (m.labId === 'sigeo' && m.id.startsWith('man-diman-'))) {
+          return false;
+        }
+        return true;
+      });
+      const map = new Map<string, MaintenanceRequest>(cleaned.map(m => [m.id, m]));
       INITIAL_MAINTENANCE_REQUESTS.forEach(initM => {
         if (!map.has(initM.id)) {
+          map.set(initM.id, initM);
+        } else if (initM.id.startsWith('man-diman-')) {
           map.set(initM.id, initM);
         }
       });
@@ -406,9 +418,17 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!saved) return INITIAL_EQUIPMENT_MOVEMENTS;
     try {
       const parsed: EquipmentMovement[] = JSON.parse(saved);
-      const map = new Map<string, EquipmentMovement>(parsed.map(m => [m.id, m]));
+      const cleaned = parsed.filter(m => {
+        if (m.equipmentId?.startsWith('eq-sigeo-ws-') || (m.labId === 'sigeo' && m.id.startsWith('mov-diman-'))) {
+          return false;
+        }
+        return true;
+      });
+      const map = new Map<string, EquipmentMovement>(cleaned.map(m => [m.id, m]));
       INITIAL_EQUIPMENT_MOVEMENTS.forEach(initM => {
         if (!map.has(initM.id)) {
+          map.set(initM.id, initM);
+        } else if (initM.id.startsWith('mov-diman-')) {
           map.set(initM.id, initM);
         }
       });
@@ -533,13 +553,16 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (e.labId === 'ltgeo') {
             return initialLtgeoIds.has(e.id) && Boolean(e.patrimonio);
           }
+          if (e.id.startsWith('eq-sigeo-ws-')) {
+            return false;
+          }
           return true;
         });
         const remoteMap = new Map<string, Equipment>(cleaned.map(e => [e.id, e]));
         INITIAL_EQUIPMENTS.forEach(initE => {
           if (!remoteMap.has(initE.id)) {
             remoteMap.set(initE.id, initE);
-          } else if (initE.id.startsWith('eq-sigeo-ws-') || initE.id === 'eq-sigeo-01') {
+          } else if (initE.id.startsWith('eq-laser-ws-') || initE.id === 'eq-sigeo-01') {
             remoteMap.set(initE.id, initE);
           }
         });
