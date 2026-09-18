@@ -24,7 +24,8 @@ import {
   Trash2,
   Edit3,
   Printer,
-  FileText
+  FileText,
+  Building2
 } from 'lucide-react';
 import { useLab } from '../context/LabContext';
 import { formatDateBR, formatDateTimeBR } from '../utils/dateHelpers';
@@ -64,9 +65,12 @@ export const MaintenanceManagementView: React.FC = () => {
   // Modal de Ficha de Manutenção para Impressão
   const [printFichaEq, setPrintFichaEq] = useState<Equipment | null>(null);
 
+  // Modal de Memorando Coletivo DIMAN
+  const [isDimanBatchModalOpen, setIsDimanBatchModalOpen] = useState(false);
+
   // Filtros de Máquinas em Manutenção
   const [maintLabFilter, setMaintLabFilter] = useState<'todos' | 'ltgeo' | 'laser' | 'sigeo'>('todos');
-  const [maintTypeFilter, setMaintTypeFilter] = useState<'todos' | 'interna' | 'externa'>('todos');
+  const [maintTypeFilter, setMaintTypeFilter] = useState<'todos' | 'interna' | 'externa' | 'diman'>('todos');
 
   // Modal de Resolução de Chamado de Manutenção
   const [resolvingReq, setResolvingReq] = useState<MaintenanceRequest | null>(null);
@@ -76,12 +80,21 @@ export const MaintenanceManagementView: React.FC = () => {
   const [resolvingSoft, setResolvingSoft] = useState<SoftwareRequest | null>(null);
   const [softNotes, setSoftNotes] = useState('');
 
+  const isEquipmentDimanRelated = (eq: Equipment) => {
+    return Boolean(
+      (eq.externalCompany && eq.externalCompany.toLowerCase().includes('diman')) ||
+      (eq.maintenanceReason && eq.maintenanceReason.toLowerCase().includes('diman'))
+    );
+  };
+
   const machinesInMaintenance = equipments.filter(e => e.status === 'manutencao' || e.status === 'manutencao_externa');
+  const dimanMachines = machinesInMaintenance.filter(isEquipmentDimanRelated);
   
   const filteredMachines = machinesInMaintenance.filter(eq => {
     if (maintLabFilter !== 'todos' && eq.labId !== maintLabFilter) return false;
     if (maintTypeFilter === 'interna' && eq.status !== 'manutencao') return false;
     if (maintTypeFilter === 'externa' && eq.status !== 'manutencao_externa') return false;
+    if (maintTypeFilter === 'diman' && !isEquipmentDimanRelated(eq)) return false;
     return true;
   });
 
@@ -259,21 +272,33 @@ export const MaintenanceManagementView: React.FC = () => {
       {/* 1. ABA: MÁQUINAS EM MANUTENÇÃO */}
       {activeTab === 'maquinas' && (
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex items-center justify-between gap-4">
+          <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h4 className="text-base font-bold text-slate-900">Equipamentos Atualmente Indisponíveis por Manutenção</h4>
               <p className="text-xs text-slate-500 mt-0.5">
-                Computadores, sensores ou instrumentos retirados da grade para calibração, troca de peças ou limpeza.
+                Computadores, sensores ou instrumentos retirados da grade para calibração, troca de peças ou reparo institucional pela DIMAN.
               </p>
             </div>
 
-            <button
-              onClick={() => setIsManualModalOpen(true)}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>+ Colocar Máquina em Manutenção</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsDimanBatchModalOpen(true)}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+                title="Visualizar e Imprimir Memorando Oficial de Remessa à DIMAN com os computadores"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Memorando DIMAN ({dimanMachines.length})</span>
+              </button>
+
+              <button
+                onClick={() => setIsManualModalOpen(true)}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>+ Colocar Máquina em Manutenção</span>
+              </button>
+            </div>
           </div>
 
           {/* Barra de Filtros Rápidos */}
@@ -313,6 +338,16 @@ export const MaintenanceManagementView: React.FC = () => {
                     }`}
                   >
                     Todas ({machinesInMaintenance.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMaintTypeFilter('diman')}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition cursor-pointer flex items-center gap-1 ${
+                      maintTypeFilter === 'diman' ? 'bg-indigo-700 text-white shadow-xs' : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100'
+                    }`}
+                  >
+                    <Building2 className="w-3 h-3" />
+                    <span>DIMAN UFU ({dimanMachines.length})</span>
                   </button>
                   <button
                     type="button"
@@ -358,12 +393,21 @@ export const MaintenanceManagementView: React.FC = () => {
               {filteredMachines.map(eq => {
                 const daysInMaint = getDaysInMaintenance(eq.maintenanceSince);
                 const isLongWait = daysInMaint !== null && daysInMaint >= 15;
+                const isDiman = isEquipmentDimanRelated(eq);
+                const isSentToDiman = eq.status === 'manutencao_externa' && (eq.externalCompany?.toLowerCase().includes('diman') || false);
+                const isAwaitingDiman = eq.status === 'manutencao' && isDiman;
 
                 return (
                   <div 
                     key={eq.id}
                     className={`bg-white p-5 rounded-3xl border-2 shadow-xs space-y-3 relative overflow-hidden flex flex-col justify-between ${
-                      eq.status === 'manutencao_externa' ? 'border-purple-300' : 'border-amber-200'
+                      isSentToDiman 
+                        ? 'border-indigo-400 bg-indigo-50/10'
+                        : eq.status === 'manutencao_externa' 
+                        ? 'border-purple-300' 
+                        : isAwaitingDiman
+                        ? 'border-amber-300 bg-amber-50/10'
+                        : 'border-amber-200'
                     }`}
                   >
                     <div className="space-y-3">
@@ -401,8 +445,18 @@ export const MaintenanceManagementView: React.FC = () => {
                           <h4 className="text-sm font-bold text-slate-900 mt-1">{eq.name}</h4>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {eq.status === 'manutencao_externa' ? (
+                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                          {isSentToDiman ? (
+                            <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-900 font-bold text-[10px] border border-indigo-300 flex items-center gap-1">
+                              <Building2 className="w-3 h-3 text-indigo-700" />
+                              <span>DIMAN • Enviado</span>
+                            </span>
+                          ) : isAwaitingDiman ? (
+                            <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-amber-700" />
+                              <span>DIMAN • Aguardando Envio</span>
+                            </span>
+                          ) : eq.status === 'manutencao_externa' ? (
                             <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300 flex items-center gap-1">
                               <Truck className="w-3 h-3 text-purple-700" />
                               <span>Manutenção Externa</span>
@@ -490,10 +544,20 @@ export const MaintenanceManagementView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setExternalModalEq(eq)}
-                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                            className={`px-3 py-1.5 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 ${
+                              isAwaitingDiman 
+                                ? 'bg-indigo-600 hover:bg-indigo-700' 
+                                : 'bg-purple-600 hover:bg-purple-700'
+                            }`}
                           >
                             <Truck className="w-3.5 h-3.5" />
-                            <span>{eq.status === 'manutencao_externa' ? 'Ver Envio Externo' : '📦 Enviar p/ Externa'}</span>
+                            <span>
+                              {eq.status === 'manutencao_externa' 
+                                ? 'Ver Envio Externo' 
+                                : isAwaitingDiman 
+                                ? '📦 Encaminhar à DIMAN' 
+                                : '📦 Enviar p/ Externa'}
+                            </span>
                           </button>
                         )}
 
@@ -1118,6 +1182,136 @@ export const MaintenanceManagementView: React.FC = () => {
               >
                 <Printer className="w-4 h-4" />
                 <span>Imprimir Ficha (PDF / A4)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. MODAL DE MEMORANDO COLETIVO DE REMESSA À DIMAN (A4 / PDF) */}
+      {isDimanBatchModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-4xl w-full border border-slate-200 shadow-2xl space-y-5 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
+            {/* Cabeçalho Oficial UFU */}
+            <div className="border-b-2 border-slate-800 pb-4 flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <span className="text-[11px] font-black tracking-wider text-slate-500 uppercase block">
+                  Universidade Federal de Uberlândia • Faculdade de Engenharia Civil
+                </span>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                  Curso de Engenharia de Agrimensura e Cartográfica
+                </h3>
+                <p className="text-xs font-semibold text-indigo-700">
+                  Laboratório de Geoprocessamento e SIG (SIGEO - Sala 1B307)
+                </p>
+              </div>
+
+              <div className="text-right shrink-0">
+                <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg text-xs font-mono font-bold block">
+                  MEMO-DIMAN 04/2026
+                </span>
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Data: {formatDateBR(new Date().toISOString())}
+                </span>
+              </div>
+            </div>
+
+            {/* Metadados da Solicitação */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-1.5 leading-relaxed">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <strong className="text-slate-700">Para:</strong> DIMAN - Diretoria de Manutenção (UFU)
+                </div>
+                <div>
+                  <strong className="text-slate-700">De:</strong> Leonardo Cardoso (Corpo Técnico - Sala 1B308)
+                </div>
+              </div>
+              <div>
+                <strong className="text-slate-700">Assunto:</strong> Solicitação de Manutenção Externa, Reparo Elétrico e Troca de Componentes para Workstations do SIGEO.
+              </div>
+              <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-200">
+                Encaminhamos a V. Sa. a relação oficial dos microcomputadores da Sala 1B307 com defeitos críticos constatados em bancada (fontes inoperantes, defeitos em HDDs, falhas de saída de vídeo e gabinetes lacrados). Solicitamos o reparo ou fornecimento de peças sobressalentes.
+              </p>
+            </div>
+
+            {/* Tabela de Equipamentos */}
+            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                    <th className="py-2.5 px-3 w-12 text-center">#</th>
+                    <th className="py-2.5 px-3">Patrimônio</th>
+                    <th className="py-2.5 px-3">Identificação / Equipamento</th>
+                    <th className="py-2.5 px-3">Defeito Diagnosticado</th>
+                    <th className="py-2.5 px-3 text-center">Situação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {dimanMachines.map((eq, index) => {
+                    const isAlreadySent = eq.status === 'manutencao_externa';
+
+                    return (
+                      <tr key={eq.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                        <td className="py-2 px-3 font-mono font-bold text-slate-400 text-center text-[11px]">
+                          {String(index + 1).padStart(2, '0')}
+                        </td>
+                        <td className="py-2 px-3 font-mono font-bold text-amber-900 whitespace-nowrap">
+                          {eq.patrimonio || 'S/N'}
+                        </td>
+                        <td className="py-2 px-3 font-semibold text-slate-800 whitespace-nowrap">
+                          {eq.name}
+                        </td>
+                        <td className="py-2 px-3 text-slate-600 text-[11px] leading-tight">
+                          {eq.maintenanceReason?.replace('Aguardando envio à DIMAN: ', '').replace(' - Encaminhado à DIMAN', '')}
+                        </td>
+                        <td className="py-2 px-3 text-center whitespace-nowrap">
+                          {isAlreadySent ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-900 border border-indigo-200">
+                              Já Solicitado à DIMAN
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                              Aguardando Coleta
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Campo Formal de Assinaturas */}
+            <div className="pt-8 border-t-2 border-slate-300 grid grid-cols-2 gap-8 text-center text-xs text-slate-600">
+              <div>
+                <div className="border-b border-slate-400 pb-1 mb-2 h-10"></div>
+                <strong className="block text-slate-900">Leonardo Cardoso</strong>
+                <span className="text-[11px] text-slate-500">Técnico dos Laboratórios (Agrimensura / FECIV)</span>
+              </div>
+              <div>
+                <div className="border-b border-slate-400 pb-1 mb-2 h-10"></div>
+                <strong className="block text-slate-900">DIMAN - Diretoria de Manutenção (UFU)</strong>
+                <span className="text-[11px] text-slate-500">Protocolo de Recebimento / Visto do Encarregado</span>
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 print:hidden">
+              <button
+                type="button"
+                onClick={() => setIsDimanBatchModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Fechar
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Imprimir Memorando Oficial (PDF / A4)</span>
               </button>
             </div>
           </div>

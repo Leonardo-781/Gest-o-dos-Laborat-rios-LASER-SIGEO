@@ -22,19 +22,24 @@ interface ExternalMaintenanceModalProps {
 }
 
 const QUICK_COMPANIES = [
+  'DIMAN - Diretoria de Manutenção (UFU)',
+  'DTI - Diretoria de Tecnologia da Informação (UFU)',
   'Leica Geosystems Brasil',
   'Trimble / Santiago & Cintra',
-  'DTI / Reitoria Central UFU',
   'Topcon / Embratop Geotecnologias',
   'Laboratório de Calibração Especializada'
 ];
 
 const COMMON_ACCESSORIES = [
+  'Gabinete Completo com Lacre',
+  'Fonte de Alimentação ATX',
+  'Disco Rígido (HDD/SSD)',
+  'Placa de Vídeo Dedicada',
+  'Cabo de Força',
   'Estojo Rígido de Transporte',
   '2x Baterias Recarregáveis',
   'Carregador de Baterias',
   'Cabo de Transferência / USB',
-  'Fonte de Alimentação',
   'Certificado de Garantia / NFe'
 ];
 
@@ -55,10 +60,12 @@ export const ExternalMaintenanceModal: React.FC<ExternalMaintenanceModalProps> =
   useEffect(() => {
     if (equipment) {
       setDefectDescription(equipment.maintenanceReason || '');
-      setCompanyName(equipment.externalCompany || '');
-      setServiceOrder(equipment.externalServiceOrder || '');
+      const isDiman = (equipment.externalCompany && equipment.externalCompany.includes('DIMAN')) ||
+                      (equipment.maintenanceReason && equipment.maintenanceReason.includes('DIMAN'));
+      setCompanyName(equipment.externalCompany || (isDiman ? 'DIMAN - Diretoria de Manutenção (UFU)' : ''));
+      setServiceOrder(equipment.externalServiceOrder || (isDiman && equipment.patrimonio ? `OS-DIMAN-2026/${equipment.patrimonio}` : ''));
       setExpectedReturnDate(equipment.externalExpectedReturn || '');
-      setAccessories('');
+      setAccessories(isDiman ? 'Gabinete completo, fonte de alimentação ATX e cabo de força' : '');
       setResponsibleTech(currentUser?.name || 'Leonardo Cardoso');
     }
   }, [equipment, currentUser]);

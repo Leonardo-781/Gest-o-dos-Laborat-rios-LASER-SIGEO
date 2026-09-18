@@ -358,6 +358,10 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (!current.patrimonio && initE.patrimonio) {
             map.set(initE.id, { ...current, patrimonio: initE.patrimonio });
           }
+          // Garante que as 16 workstations e infraestrutura atualizadas entrem com seus defeitos e status DIMAN
+          if (initE.id.startsWith('eq-sigeo-ws-') || initE.id === 'eq-sigeo-01') {
+            map.set(initE.id, initE);
+          }
         }
       });
       const merged = Array.from(map.values());
@@ -375,7 +379,21 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.MAINTENANCE);
-    return saved ? JSON.parse(saved) : INITIAL_MAINTENANCE_REQUESTS;
+    if (!saved) return INITIAL_MAINTENANCE_REQUESTS;
+    try {
+      const parsed: MaintenanceRequest[] = JSON.parse(saved);
+      const map = new Map<string, MaintenanceRequest>(parsed.map(m => [m.id, m]));
+      INITIAL_MAINTENANCE_REQUESTS.forEach(initM => {
+        if (!map.has(initM.id)) {
+          map.set(initM.id, initM);
+        }
+      });
+      const merged = Array.from(map.values());
+      localStorage.setItem(STORAGE_KEYS.MAINTENANCE, JSON.stringify(merged));
+      return merged;
+    } catch {
+      return INITIAL_MAINTENANCE_REQUESTS;
+    }
   });
 
   const [softwareRequests, setSoftwareRequests] = useState<SoftwareRequest[]>(() => {
@@ -385,7 +403,21 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [movements, setMovements] = useState<EquipmentMovement[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.MOVEMENTS);
-    return saved ? JSON.parse(saved) : INITIAL_EQUIPMENT_MOVEMENTS;
+    if (!saved) return INITIAL_EQUIPMENT_MOVEMENTS;
+    try {
+      const parsed: EquipmentMovement[] = JSON.parse(saved);
+      const map = new Map<string, EquipmentMovement>(parsed.map(m => [m.id, m]));
+      INITIAL_EQUIPMENT_MOVEMENTS.forEach(initM => {
+        if (!map.has(initM.id)) {
+          map.set(initM.id, initM);
+        }
+      });
+      const merged = Array.from(map.values());
+      localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(merged));
+      return merged;
+    } catch {
+      return INITIAL_EQUIPMENT_MOVEMENTS;
+    }
   });
 
   // E-mails e Notificações Institucionais
@@ -506,6 +538,8 @@ export const LabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const remoteMap = new Map<string, Equipment>(cleaned.map(e => [e.id, e]));
         INITIAL_EQUIPMENTS.forEach(initE => {
           if (!remoteMap.has(initE.id)) {
+            remoteMap.set(initE.id, initE);
+          } else if (initE.id.startsWith('eq-sigeo-ws-') || initE.id === 'eq-sigeo-01') {
             remoteMap.set(initE.id, initE);
           }
         });
